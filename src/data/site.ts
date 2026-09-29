@@ -23,6 +23,7 @@ export const site = {
   } as Record<"scholar" | "github" | "linkedin" | "orcid", string>,
   education: [
     { name: "The City College of New York, CUNY", url: "https://www.ccny.cuny.edu/" },
+    { name: "University of Stuttgart", url: "https://www.uni-stuttgart.de/en/" },
     { name: "Toyohashi University of Technology", url: "https://www.tut.ac.jp/english/" },
   ],
   knowsAbout: [

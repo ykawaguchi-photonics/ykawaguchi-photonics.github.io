@@ -1,0 +1,30 @@
+title: "Optimization of Fully Integrated Al Nanohole Array-Based Refractive Index Sensors for Use With a LED Light Source"
+authors:
+  - "Fritz Berkmann"
+  - "Lion Augel"
+  - "Michael Hack"
+  - "Yuma Kawaguchi"
+  - "David Weishaupt"
+  - "Inga A. Fischer"
+  - "Jorg Schulze"
+year: 2022
+venue: "IEEE Photonics Journal"
+venueShort: "IEEE Photonics J."
+volume: "14"
+issue: "3"
+pages: "1-8"
+type: "journal"
+doi: "10.1109/jphot.2022.3177354"
+areas:
+  - "optical-sensing"
+tags:
+  - "refractive index sensing"
+  - "nanohole array"
+  - "plasmonics"
+  - "LED"
+featured: false
+selfRole: "co"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

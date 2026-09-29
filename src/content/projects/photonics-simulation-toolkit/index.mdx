@@ -1,0 +1,65 @@
+---
+title: Photonics Simulation Toolkit
+description: An end-to-end, open-source workflow for building, physically validating, and composing silicon photonic integrated circuit components — from Meep FDTD, through SAX circuit composition, to GDSFactory layout.
+date: 2026-09-28
+status: active
+repo: https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit
+technologies: [Python, Meep (FDTD), Adjoint optimization, SAX, GDSFactory, Jupyter]
+areas: [silicon-photonics]
+featured: true
+image: ./workflow_overview.png
+imageAlt: "Simulation-to-layout workflow: geometry design in GDSFactory, FDTD simulation in Meep, S-parameter extraction, circuit simulation in SAX, and GDS layout export."
+---
+
+import Figure from "../../../components/Figure.astro";
+import workflow from "./workflow_overview.png";
+
+## Overview
+
+The toolkit builds silicon photonic integrated circuit (PIC) components one at a time, validates each with a real FDTD simulation, and then composes those validated components into circuits and fabricable GDS layouts. Every circuit-level result is traceable back to a measured simulation, amplitude **and** phase, rather than an idealized textbook model.
+
+<Figure
+  src={workflow}
+  alt="Workflow diagram: GDSFactory geometry, Meep FDTD simulation, S-parameter extraction, SAX circuit simulation, and GDS export."
+  caption="Simulation-to-layout workflow. Each component is designed as a GDSFactory geometry, simulated in Meep, reduced to S-parameters, composed into circuits in SAX, and exported as GDS."
+  number={1}
+  size="wide"
+/>
+
+## Motivation
+
+Component-level FDTD results often stay trapped in the notebook that produced them. Circuit simulations, meanwhile, frequently fall back on ideal analytic models. This project closes that loop. Each component's simulated behavior is saved as a small, versioned design point, and a lightweight model reads it back without re-running FDTD. That makes circuit-level design both fast and grounded in real physics.
+
+## Technologies
+
+- **[Meep](https://meep.readthedocs.io/)**: FDTD electromagnetic simulation, including adjoint-based topology optimization (`autograd` + `nlopt`).
+- **[GDSFactory](https://gdsfactory.github.io/gdsfactory/)**: parametric geometry and GDS layout generation.
+- **[SAX](https://flaport.github.io/sax/)**: circuit-level S-parameter composition.
+- **Python / Jupyter**: one reader-facing notebook per component, with explicit checkpoints before expensive runs.
+
+## Simulation workflow
+
+1. **Component notebooks.** Each notebook builds the geometry (GDSFactory first), runs a Meep FDTD simulation, and characterizes the device: S-parameters, resonances, extinction, V<sub>π</sub>. The result is saved as a YAML design point, the single source of truth for that component.
+2. **Meep-free component models.** A twin module reads each cached design point and serves it as a SAX-compatible model, so downstream work never needs to import Meep.
+3. **Circuit composition.** Circuits are wired together purely from those cached models, compared against ideal analytic models, and exported as GDS.
+
+## Examples
+
+| Component | What is characterized |
+|---|---|
+| Straight and bent waveguides | TE mode, bend loss vs. radius, circular vs. Euler bends |
+| Adjoint topology-optimized bend | Gradient-based geometry optimization, plus a fabrication-bias-robust variant |
+| Directional coupler | Splitting ratio and complex through/cross phase vs. gap and length |
+| Racetrack and add-drop ring resonators | Resonance, extinction, and energy-conservation checks |
+| Mach–Zehnder interferometer and modulator | Interference spectrum; push-pull V<sub>π</sub> |
+| Grating coupler | Resolved x–z layer-stack cross-section |
+
+At the circuit level, a four-channel WDM demultiplexer built from FDTD-measured coupler models shows real physics changing the design outcome. Moving from a 2-coupler to a 4-coupler lattice raised the worst channel's extinction ratio from **1.7 dB to 10.1 dB**.
+
+### Modeling assumptions
+
+Components use a 2D effective-index cross-section with non-dispersive materials, a deliberate first-phase simplification. The grating coupler is the exception and resolves the real vertical layer stack. The repository README documents these assumptions in full.
+
+## Source
+
+The code, notebooks, and cached design points are on [GitHub](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit).

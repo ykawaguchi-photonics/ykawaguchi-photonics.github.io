@@ -1,0 +1,45 @@
+---
+export interface Props {
+  /** id of the element whose text is copied */
+  target: string;
+  label?: string;
+}
+const { target, label = "Copy" } = Astro.props;
+---
+
+<button type="button" class="copy" data-copy-target={target} data-label={label}>{label}</button>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>("button[data-copy-target]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const el = document.getElementById(btn.dataset.copyTarget!);
+      if (!el) return;
+      try {
+        await navigator.clipboard.writeText(el.innerText);
+        btn.textContent = "Copied";
+      } catch {
+        btn.textContent = "Copy failed";
+      }
+      setTimeout(() => (btn.textContent = btn.dataset.label ?? "Copy"), 1600);
+    });
+  });
+</script>
+
+<style>
+  .copy {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    font: 500 0.75rem/1 var(--font-sans);
+    color: var(--text-muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.4em 0.65em;
+    cursor: pointer;
+  }
+  .copy:hover {
+    color: var(--text);
+    border-color: var(--accent-line);
+  }
+</style>

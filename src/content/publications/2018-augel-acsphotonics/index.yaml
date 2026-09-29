@@ -1,0 +1,32 @@
+title: "Integrated Collinear Refractive Index Sensor with Ge PIN Photodiodes"
+authors:
+  - "Lion Augel"
+  - "Yuma Kawaguchi"
+  - "Stefan Bechler"
+  - "Roman Körner"
+  - "Jörg Schulze"
+  - "Hironaga Uchida"
+  - "Inga A. Fischer"
+year: 2018
+date: "2018-10-29"
+venue: "ACS Photonics"
+venueShort: "ACS Photonics"
+volume: "5"
+issue: "11"
+pages: "4586-4593"
+type: "journal"
+doi: "10.1021/acsphotonics.8b01067"
+areas:
+  - "optical-sensing"
+  - "silicon-photonics"
+tags:
+  - "refractive index sensing"
+  - "Ge photodiode"
+  - "plasmonics"
+  - "integrated sensor"
+featured: true
+selfRole: "co"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

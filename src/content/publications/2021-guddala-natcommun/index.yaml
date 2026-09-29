@@ -1,0 +1,34 @@
+title: "All-optical nonreciprocity due to valley polarization pumping in transition metal dichalcogenides"
+authors:
+  - "Sriram Guddala"
+  - "Yuma Kawaguchi"
+  - "Filipp Komissarenko"
+  - "Svetlana Kiriushechkina"
+  - "Anton Vakulenko"
+  - "Kai Chen"
+  - "Andrea Alù"
+  - "Vinod M. Menon"
+  - "Alexander B. Khanikaev"
+year: 2021
+date: "2021-06-18"
+venue: "Nature Communications"
+venueShort: "Nat. Commun."
+volume: "12"
+issue: "1"
+pages: "3746"
+type: "journal"
+doi: "10.1038/s41467-021-24138-0"
+abstract: "Nonreciprocity and nonreciprocal optical devices play a vital role in modern photonic technologies by enforcing one-way propagation of light. Here, we demonstrate an all-optical approach to nonreciprocity based on valley-selective response in transition metal dichalcogenides (TMDs). This approach overcomes the limitations of magnetic materials and it does not require an external magnetic field. We provide experimental evidence of photoinduced nonreciprocity in a monolayer WS2 pumped by circularly polarized (CP) light. Nonreciprocity stems from valley-selective exciton population, giving rise to nonlinear circular dichroism controlled by CP pump fields. Our experimental results reveal a significant effect even at room temperature, despite considerable intervalley-scattering, showing promising potential for practical applications in magnetic-free nonreciprocal platforms. As an example, here we propose a device scheme to realize an optical isolator based on a pass-through silicon nitride (SiN) ring resonator integrating the optically biased TMD monolayer."
+areas:
+  - "nonreciprocal-photonics"
+tags:
+  - "2D materials"
+  - "TMD"
+  - "valley polarization"
+  - "nonreciprocity"
+featured: true
+selfRole: "co"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

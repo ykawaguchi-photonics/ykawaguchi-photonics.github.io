@@ -1,0 +1,69 @@
+---
+import PageLayout from "../layouts/PageLayout.astro";
+import { site } from "../data/site";
+
+const channels = [
+  site.email && { label: "Email", value: site.email, href: `mailto:${site.email}` },
+  { label: "LinkedIn", value: "linkedin.com/in/yumakawaguchi-96", href: site.links.linkedin },
+  { label: "GitHub", value: "github.com/ykawaguchi-photonics", href: site.links.github },
+  { label: "Google Scholar", value: "Yuma Kawaguchi", href: site.links.scholar },
+  site.links.orcid && { label: "ORCID", value: site.links.orcid.replace("https://orcid.org/", ""), href: site.links.orcid },
+].filter(Boolean) as { label: string; value: string; href: string }[];
+---
+
+<PageLayout
+  title="Contact"
+  heading="Contact"
+  eyebrow={site.name}
+  description={`How to contact ${site.name} about research collaboration, photonics simulation, or speaking.`}
+  lede="I'm happy to hear about research collaborations, questions about my publications or open-source code, and speaking invitations."
+  narrow
+>
+  <dl class="channels">
+    {
+      channels.map((c) => (
+        <div>
+          <dt>{c.label}</dt>
+          <dd>
+            <a href={c.href} rel="noopener">
+              {c.value}
+            </a>
+          </dd>
+        </div>
+      ))
+    }
+  </dl>
+  <p class="muted note">
+    Based in {site.location}. For questions about the photonics simulation toolkit, a GitHub issue is the fastest route.
+  </p>
+</PageLayout>
+
+<style>
+  .channels {
+    margin: 0;
+    border-top: 1px solid var(--border);
+  }
+  .channels div {
+    display: grid;
+    grid-template-columns: 9rem 1fr;
+    gap: var(--space-4);
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  dt {
+    color: var(--text-muted);
+  }
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .note {
+    margin-top: var(--space-6);
+  }
+  @media (max-width: 520px) {
+    .channels div {
+      grid-template-columns: 1fr;
+      gap: var(--space-1);
+    }
+  }
+</style>

@@ -1,0 +1,148 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import JsonLd from "../components/JsonLd.astro";
+import PubItem from "../components/PubItem.astro";
+import PostCard from "../components/PostCard.astro";
+import { profileLinks, site } from "../data/site";
+import { getPosts, getProjects, getPublications, getResearchAreas } from "../utils/content";
+import { personSchema, websiteSchema } from "../utils/schema";
+
+const pubs = await getPublications();
+const featured = pubs.filter((p) => p.data.featured).slice(0, 5);
+const areas = await getResearchAreas();
+const project = (await getProjects())[0];
+const posts = (await getPosts()).slice(0, 3);
+---
+
+<BaseLayout>
+  <Fragment slot="head">
+    <JsonLd data={personSchema(Astro.site)} />
+    <JsonLd data={websiteSchema(Astro.site)} />
+  </Fragment>
+
+  <div class="container page">
+    <section class="intro" aria-labelledby="name">
+      <p class="eyebrow">{site.title}</p>
+      <h1 id="name">{site.name}</h1>
+      <p class="tagline">{site.tagline}</p>
+      <div class="bio">
+        <p>
+          I am a {site.position} at {site.affiliation} in {site.location}. I received my Ph.D. in Electrical Engineering
+          from The City College of New York (CUNY) in 2024, with a dissertation on ring resonators with dichroic materials
+          and spin-valley controlled topological photonic systems.
+        </p>
+        <p>
+          My research spans metasurfaces and flat optics, silicon photonic integrated circuits, topological and
+          nonreciprocal photonics, and optical sensing, combining full-wave simulation with nanophotonic device design.
+        </p>
+      </div>
+      <ul class="link-list profile-links" aria-label="Profiles">
+        {profileLinks().map((l) => <li><a class="chip" href={l.href} rel="me noopener">{l.label}</a></li>)}
+        <li><a class="chip" href="/cv/">CV</a></li>
+      </ul>
+    </section>
+
+    <section class="section" aria-labelledby="areas-h">
+      <div class="section-head">
+        <h2 id="areas-h">Research areas</h2>
+        <a href="/research/">All research →</a>
+      </div>
+      <div class="card-grid">
+        {
+          areas.map((a) => (
+            <a class="card" href={`/research/${a.id}/`}>
+              <h3>{a.data.title}</h3>
+              <p>{a.data.description}</p>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="pubs-h">
+      <div class="section-head">
+        <h2 id="pubs-h">Selected publications</h2>
+        <a href="/publications/">All {pubs.length} publications →</a>
+      </div>
+      <ol class="pubs">
+        {featured.map((p) => <PubItem pub={p} compact />)}
+      </ol>
+    </section>
+
+    {
+      project && (
+        <section class="section" aria-labelledby="proj-h">
+          <div class="section-head">
+            <h2 id="proj-h">Latest project</h2>
+            <a href="/projects/">All projects →</a>
+          </div>
+          <a class="card project" href={`/projects/${project.id}/`}>
+            <h3>{project.data.title}</h3>
+            <p>{project.data.description}</p>
+            <p class="tech">{project.data.technologies.join(" · ")}</p>
+          </a>
+        </section>
+      )
+    }
+
+    {
+      posts.length > 0 && (
+        <section class="section" aria-labelledby="posts-h">
+          <div class="section-head">
+            <h2 id="posts-h">Latest writing</h2>
+            <a href="/blog/">All posts →</a>
+          </div>
+          {posts.map((p) => (
+            <PostCard post={p} headingLevel="h3" />
+          ))}
+        </section>
+      )
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .intro {
+    max-width: var(--content-width);
+    padding-top: var(--space-5);
+  }
+  h1 {
+    font-size: clamp(2.25rem, 5vw, 3.25rem);
+    margin-bottom: var(--space-3);
+  }
+  .tagline {
+    font-size: var(--step-1);
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: var(--space-6);
+  }
+  .bio p {
+    font-family: var(--font-serif);
+    font-size: 1.1875rem;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .profile-links {
+    margin-top: var(--space-5);
+  }
+  .profile-links .chip {
+    font-size: 0.875rem;
+    padding: 0.5em 0.9em;
+  }
+  .pubs {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .project {
+    max-width: var(--content-width);
+  }
+  .project h3 {
+    font-size: var(--step-1);
+  }
+  .project .tech {
+    margin-top: var(--space-3);
+    font-size: var(--step--1);
+    color: var(--text-faint);
+  }
+</style>

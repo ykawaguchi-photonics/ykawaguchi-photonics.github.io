@@ -1,0 +1,287 @@
+---
+import "katex/dist/katex.min.css";
+import "../styles/prose.css";
+import type { MarkdownHeading } from "astro";
+import { getEntries } from "astro:content";
+import BaseLayout from "./BaseLayout.astro";
+import JsonLd from "../components/JsonLd.astro";
+import Toc from "../components/Toc.astro";
+import PostCard from "../components/PostCard.astro";
+import { getCategory } from "../data/categories";
+import { formatDate, isoDate, readingTime, relatedPosts, slugifyTag, type Post } from "../utils/content";
+import { blogPostingSchema, breadcrumbSchema } from "../utils/schema";
+
+export interface Props {
+  post: Post;
+  headings: MarkdownHeading[];
+  all: Post[];
+}
+
+const { post, headings, all } = Astro.props;
+const d = post.data;
+const path = `/blog/${post.id}/`;
+const cat = getCategory(d.category)!;
+const minutes = readingTime(post.body);
+const related = relatedPosts(post, all);
+const pubs = await getEntries(d.relatedPublications);
+const idx = all.findIndex((p) => p.id === post.id);
+const newer = idx > 0 ? all[idx - 1] : undefined;
+const older = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : undefined;
+const ogImage = d.image?.src;
+---
+
+<BaseLayout
+  title={d.title}
+  description={d.description}
+  type="article"
+  publishedTime={d.date}
+  modifiedTime={d.updated}
+  tags={d.tags}
+  image={ogImage}
+  imageAlt={d.imageAlt}
+  noindex={d.draft}
+>
+  <Fragment slot="head">
+    <JsonLd data={blogPostingSchema(Astro.site, post, path, ogImage)} />
+    <JsonLd
+      data={breadcrumbSchema(Astro.site, [
+        { name: "Home", path: "/" },
+        { name: "Blog", path: "/blog/" },
+        { name: cat.label, path: `/blog/category/${cat.slug}/` },
+        { name: d.title, path },
+      ])}
+    />
+  </Fragment>
+
+  <article class="container page post">
+    <header class="post-header">
+      <p class="eyebrow">
+        <a href={`/blog/category/${cat.slug}/`}>{cat.label}</a>
+      </p>
+      <h1>{d.title}</h1>
+      <p class="lede">{d.description}</p>
+      <p class="byline">
+        <span>{d.author}</span>
+        <span aria-hidden="true">·</span>
+        <time datetime={isoDate(d.date)}>{formatDate(d.date)}</time>
+        {
+          d.updated && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>
+                Updated <time datetime={isoDate(d.updated)}>{formatDate(d.updated)}</time>
+              </span>
+            </>
+          )
+        }
+        <span aria-hidden="true">·</span>
+        <span>{minutes} min read</span>
+      </p>
+    </header>
+
+    <div class="post-grid">
+      <aside class="toc-col">
+        <div class="toc-sticky"><Toc headings={headings} /></div>
+      </aside>
+      <div class="prose" id="post-body">
+        <slot />
+      </div>
+    </div>
+
+    <footer class="post-footer">
+      {
+        d.tags.length > 0 && (
+          <p class="tags">
+            {d.tags.map((t) => (
+              <a class="tag" href={`/blog/tags/${slugifyTag(t)}/`}>
+                {t}
+              </a>
+            ))}
+          </p>
+        )
+      }
+
+      {
+        pubs.length > 0 && (
+          <section class="related-block">
+            <h2>Related publications</h2>
+            <ul>
+              {pubs.map((p) => (
+                <li>
+                  <a href={`/publications/${p.id}/`}>{p.data.title}</a>
+                  <span class="muted">
+                    {" "}
+                    — {p.data.venueShort ?? p.data.venue}, {p.data.year}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+
+      {
+        related.length > 0 && (
+          <section class="related-block">
+            <h2>Related posts</h2>
+            {related.map((p) => (
+              <PostCard post={p} headingLevel="h3" />
+            ))}
+          </section>
+        )
+      }
+
+      <nav class="pager" aria-label="More posts">
+        {
+          older ? (
+            <a href={`/blog/${older.id}/`} rel="prev">
+              <span class="muted">← Older</span>
+              <span>{older.data.title}</span>
+            </a>
+          ) : (
+            <span />
+          )
+        }
+        {
+          newer && (
+            <a class="next" href={`/blog/${newer.id}/`} rel="next">
+              <span class="muted">Newer →</span>
+              <span>{newer.data.title}</span>
+            </a>
+          )
+        }
+      </nav>
+    </footer>
+  </article>
+</BaseLayout>
+
+<script>
+  // Heading anchor links and copy buttons on code blocks.
+  const body = document.getElementById("post-body");
+  if (body) {
+    body.querySelectorAll<HTMLHeadingElement>("h2[id], h3[id]").forEach((h) => {
+      const a = document.createElement("a");
+      a.href = `#${h.id}`;
+      a.className = "heading-anchor";
+      a.setAttribute("aria-label", `Link to section: ${h.textContent}`);
+      a.textContent = "#";
+      h.appendChild(a);
+    });
+    body.querySelectorAll<HTMLPreElement>("pre").forEach((pre) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "copy-btn";
+      btn.textContent = "Copy";
+      btn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(pre.querySelector("code")?.innerText ?? pre.innerText);
+          btn.textContent = "Copied";
+        } catch {
+          btn.textContent = "Failed";
+        }
+        setTimeout(() => (btn.textContent = "Copy"), 1500);
+      });
+      pre.appendChild(btn);
+    });
+  }
+</script>
+
+<style>
+  .post-header {
+    max-width: var(--content-width);
+    margin: 0 auto var(--space-7);
+  }
+  .post-header .eyebrow a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .lede {
+    font-size: var(--step-1);
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+  .byline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    font-size: var(--step--1);
+    color: var(--text-muted);
+    margin: 0;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border);
+  }
+  .post-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: center;
+  }
+  .post-grid .prose {
+    width: 100%;
+    margin-inline: auto;
+  }
+  .toc-col {
+    max-width: var(--content-width);
+    width: 100%;
+    margin: 0 auto var(--space-6);
+  }
+  @media (min-width: 1180px) {
+    .post-grid {
+      grid-template-columns: 14rem minmax(0, var(--measure)) 14rem;
+      gap: var(--space-6);
+    }
+    .toc-col {
+      margin: 0;
+    }
+    .toc-sticky {
+      position: sticky;
+      top: 5.5rem;
+    }
+  }
+  .post-footer {
+    max-width: var(--content-width);
+    margin: var(--space-7) auto 0;
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    padding-bottom: var(--space-5);
+    border-bottom: 1px solid var(--border);
+  }
+  .related-block {
+    margin-top: var(--space-6);
+  }
+  .related-block h2 {
+    font-size: var(--step--1);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .related-block ul {
+    padding-left: 1.2em;
+  }
+  .pager {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-5);
+    margin-top: var(--space-7);
+  }
+  .pager a {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-width: 48%;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .pager a:hover span:last-child {
+    color: var(--accent);
+  }
+  .pager .next {
+    text-align: right;
+    margin-left: auto;
+  }
+  .pager .muted {
+    font-size: var(--step--1);
+  }
+</style>

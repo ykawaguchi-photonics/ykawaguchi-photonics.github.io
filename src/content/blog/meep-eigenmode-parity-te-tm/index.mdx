@@ -1,0 +1,66 @@
+---
+title: "NO_PARITY is not TE: choosing the polarization of Meep eigenmode sources"
+description: "Why eig_parity=mp.NO_PARITY can silently launch the wrong polarization in 2D Meep simulations, how to spot it from the fields, and the one-line fix."
+date: 2026-09-29
+category: technical-notes
+tags: [Meep, FDTD, eigenmode, polarization, silicon photonics]
+draft: true
+areas: [silicon-photonics]
+---
+
+Eigenmode sources and monitors are the workhorse of waveguide simulation in [Meep](https://meep.readthedocs.io/). You give Meep a cross-section, it calls MPB to solve for a guided mode, and it launches or projects onto exactly that mode. One argument decides *which* mode you get, and its most permissive value is an easy trap.
+
+## The symptom
+
+A 2D waveguide simulation runs without errors, and transmission looks plausible. Then a coupler, bend, or resonator gives numbers that disagree with expectations by more than any convergence study can explain. The geometry is fine and the resolution is fine. The mode is wrong.
+
+## What `eig_band=1` actually selects
+
+At a fixed frequency $\omega$, MPB returns guided modes sorted by propagation constant. `eig_band=1` is the mode with the largest
+
+$$
+\beta = n_\text{eff}\,\frac{\omega}{c}.
+$$
+
+With `eig_parity=mp.NO_PARITY`, **both** polarization families compete for that first slot. In a 2D simulation the two families are:
+
+| Meep parity | Field components | Common name in the $xy$ plane |
+|---|---|---|
+| `mp.EVEN_Z` (= `mp.TE`) | $H_z, E_x, E_y$ | TE |
+| `mp.ODD_Z` (= `mp.TM`) | $E_z, H_x, H_y$ | TM |
+
+For a high-contrast 2D waveguide, the family with the electric field out of plane ($E_z$) usually has the higher effective index. So `NO_PARITY` with `eig_band=1` hands you **TM**, not the TE mode most integrated-photonics work assumes.
+
+## The fix
+
+State the polarization explicitly on every eigenmode source *and* monitor:
+
+```python
+import meep as mp
+
+src = mp.EigenModeSource(
+    src=mp.GaussianSource(fcen, fwidth=df),
+    center=mp.Vector3(x_src),
+    size=mp.Vector3(0, sy),
+    eig_band=1,
+    eig_parity=mp.TE,   # EVEN_Z: Hz, Ex, Ey
+)
+
+coeffs = sim.get_eigenmode_coefficients(
+    flux_monitor,
+    bands=[1],
+    eig_parity=mp.TE,   # must match the source
+)
+```
+
+## How to check you got it right
+
+Don't trust the parity flag alone. Verify it from the fields:
+
+1. Record DFT fields for **both** $E_z$ and $H_z$ at the operating frequency.
+2. Compare their peak magnitudes. With TE genuinely forced, $H_z$ dominates and $E_z$ sits at numerical noise.
+3. Plot $\mathrm{Re}(H_z)$ and check that the mode profile and its effective index match an independent mode solve.
+
+## Takeaway
+
+`NO_PARITY` means "no constraint", not "the polarization I had in mind." Setting `eig_parity=mp.TE` everywhere costs one argument and removes a whole class of silent errors. It's one of the conventions enforced across every component in my [photonics simulation toolkit](/projects/photonics-simulation-toolkit/).

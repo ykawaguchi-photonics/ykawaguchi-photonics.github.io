@@ -1,0 +1,32 @@
+title: "Freeform Spectrally Stable Topological Photonic Vortex Resonators"
+authors:
+  - "Yuma Kawaguchi"
+  - "Daria Smirnova"
+  - "Filipp Komissarenko"
+  - "Daria Kafeeva"
+  - "Svetlana Kiriushechkina"
+  - "Jeffery Allen"
+  - "Monica Allen"
+  - "Andrea Alù"
+  - "Alexander B. Khanikaev"
+year: 2026
+date: "2026-03-23"
+venue: "arXiv preprint"
+venueShort: "arXiv"
+type: "preprint"
+arxiv: "2603.21486"
+abstract: "Topological concepts have been at the forefront of materials research in recent years, driving a revolution in our understanding of the response of quantum materials and enabling new ways to manipulate light and sound in topological metamaterials. Topological defects and topological boundaries of different dimensions have driven a paradigm shift in photonics, where topological photonic crystals and metamaterials can be engineered to create one-way flow of energy robust to defects or to control such flows with synthetic degrees of freedom along topological domain walls. More recently, topological point singularities encoded into photonic structures have been shown to enable confinement of optical modes with the topologically nontrivial nature of the cavity imprinted into the vorticity of optical far fields. Here we demonstrate that the two latter concepts - domain wall and point singularities - can be unified into an even more powerful tool to enable arbitrarily shaped resonant cavities of any dimension supporting spectrally stable zero-energy modes. We experimentally confirm that such modes, whose existence is guaranteed by topological principles, allow an unprecedented degree of control over the optical field, which appears to have no phase modulation across space, can have any desirable radiation pattern, and enables spectral stability regardless of shape or length."
+areas:
+  - "topological-photonics"
+  - "metasurfaces"
+tags:
+  - "topological cavity"
+  - "vortex resonator"
+  - "zero-energy modes"
+  - "domain walls"
+featured: true
+selfRole: "first"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

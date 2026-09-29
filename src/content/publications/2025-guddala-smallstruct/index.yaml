@@ -1,0 +1,33 @@
+title: "Topological Polaritonic Metamaterials Realized in Bulk Transition Metal Dichalcogenide Crystals"
+authors:
+  - "Sriram Guddala"
+  - "Svetlana Kiriushechkina"
+  - "Yuma Kawaguchi"
+  - "Anton Vakulenko"
+  - "Daria Smirnova"
+  - "Saroj B. Chand"
+  - "Edda M. Hobuss"
+  - "Gabriele Grosso"
+  - "Andrea Alù"
+  - "Alexander B. Khanikaev"
+year: 2025
+venue: "Small Structures"
+venueShort: "Small Struct."
+volume: "6"
+issue: "11"
+pages: "70142"
+type: "journal"
+doi: "10.1002/sstr.70142"
+areas:
+  - "topological-photonics"
+tags:
+  - "polaritons"
+  - "TMD"
+  - "WS2"
+  - "topological metamaterials"
+featured: false
+selfRole: "co"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

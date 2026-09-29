@@ -1,0 +1,28 @@
+---
+import PageLayout from "../../layouts/PageLayout.astro";
+import PostCard from "../../components/PostCard.astro";
+import CategoryNav from "../../components/CategoryNav.astro";
+import { site } from "../../data/site";
+import { getPosts } from "../../utils/content";
+
+const posts = await getPosts();
+---
+
+<PageLayout
+  title="Blog"
+  heading="Blog"
+  eyebrow="Writing"
+  description={`Research notes, technical notes on photonics simulation (Meep, FDTD, RCWA, GDSFactory), and essays on research careers by ${site.name}.`}
+  lede="Research notes, technical notes on photonics simulation, and occasional essays on research careers and life."
+>
+  <CategoryNav />
+  {posts.length > 0 ? posts.map((p) => <PostCard post={p} />) : <p class="muted">No posts yet — the first one is coming soon.</p>}
+  <p class="rss"><a href="/rss.xml">Subscribe via RSS</a></p>
+</PageLayout>
+
+<style>
+  .rss {
+    margin-top: var(--space-6);
+    font-size: var(--step--1);
+  }
+</style>

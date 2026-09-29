@@ -1,0 +1,41 @@
+---
+import { SELF_NAME } from "../utils/content";
+
+export interface Props {
+  authors: string[];
+  max?: number;
+}
+const { authors, max } = Astro.props;
+
+// When truncating, always keep the self-author visible.
+let shown = authors;
+let truncated = false;
+if (max && authors.length > max) {
+  const selfIdx = authors.findIndex((a) => SELF_NAME.test(a));
+  shown = authors.slice(0, max);
+  if (selfIdx >= max) shown = [...authors.slice(0, max - 1), authors[selfIdx]];
+  truncated = true;
+}
+---
+
+<span class="authors">
+  {
+    shown.map((a, i) => (
+      <>
+        {SELF_NAME.test(a) ? <strong class="self">{a}</strong> : a}
+        {i < shown.length - 1 ? ", " : ""}
+      </>
+    ))
+  }
+  {truncated && <span class="muted">, et al.</span>}
+</span>
+
+<style>
+  .self {
+    color: var(--text);
+    font-weight: 650;
+    text-decoration: underline;
+    text-decoration-color: var(--accent-line);
+    text-underline-offset: 0.2em;
+  }
+</style>

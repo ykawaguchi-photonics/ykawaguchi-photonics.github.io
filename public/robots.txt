@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ykawaguchi-photonics.github.io/sitemap-index.xml

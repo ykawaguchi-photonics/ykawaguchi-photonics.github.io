@@ -1,0 +1,30 @@
+title: "Extending the Measurement Capability of a Stereo Metalens Rangefinder Using the Wavelength Dependence of Focal Length"
+authors:
+  - "Kosuke Nishiura"
+  - "Atsushi Hasegawa"
+  - "Yuma Kawaguchi"
+  - "Keisuke Ozawa"
+  - "Yuki Abe"
+  - "Mineki Taoka"
+  - "Takeshi Yamagishi"
+  - "Kentaro Iwami"
+year: 2026
+venue: "CLEO: Fundamental Science 2026"
+venueShort: "CLEO 2026"
+pages: "FW1F.8"
+type: "conference"
+doi: "10.1364/cleo_fs.2026.fw1f.8"
+abstract: "We achieved 1.49 times measurement range expansion of stereo-camera rangefinder by using wavelength-dependent dual-focal-length metalenses working at 740 and 940 nm. Binocular arrangement on a single image sensor enables ultracompact camera system of 1.45 mm 3 ."
+areas:
+  - "metalens-flat-optics"
+  - "optical-sensing"
+tags:
+  - "metalens"
+  - "rangefinder"
+  - "chromatic dispersion"
+featured: false
+selfRole: "co"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

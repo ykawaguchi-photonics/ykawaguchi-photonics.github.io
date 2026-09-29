@@ -1,0 +1,33 @@
+---
+import { categories } from "../data/categories";
+
+export interface Props {
+  current?: string;
+}
+const { current } = Astro.props;
+---
+
+<nav aria-label="Blog categories" class="cat-nav">
+  <ul class="link-list">
+    <li><a class="chip" href="/blog/" aria-current={!current ? "page" : undefined}>All</a></li>
+    {
+      categories.map((c) => (
+        <li>
+          <a class="chip" href={`/blog/category/${c.slug}/`} aria-current={current === c.slug ? "page" : undefined}>
+            {c.label}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>
+
+<style>
+  .cat-nav {
+    margin-bottom: var(--space-5);
+  }
+  .chip {
+    font-size: 0.875rem;
+    padding: 0.5em 0.9em;
+  }
+</style>

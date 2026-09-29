@@ -1,0 +1,32 @@
+title: "Optical isolator based on chiral light-matter interactions in a ring resonator integrating a dichroic magneto-optical material"
+authors:
+  - "Yuma Kawaguchi"
+  - "Mengyao Li"
+  - "Kai Chen"
+  - "Vinod Menon"
+  - "Andrea Alù"
+  - "Alexander B. Khanikaev"
+year: 2021
+date: "2021-06-14"
+venue: "Applied Physics Letters"
+venueShort: "Appl. Phys. Lett."
+volume: "118"
+issue: "24"
+pages: "241104"
+type: "journal"
+doi: "10.1063/5.0057558"
+abstract: "Nonreciprocal optical devices based on magneto-optical ferrites in their low-loss regimes have been widely investigated as a promising platform for integrated photonics. Nonreciprocity in such devices originates from circular birefringence, leading to frequency splitting of forward and backward modes and, as a result, nonreciprocal transmission. In this paper, we propose an alternative approach to realize nonreciprocal devices based on magneto-optical circular dichroism and relying on the very presence of optical absorption. Our approach relies on the phenomenon of spin-Hall effect of light, which gives rise to chiral near field interactions of light carrying transverse angular momentum with matter, which, in lossy regimes, yields a disparate absorption for forward and backward optical modes. As an example of practical application, we design an optical isolator based on ring resonator integrating Ce:YIG ferrite, and we demonstrate isolation near 880 nm absorption line due to the ionic electric dipole transition. A Ce:YIG film asymmetrically placed on the inner side of the ring yields different critical coupling conditions due to the chiral nature of evanescent light for forward and backward waves, leading to nonreciprocal absorption and transmission. The proposed approach to nonreciprocity may significantly broaden the possible choice of magneto-optical materials for nonreciprocal devices, enabling operation even in lossy regimes."
+areas:
+  - "nonreciprocal-photonics"
+  - "silicon-photonics"
+tags:
+  - "optical isolator"
+  - "ring resonator"
+  - "magneto-optics"
+  - "chiral light-matter interaction"
+featured: true
+selfRole: "first"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

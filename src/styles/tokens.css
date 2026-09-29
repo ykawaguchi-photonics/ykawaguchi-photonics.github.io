@@ -1,0 +1,48 @@
+/* Design tokens. Dark is the default (and only) theme for now; a light theme
+   can be added later by redefining these under :root[data-theme="light"]. */
+:root {
+  color-scheme: dark;
+
+  --bg: #0f1216;
+  --surface: #161b22;
+  --surface-2: #1e252e;
+  --border: #2a323c;
+  --border-strong: #3a444f;
+
+  --text: #e6e8eb;
+  --text-muted: #9aa4af;
+  --text-faint: #7d8793;
+
+  --accent: #f0a04b;
+  --accent-strong: #f5b56e;
+  --accent-soft: rgba(240, 160, 75, 0.12);
+  --accent-line: rgba(240, 160, 75, 0.35);
+
+  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* 1.25 modular scale */
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.5625rem;
+  --step-3: 1.953rem;
+  --step-4: 2.441rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+
+  --radius: 6px;
+  --measure: 68ch;
+  --page-width: 72rem;
+  --content-width: 46rem;
+  --gutter: clamp(1rem, 4vw, 2rem);
+  --transition: 150ms ease;
+}

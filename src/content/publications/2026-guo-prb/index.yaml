@@ -1,0 +1,29 @@
+title: "Topological pseudospin Hall effect and multifrequency corner modes in kagome-based lattices"
+authors:
+  - "Shenglong Guo"
+  - "Qinhui Jiang"
+  - "Yuma Kawaguchi"
+  - "Bo Li"
+  - "Mengyao Li"
+year: 2026
+date: "2026-07-22"
+venue: "Physical Review B"
+venueShort: "Phys. Rev. B"
+volume: "114"
+issue: "5"
+pages: "055417"
+type: "journal"
+doi: "10.1103/rt47-39ft"
+abstract: "Topological phases and modes, including the pseudospin Hall effect with robust edge transport and higher-order corner states, provide versatile control of wave propagation and modal confinement in classical wave platforms. Motivated by the need to systematically engineer multigap interface and corner localization with enhanced design freedom in kagome-derived lattices, we theoretically investigate two types of extended kagome lattices within a tight-binding framework. These lattices support a series of localized modes, including pseudospin Hall interface states and corner states in multiple band gaps and at different frequencies. Meanwhile, the extended kagome designs introduce additional tunable structural parameters, offering enhanced flexibility for tailoring topological and localized states. By constructing two types of extended kagome lattices with distinct topological properties, we identify multiple groups of corner states, pseudospin Hall effect achieved by band folding or accidental degeneracy, and type-II corner states without long-range interactions. These results highlight extended kagome lattices as a flexible platform for topological waveguiding and multifrequency corner-state localization."
+areas:
+  - "topological-photonics"
+tags:
+  - "kagome lattice"
+  - "pseudospin Hall effect"
+  - "corner modes"
+featured: false
+selfRole: "co"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

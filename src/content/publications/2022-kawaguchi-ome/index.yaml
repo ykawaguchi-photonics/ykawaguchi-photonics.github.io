@@ -1,0 +1,29 @@
+title: "Non-reciprocal parity-time symmetry breaking based on magneto-optical and gain/loss double ring resonators"
+authors:
+  - "Yuma Kawaguchi"
+  - "Andrea Alù"
+  - "Alexander B. Khanikaev"
+year: 2022
+date: "2022-03-16"
+venue: "Optical Materials Express"
+venueShort: "Opt. Mater. Express"
+volume: "12"
+issue: "4"
+pages: "1453"
+type: "journal"
+doi: "10.1364/ome.450821"
+abstract: "In this paper, we explore the operation of a nonreciprocal non-Hermitian system consisting of a lossy magneto-optical ring resonator coupled to another ring resonator with gain and loss, and we demonstrate that such a system can exhibit non-reciprocity-based broken parity-time (PT) symmetry and supports one-way exceptional points. The nonreciprocal PT-phase transition is analyzed with the use of both analytical tools based on coupled-mode theory and two-dimensional finite element method simulations. Our calculations show that the response of the system strongly depends on the regime of operation – broken or preserved PT-symmetry. This response is leveraged to show that the system can operate as an optical isolator or a one-way laser with functionality tuned by adjusting loss/gain in the second ring resonator. The proposed system can thus be promising for device applications such as magnetically or even optically switchable non-reciprocal devices and one-way micro-ring lasers."
+areas:
+  - "nonreciprocal-photonics"
+  - "silicon-photonics"
+tags:
+  - "parity-time symmetry"
+  - "ring resonator"
+  - "magneto-optics"
+  - "gain/loss"
+featured: false
+selfRole: "first"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

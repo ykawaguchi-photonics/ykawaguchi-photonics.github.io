@@ -1,0 +1,27 @@
+---
+// Standard inner page: header block (eyebrow + h1 + lede) and a content slot.
+import BaseLayout from "./BaseLayout.astro";
+import type { Props as HeadProps } from "../components/BaseHead.astro";
+
+export interface Props extends HeadProps {
+  heading: string;
+  eyebrow?: string;
+  lede?: string;
+  narrow?: boolean;
+}
+
+const { heading, eyebrow, lede, narrow = false, ...head } = Astro.props;
+---
+
+<BaseLayout {...head}>
+  <slot name="head" slot="head" />
+  <div class:list={["container page", { "container--narrow": narrow }]}>
+    <header class="page-header">
+      {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+      <h1>{heading}</h1>
+      {lede && <p>{lede}</p>}
+      <slot name="header-extra" />
+    </header>
+    <slot />
+  </div>
+</BaseLayout>

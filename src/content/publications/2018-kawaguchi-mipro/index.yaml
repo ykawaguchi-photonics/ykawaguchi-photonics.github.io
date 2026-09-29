@@ -1,0 +1,27 @@
+title: "Simulation-based optimization of Ge-PIN-photodiodes with Al nanohole arrays for refractive index sensing"
+authors:
+  - "Y. Kawaguchi"
+  - "L. Augel"
+  - "H. Uchida"
+  - "M. Inoue"
+  - "J. Schulze"
+  - "I. A. Fischer"
+year: 2018
+venue: "2018 41st International Convention on Information and Communication Technology, Electronics and Microelectronics (MIPRO)"
+venueShort: "MIPRO 2018"
+pages: "23–26"
+type: "conference"
+doi: "10.23919/mipro.2018.8400004"
+areas:
+  - "optical-sensing"
+tags:
+  - "refractive index sensing"
+  - "Ge photodiode"
+  - "nanohole array"
+  - "simulation"
+featured: false
+selfRole: "first"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

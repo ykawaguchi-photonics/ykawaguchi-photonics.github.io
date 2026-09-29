@@ -1,0 +1,116 @@
+---
+import { Image } from "astro:assets";
+import PageLayout from "../../layouts/PageLayout.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { site } from "../../data/site";
+import { getProjects } from "../../utils/content";
+import { breadcrumbSchema } from "../../utils/schema";
+
+const projects = await getProjects();
+---
+
+<PageLayout
+  title="Projects"
+  heading="Projects"
+  eyebrow="Software & research"
+  description={`Research and open-source software projects by ${site.name}, including a Meep FDTD and GDSFactory photonics simulation toolkit.`}
+  lede="Open-source software and research projects, mostly around simulation-driven photonic design."
+>
+  <JsonLd
+    slot="head"
+    data={breadcrumbSchema(Astro.site, [
+      { name: "Home", path: "/" },
+      { name: "Projects", path: "/projects/" },
+    ])}
+  />
+  <ul class="projects">
+    {
+      projects.map((p) => (
+        <li>
+          <article class="project">
+            {p.data.image && (
+              <a class="thumb" href={`/projects/${p.id}/`} tabindex="-1" aria-hidden="true">
+                <Image src={p.data.image} alt="" widths={[400, 800]} sizes="(max-width: 760px) 100vw, 320px" />
+              </a>
+            )}
+            <div>
+              <h2>
+                <a href={`/projects/${p.id}/`}>{p.data.title}</a>
+              </h2>
+              <p class="desc">{p.data.description}</p>
+              <ul class="link-list">
+                {p.data.technologies.map((t) => (
+                  <li>
+                    <span class="chip">{t}</span>
+                  </li>
+                ))}
+              </ul>
+              {p.data.repo && (
+                <p class="repo">
+                  <a href={p.data.repo} rel="noopener">
+                    Source on GitHub →
+                  </a>
+                </p>
+              )}
+            </div>
+          </article>
+        </li>
+      ))
+    }
+  </ul>
+</PageLayout>
+
+<style>
+  .projects {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .project {
+    display: grid;
+    grid-template-columns: 20rem 1fr;
+    gap: var(--space-6);
+    padding: var(--space-6) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .project:not(:has(.thumb)) {
+    grid-template-columns: 1fr;
+  }
+  .thumb {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #fff;
+    align-self: start;
+  }
+  .thumb img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  h2 {
+    font-size: var(--step-2);
+    margin-bottom: var(--space-3);
+  }
+  h2 a {
+    color: var(--text);
+    text-decoration: none;
+  }
+  h2 a:hover {
+    color: var(--accent);
+  }
+  .desc {
+    color: var(--text-muted);
+    max-width: var(--measure);
+  }
+  .repo {
+    margin: var(--space-4) 0 0;
+  }
+  @media (max-width: 760px) {
+    .project {
+      grid-template-columns: 1fr;
+      gap: var(--space-4);
+    }
+  }
+</style>

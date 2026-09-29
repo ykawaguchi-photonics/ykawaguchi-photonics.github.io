@@ -1,0 +1,33 @@
+title: "Spin-dependent properties of optical modes guided by adiabatic trapping potentials in photonic Dirac metasurfaces"
+authors:
+  - "Svetlana Kiriushechkina"
+  - "Anton Vakulenko"
+  - "Daria Smirnova"
+  - "Sriram Guddala"
+  - "Yuma Kawaguchi"
+  - "Filipp Komissarenko"
+  - "Monica Allen"
+  - "Jeffery Allen"
+  - "Alexander B. Khanikaev"
+year: 2023
+date: "2023-04-27"
+venue: "Nature Nanotechnology"
+venueShort: "Nat. Nanotechnol."
+volume: "18"
+issue: "8"
+pages: "875-881"
+type: "journal"
+doi: "10.1038/s41565-023-01380-9"
+areas:
+  - "topological-photonics"
+  - "metasurfaces"
+tags:
+  - "Dirac metasurface"
+  - "spin-dependent modes"
+  - "topological photonics"
+featured: true
+selfRole: "co"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

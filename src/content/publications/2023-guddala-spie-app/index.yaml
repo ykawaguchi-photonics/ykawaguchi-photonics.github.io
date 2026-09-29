@@ -1,0 +1,28 @@
+title: "Topological polaritonic structures based on patterned bulk transition metal dichalcogenide WS2 crystals"
+authors:
+  - "Sriram Guddala"
+  - "Svetlana Kiriushechkina"
+  - "Yuma Kawaguchi"
+  - "Anton Vakulenko"
+  - "Edda Monique Ottilie Proenca Hobuss"
+  - "Andrea Alù"
+  - "Alexander B. Khanikaev"
+year: 2023
+date: "2023-10-04"
+venue: "Active Photonic Platforms (APP) 2023, Proc. SPIE"
+venueShort: "Proc. SPIE (APP 2023)"
+pages: "84"
+type: "conference"
+doi: "10.1117/12.2676948"
+areas:
+  - "topological-photonics"
+tags:
+  - "polaritons"
+  - "TMD"
+  - "WS2"
+featured: false
+selfRole: "co"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

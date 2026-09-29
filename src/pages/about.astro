@@ -1,0 +1,59 @@
+---
+import "../styles/prose.css";
+import PageLayout from "../layouts/PageLayout.astro";
+import JsonLd from "../components/JsonLd.astro";
+import Timeline from "../components/Timeline.astro";
+import { profileLinks, site } from "../data/site";
+import { education, positions } from "../data/timeline";
+import { personSchema } from "../utils/schema";
+---
+
+<PageLayout
+  title="About"
+  heading="About"
+  eyebrow={site.name}
+  description={`About ${site.name}, a photonics researcher in ${site.location} working on metasurfaces, silicon photonics, and topological photonics.`}
+  type="profile"
+  narrow
+>
+  <JsonLd slot="head" data={personSchema(Astro.site)} />
+
+  <div class="prose">
+    <p>
+      I am a photonics researcher based in {site.location}, currently a {site.position} at {site.affiliation}.
+    </p>
+    <p>
+      I received my Ph.D. in Electrical Engineering from The City College of New York (CUNY) in 2024. My doctoral research
+      explored how light can be made to flow in one direction and along protected paths: ring resonators integrating
+      dichroic and magneto-optical materials for on-chip nonreciprocity, all-optical nonreciprocity from valley
+      polarization in two-dimensional semiconductors, and topological photonic systems whose boundary modes carry
+      pseudo-spin and valley degrees of freedom. Before that, I completed my master's studies at the University of
+      Stuttgart in Germany, where I worked on integrated plasmonic refractive-index sensors.
+    </p>
+    <p>
+      Across these topics, my approach combines physical insight with computational design. I use full-wave simulation
+      tools such as Lumerical FDTD, Meep, COMSOL, and RCWA, and I maintain an open-source{" "}
+      <a href="/projects/photonics-simulation-toolkit/">photonics simulation toolkit</a> that connects FDTD, circuit
+      simulation, and GDS layout.
+    </p>
+    <p>
+      I am originally from Japan and have lived and done research in Germany and the United States. On this site I also write{" "}
+      <a href="/blog/category/technical-notes/">technical notes</a> on simulation and occasional posts about research
+      careers and life.
+    </p>
+  </div>
+
+  <section class="section">
+    <div class="section-head"><h2>Path</h2></div>
+    <Timeline entries={[...positions, ...education]} />
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2>Elsewhere</h2></div>
+    <ul class="link-list">
+      {profileLinks().map((l) => <li><a class="chip" href={l.href} rel="me noopener">{l.label}</a></li>)}
+      <li><a class="chip" href="/cv/">CV</a></li>
+      <li><a class="chip" href="/contact/">Contact</a></li>
+    </ul>
+  </section>
+</PageLayout>

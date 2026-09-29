@@ -1,0 +1,21 @@
+title: "Ring Resonators Integrating With Dichroic Materials and in Spin-Valley Controlled Photonic Topological System"
+authors:
+  - "Yuma Kawaguchi"
+year: 2024
+venue: "Ph.D. dissertation, The City College of New York, CUNY"
+venueShort: "Ph.D. thesis, CCNY"
+type: "thesis"
+areas:
+  - "nonreciprocal-photonics"
+  - "topological-photonics"
+tags:
+  - "ring resonator"
+  - "dichroic materials"
+  - "spin-valley"
+  - "topological photonics"
+featured: false
+selfRole: "first"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

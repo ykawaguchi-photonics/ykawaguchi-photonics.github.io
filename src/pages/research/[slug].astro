@@ -1,0 +1,167 @@
+---
+import "../../styles/prose.css";
+import { render } from "astro:content";
+import PageLayout from "../../layouts/PageLayout.astro";
+import PubItem from "../../components/PubItem.astro";
+import PostCard from "../../components/PostCard.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { getPosts, getProjects, getPublications, getResearchAreas, type ResearchArea } from "../../utils/content";
+import { breadcrumbSchema } from "../../utils/schema";
+
+export async function getStaticPaths() {
+  const areas = await getResearchAreas();
+  return areas.map((area) => ({ params: { slug: area.id }, props: { area } }));
+}
+
+const { area } = Astro.props as { area: ResearchArea };
+const { Content } = await render(area);
+const inArea = (refs: { id: string }[]) => refs.some((r) => r.id === area.id);
+const pubs = (await getPublications()).filter((p) => inArea(p.data.areas));
+const projects = (await getProjects()).filter((p) => inArea(p.data.areas));
+const posts = (await getPosts()).filter((p) => inArea(p.data.areas));
+const others = (await getResearchAreas()).filter((a) => a.id !== area.id);
+---
+
+<PageLayout title={area.data.title} heading={area.data.title} eyebrow="Research" description={area.data.description} lede={area.data.description}>
+  <JsonLd
+    slot="head"
+    data={breadcrumbSchema(Astro.site, [
+      { name: "Home", path: "/" },
+      { name: "Research", path: "/research/" },
+      { name: area.data.title, path: `/research/${area.id}/` },
+    ])}
+  />
+
+  <div class="layout">
+    <div class="main">
+      <div class="prose"><Content /></div>
+
+      {
+        area.data.questions.length > 0 && (
+          <section class="section">
+            <div class="section-head">
+              <h2>Research questions</h2>
+            </div>
+            <ul class="questions">
+              {area.data.questions.map((q) => (
+                <li>{q}</li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+
+      {
+        pubs.length > 0 && (
+          <section class="section">
+            <div class="section-head">
+              <h2>Publications</h2>
+              <a href={`/publications/?area=${area.id}`}>View filtered archive →</a>
+            </div>
+            <ol class="pubs">
+              {pubs.map((p) => (
+                <PubItem pub={p} />
+              ))}
+            </ol>
+          </section>
+        )
+      }
+
+      {
+        projects.length > 0 && (
+          <section class="section">
+            <div class="section-head">
+              <h2>Projects</h2>
+            </div>
+            <div class="card-grid">
+              {projects.map((p) => (
+                <a class="card" href={`/projects/${p.id}/`}>
+                  <h3>{p.data.title}</h3>
+                  <p>{p.data.description}</p>
+                </a>
+              ))}
+            </div>
+          </section>
+        )
+      }
+
+      {
+        posts.length > 0 && (
+          <section class="section">
+            <div class="section-head">
+              <h2>Notes &amp; posts</h2>
+            </div>
+            {posts.map((p) => (
+              <PostCard post={p} headingLevel="h3" />
+            ))}
+          </section>
+        )
+      }
+    </div>
+
+    <aside class="side" aria-label="Other research areas">
+      <p class="eyebrow">Other areas</p>
+      <ul>
+        {
+          others.map((a) => (
+            <li>
+              <a href={`/research/${a.id}/`}>{a.data.title}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </aside>
+  </div>
+</PageLayout>
+
+<style>
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-7);
+  }
+  @media (min-width: 1000px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr) 14rem;
+    }
+    .side {
+      position: sticky;
+      top: 5.5rem;
+      align-self: start;
+    }
+  }
+  .section:first-of-type {
+    margin-top: var(--space-7);
+  }
+  .questions {
+    padding-left: 1.2em;
+    max-width: var(--measure);
+  }
+  .questions li {
+    margin-bottom: var(--space-3);
+  }
+  .questions li::marker {
+    color: var(--accent);
+  }
+  .pubs {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .side ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-left: 1px solid var(--border);
+  }
+  .side li a {
+    display: block;
+    padding: 0.35rem 0 0.35rem var(--space-4);
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .side li a:hover {
+    color: var(--accent);
+  }
+</style>

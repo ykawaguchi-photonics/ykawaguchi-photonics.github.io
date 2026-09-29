@@ -1,0 +1,177 @@
+---
+// HTML-only CV. There is deliberately no PDF download: the full CV contains
+// confidential information and must never be published or committed.
+import PageLayout from "../layouts/PageLayout.astro";
+import JsonLd from "../components/JsonLd.astro";
+import Timeline from "../components/Timeline.astro";
+import { site } from "../data/site";
+import { coursework } from "../data/coursework";
+import { education, honors, positions } from "../data/timeline";
+import { getPublications, getResearchAreas, pubTypePlural } from "../utils/content";
+import { personSchema } from "../utils/schema";
+
+const pubs = await getPublications();
+const areas = await getResearchAreas();
+const types = ["journal", "conference", "preprint", "thesis"] as const;
+
+const providers = [...new Set(coursework.map((c) => c.provider))];
+const courseGroups = providers.map((p) => ({ provider: p, courses: coursework.filter((c) => c.provider === p) }));
+---
+
+<PageLayout
+  title="CV"
+  heading="Curriculum Vitae"
+  eyebrow={site.name}
+  description={`Curriculum vitae of ${site.name}: positions, education, research areas, publications, skills, and coursework.`}
+  lede={`${site.position} at ${site.affiliation} · ${site.location}`}
+  narrow
+>
+  <JsonLd slot="head" data={personSchema(Astro.site)} />
+
+  <section class="cv-section">
+    <h2>Positions</h2>
+    <Timeline entries={positions} />
+  </section>
+
+  <section class="cv-section">
+    <h2>Education</h2>
+    <Timeline entries={education} />
+  </section>
+
+  {
+    honors.length > 0 && (
+      <section class="cv-section">
+        <h2>Honors</h2>
+        <Timeline entries={honors} />
+      </section>
+    )
+  }
+
+  <section class="cv-section">
+    <h2>Research areas</h2>
+    <ul class="link-list">
+      {areas.map((a) => <li><a class="chip" href={`/research/${a.id}/`}>{a.data.title}</a></li>)}
+    </ul>
+  </section>
+
+  <section class="cv-section">
+    <h2>Publications</h2>
+    <p>
+      {pubs.length} publications, including
+      {
+        types
+          .map((t) => ({ t, n: pubs.filter((p) => p.data.type === t).length }))
+          .filter((x) => x.n > 0)
+          .map((x) => `${x.n} ${x.n === 1 && x.t !== "thesis" ? pubTypePlural[x.t].replace(/s$/, "") : pubTypePlural[x.t]}`)
+          .join(", ")
+      }. See the <a href="/publications/">full publication archive</a> or{" "}
+      <a href={site.links.scholar} rel="noopener">Google Scholar</a>.
+    </p>
+  </section>
+
+  <section class="cv-section">
+    <h2>Skills &amp; tools</h2>
+    <dl class="skills">
+      <div>
+        <dt>Simulation</dt>
+        <dd>Lumerical FDTD, Meep (FDTD, adjoint optimization), COMSOL Multiphysics, RCWA (Meent)</dd>
+      </div>
+      <div>
+        <dt>Design &amp; layout</dt>
+        <dd>GDSFactory, SAX circuit simulation</dd>
+      </div>
+      <div>
+        <dt>Programming</dt>
+        <dd>Python (NumPy, SciPy, Matplotlib, Jupyter)</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="cv-section" id="coursework">
+    <h2>Coursework</h2>
+    {
+      courseGroups.length > 0 ? (
+        courseGroups.map((g) => (
+          <div class="course-group">
+            <h3>{g.provider}</h3>
+            <ul class="courses">
+              {g.courses.map((c) => (
+                <li>
+                  <span class="course-title">
+                    {c.credential ? (
+                      <a href={c.credential} rel="noopener">
+                        {c.title}
+                      </a>
+                    ) : (
+                      c.title
+                    )}
+                  </span>
+                  {(c.year || c.notes) && <span class="muted">{[c.year, c.notes].filter(Boolean).join(" · ")}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      ) : (
+        <p class="muted">Coursework list coming soon.</p>
+      )
+    }
+  </section>
+</PageLayout>
+
+<style>
+  .cv-section {
+    margin-bottom: var(--space-7);
+  }
+  .cv-section h2 {
+    font-size: var(--step--1);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .cv-section > p {
+    margin-top: var(--space-4);
+  }
+  .skills {
+    margin: 0;
+  }
+  .skills div {
+    display: grid;
+    grid-template-columns: 9rem 1fr;
+    gap: var(--space-4);
+    padding: var(--space-3) 0;
+  }
+  .skills dt {
+    color: var(--text-muted);
+  }
+  .skills dd {
+    margin: 0;
+  }
+  .course-group h3 {
+    font-size: var(--step-0);
+    margin: var(--space-5) 0 var(--space-2);
+  }
+  .courses {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .courses li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-1) var(--space-4);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9375rem;
+  }
+  @media (max-width: 520px) {
+    .skills div {
+      grid-template-columns: 1fr;
+      gap: var(--space-1);
+    }
+  }
+</style>

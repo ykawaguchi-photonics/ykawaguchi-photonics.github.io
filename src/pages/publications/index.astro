@@ -1,0 +1,287 @@
+---
+import PageLayout from "../../layouts/PageLayout.astro";
+import PubItem from "../../components/PubItem.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { site } from "../../data/site";
+import { getPublications, getResearchAreas, pubTypeLabel, pubTypePlural } from "../../utils/content";
+import { breadcrumbSchema } from "../../utils/schema";
+
+const pubs = await getPublications();
+const areas = await getResearchAreas();
+
+// Year groups, newest first.
+const years = [...new Set(pubs.map((p) => p.data.year))].sort((a, b) => b - a);
+const byYear = years.map((y) => ({ year: y, items: pubs.filter((p) => p.data.year === y) }));
+
+// Types in a fixed display order, only those present.
+const typeOrder = ["journal", "conference", "preprint", "thesis", "book-chapter"] as const;
+const typeCounts = typeOrder
+  .map((t) => ({ type: t, n: pubs.filter((p) => p.data.type === t).length }))
+  .filter((t) => t.n > 0);
+
+const usedAreas = areas.filter((a) => pubs.some((p) => p.data.areas.some((r) => r.id === a.id)));
+const firstAuthorCount = pubs.filter((p) => p.data.selfRole === "first").length;
+---
+
+<PageLayout
+  title="Publications"
+  heading="Publications"
+  eyebrow="Archive"
+  description={`Complete list of publications by ${site.name}: journal articles, conference papers, preprints, and thesis in photonics, metasurfaces, silicon photonics, and topological photonics.`}
+  lede="Complete list of journal articles, conference papers, preprints, and thesis, newest first."
+>
+  <JsonLd
+    slot="head"
+    data={breadcrumbSchema(Astro.site, [
+      { name: "Home", path: "/" },
+      { name: "Publications", path: "/publications/" },
+    ])}
+  />
+
+  <p class="summary" slot="header-extra">
+    <strong>{pubs.length}</strong> publications
+    {typeCounts.map((t) => <span> · {t.n} {t.n === 1 ? pubTypeLabel[t.type].toLowerCase() : pubTypePlural[t.type]}</span>)}
+    <span> · {firstAuthorCount} first-author</span>
+    <br />
+    <span class="muted"
+      >Citation metrics: <a href={site.links.scholar} rel="noopener">Google Scholar profile</a>.</span
+    >
+  </p>
+
+  <form class="filters" id="pub-filters" role="search" aria-label="Filter publications" hidden>
+    <div class="row">
+      <label class="search">
+        <span class="visually-hidden">Search publications</span>
+        <input type="search" name="q" placeholder="Search title, author, venue, keyword…" autocomplete="off" />
+      </label>
+      <label class="year">
+        <span class="visually-hidden">Year</span>
+        <select name="year">
+          <option value="">All years</option>
+          {years.map((y) => <option value={y}>{y}</option>)}
+        </select>
+      </label>
+    </div>
+    <div class="row chips" role="group" aria-label="Publication type">
+      <span class="label">Type</span>
+      <button type="button" class="chip" data-filter="type" data-value="" aria-pressed="true">All</button>
+      {
+        typeCounts.map((t) => (
+          <button type="button" class="chip" data-filter="type" data-value={t.type} aria-pressed="false">
+            {pubTypeLabel[t.type]}
+          </button>
+        ))
+      }
+    </div>
+    <div class="row chips" role="group" aria-label="Research area">
+      <span class="label">Area</span>
+      <button type="button" class="chip" data-filter="area" data-value="" aria-pressed="true">All</button>
+      {
+        usedAreas.map((a) => (
+          <button type="button" class="chip" data-filter="area" data-value={a.id} aria-pressed="false">
+            {a.data.short}
+          </button>
+        ))
+      }
+    </div>
+    <p class="status" aria-live="polite" id="pub-status"></p>
+  </form>
+
+  <div class="archive" id="pub-archive">
+    {
+      byYear.map((g) => (
+        <section class="year-group" data-year-group={g.year} aria-labelledby={`y-${g.year}`}>
+          <h2 id={`y-${g.year}`} class="year-heading">
+            {g.year}
+          </h2>
+          <ol class="pubs" reversed>
+            {g.items.map((p) => (
+              <PubItem pub={p} />
+            ))}
+          </ol>
+        </section>
+      ))
+    }
+    <p class="empty" id="pub-empty" hidden>No publications match these filters.</p>
+  </div>
+</PageLayout>
+
+<script>
+  // Progressive enhancement: the full list is server-rendered; this only hides items.
+  const form = document.getElementById("pub-filters") as HTMLFormElement | null;
+  const archive = document.getElementById("pub-archive");
+  if (form && archive) {
+    form.hidden = false;
+    const items = Array.from(archive.querySelectorAll<HTMLLIElement>("li[data-year]"));
+    const groups = Array.from(archive.querySelectorAll<HTMLElement>("[data-year-group]"));
+    const status = document.getElementById("pub-status")!;
+    const empty = document.getElementById("pub-empty")!;
+    const q = form.elements.namedItem("q") as HTMLInputElement;
+    const year = form.elements.namedItem("year") as HTMLSelectElement;
+    const state = { type: "", area: "" };
+
+    const params = new URLSearchParams(location.search);
+    q.value = params.get("q") ?? "";
+    year.value = params.get("year") ?? "";
+    state.type = params.get("type") ?? "";
+    state.area = params.get("area") ?? "";
+
+    const syncChips = () => {
+      form.querySelectorAll<HTMLButtonElement>("button[data-filter]").forEach((b) => {
+        const key = b.dataset.filter as "type" | "area";
+        b.setAttribute("aria-pressed", String(state[key] === b.dataset.value));
+      });
+    };
+
+    const apply = () => {
+      const terms = q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      let shown = 0;
+      for (const li of items) {
+        const ok =
+          (!state.type || li.dataset.type === state.type) &&
+          (!state.area || (li.dataset.areas ?? "").split(" ").includes(state.area)) &&
+          (!year.value || li.dataset.year === year.value) &&
+          terms.every((t) => (li.dataset.search ?? "").includes(t));
+        li.hidden = !ok;
+        if (ok) shown++;
+      }
+      for (const g of groups) g.hidden = !g.querySelector("li[data-year]:not([hidden])");
+      empty.hidden = shown > 0;
+      const filtered = shown !== items.length;
+      status.textContent = filtered ? `Showing ${shown} of ${items.length} publications` : "";
+
+      const next = new URLSearchParams();
+      if (q.value.trim()) next.set("q", q.value.trim());
+      if (state.type) next.set("type", state.type);
+      if (state.area) next.set("area", state.area);
+      if (year.value) next.set("year", year.value);
+      const qs = next.toString();
+      history.replaceState(null, "", qs ? `?${qs}` : location.pathname);
+    };
+
+    form.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-filter]");
+      if (!b) return;
+      state[b.dataset.filter as "type" | "area"] = b.dataset.value ?? "";
+      syncChips();
+      apply();
+    });
+    q.addEventListener("input", apply);
+    year.addEventListener("change", apply);
+    form.addEventListener("submit", (e) => e.preventDefault());
+
+    syncChips();
+    apply();
+  }
+</script>
+
+<style>
+  .summary {
+    font-size: 0.9375rem !important;
+    color: var(--text-muted);
+    margin-top: var(--space-4) !important;
+    line-height: 1.7 !important;
+  }
+  .summary strong {
+    color: var(--text);
+  }
+  .filters {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    margin-bottom: var(--space-7);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .search {
+    flex: 1 1 18rem;
+  }
+  input,
+  select {
+    width: 100%;
+    font: inherit;
+    font-size: 0.9375rem;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.55rem 0.75rem;
+  }
+  input::placeholder {
+    color: var(--text-faint);
+  }
+  input:focus,
+  select:focus {
+    border-color: var(--accent-line);
+  }
+  .year {
+    flex: 0 0 10rem;
+  }
+  .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    width: 3.2rem;
+  }
+  .status {
+    font-size: var(--step--1);
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .status:empty {
+    display: none;
+  }
+  .year-group {
+    display: grid;
+    grid-template-columns: 6rem 1fr;
+    gap: var(--space-5);
+    margin-bottom: var(--space-6);
+  }
+  .year-group[hidden] {
+    display: none;
+  }
+  .year-heading {
+    font-size: var(--step-1);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+    position: sticky;
+    top: 5rem;
+    align-self: start;
+  }
+  .pubs {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .empty {
+    color: var(--text-muted);
+  }
+  @media (max-width: 760px) {
+    .year-group {
+      grid-template-columns: 1fr;
+      gap: var(--space-3);
+    }
+    .year-heading {
+      position: static;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: var(--space-2);
+    }
+    .year {
+      flex: 1 1 100%;
+    }
+    .label {
+      width: 100%;
+    }
+  }
+</style>

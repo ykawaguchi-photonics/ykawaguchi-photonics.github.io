@@ -1,0 +1,183 @@
+---
+import { Image } from "astro:assets";
+import Authors from "./Authors.astro";
+import {
+  arxivUrl,
+  doiUrl,
+  pubTypeLabel,
+  venueLine,
+  type Publication,
+} from "../utils/content";
+
+export interface Props {
+  pub: Publication;
+  /** Show abstract toggle and thumbnail (archive) or keep compact (home). */
+  compact?: boolean;
+  headingLevel?: "h3" | "h4";
+}
+
+const { pub, compact = false, headingLevel: H = "h3" } = Astro.props;
+const d = pub.data;
+const href = `/publications/${pub.id}/`;
+const areaIds = d.areas.map((a) => a.id);
+const searchText = [d.title, d.authors.join(" "), d.venue, d.venueShort ?? "", d.tags.join(" "), d.abstract ?? ""]
+  .join(" ")
+  .toLowerCase();
+---
+
+<li
+  class:list={["pub", { "has-image": d.image && !compact, compact }]}
+  data-year={d.year}
+  data-type={d.type}
+  data-areas={areaIds.join(" ")}
+  data-search={compact ? undefined : searchText}
+>
+  {
+    d.image && !compact && (
+      <a class="thumb" href={href} tabindex="-1" aria-hidden="true">
+        <Image src={d.image} alt="" widths={[240, 480, 720]} sizes="(max-width: 640px) 100vw, 160px" loading="lazy" />
+      </a>
+    )
+  }
+  <div class="body">
+    <H class="title"><a href={href}>{d.title}</a></H>
+    <p class="meta"><Authors authors={d.authors} max={compact ? 6 : undefined} /></p>
+    <p class="venue">
+      <em>{compact ? (d.venueShort ?? d.venue) : venueLine(pub)}</em>
+      <span class="sep" aria-hidden="true">·</span>
+      <span>{d.year}</span>
+      {!compact && d.type !== "journal" && <span class="type">{pubTypeLabel[d.type]}</span>}
+    </p>
+    {
+      !compact && (
+        <ul class="link-list links" aria-label="Links">
+          {d.doi && <li><a class="chip" href={doiUrl(d.doi)} rel="noopener">DOI</a></li>}
+          {d.arxiv && <li><a class="chip" href={arxivUrl(d.arxiv)} rel="noopener">arXiv</a></li>}
+          {d.url && !d.doi && <li><a class="chip" href={d.url} rel="noopener">Link</a></li>}
+          {d.pdf && <li><a class="chip" href={d.pdf} rel="noopener">PDF</a></li>}
+          {d.code && <li><a class="chip" href={d.code} rel="noopener">Code</a></li>}
+          {d.abstract && (
+            <li class="abs-li">
+              <details class="abstract">
+                <summary class="chip">Abstract</summary>
+                <p>{d.abstract}</p>
+              </details>
+            </li>
+          )}
+        </ul>
+      )
+    }
+  </div>
+</li>
+
+<style>
+  .pub {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+    padding: var(--space-5) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .pub.compact {
+    padding: var(--space-4) 0;
+  }
+  .pub:first-child {
+    padding-top: 0;
+  }
+  .pub.has-image {
+    grid-template-columns: 160px 1fr;
+  }
+  .thumb {
+    display: block;
+    align-self: start;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .thumb img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .title {
+    text-wrap: pretty;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.005em;
+    margin: 0 0 var(--space-2);
+  }
+  .title a {
+    color: var(--text);
+    text-decoration: none;
+  }
+  .title a:hover {
+    color: var(--accent);
+  }
+  .meta,
+  .venue {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    margin: 0 0 var(--space-1);
+    line-height: 1.5;
+  }
+  .venue em {
+    color: var(--text);
+    font-style: italic;
+  }
+  .sep {
+    margin: 0 0.4em;
+  }
+  .type {
+    margin-left: 0.6em;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .links {
+    margin-top: var(--space-3);
+    align-items: flex-start;
+  }
+  .abs-li {
+    display: contents;
+  }
+  .abstract summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  .abstract summary::-webkit-details-marker {
+    display: none;
+  }
+  .abstract summary::after {
+    content: "+";
+    margin-left: 0.2em;
+  }
+  .abstract[open] summary::after {
+    content: "−";
+  }
+  .abstract[open] summary {
+    background: var(--accent-soft);
+    border-color: var(--accent-line);
+    color: var(--accent-strong);
+  }
+  .abstract[open] {
+    flex-basis: 100%;
+  }
+  .abstract p {
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--text);
+    max-width: var(--measure);
+    margin: var(--space-3) 0 0;
+    padding-left: var(--space-4);
+    border-left: 2px solid var(--border-strong);
+  }
+  @media (max-width: 640px) {
+    .pub.has-image {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

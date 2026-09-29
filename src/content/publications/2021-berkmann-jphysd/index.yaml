@@ -1,0 +1,36 @@
+title: "Plasmonic gratings from highly doped Ge1−y\n               Sn\n                  y\n                films on Si"
+authors:
+  - "Fritz Berkmann"
+  - "Markus Ayasse"
+  - "Jon Schlipf"
+  - "Florian Mörz"
+  - "David Weißhaupt"
+  - "Michael Oehme"
+  - "Slawomir Prucnal"
+  - "Yuma Kawaguchi"
+  - "Daniel Schwarz"
+  - "Inga Anita Fischer"
+  - "Jörg Schulze"
+year: 2021
+date: "2021-08-31"
+venue: "Journal of Physics D: Applied Physics"
+venueShort: "J. Phys. D"
+volume: "54"
+issue: "44"
+pages: "445109"
+type: "journal"
+doi: "10.1088/1361-6463/ac1f51"
+abstract: "Plasmonic modes in metal structures are of great interest for optical applications. While metals such as Au and Ag are highly suitable for such applications at visible wavelengths, their high Drude losses limit their usefulness at mid-infrared wavelengths. Highly n-doped Ge1−y Sn y alloys are interesting possible alternative materials for plasmonic applications in this wavelength range. Here, we investigate the use of highly n-doped Ge1−y Sn y films grown directly on Si by molecular beam epitaxy with varying Sn-content from 0% up to 7.6% for plasmonic grating structures. We compare plasma wavelengths and relaxation times obtained from electrical and optical characterization. While theoretical considerations indicate that the decreasing effective mass with increasing Sn content in Ge1−y Sn y films could improve performance for plasmonic applications, our optical characterization results show that the utilization of Ge1−y Sn y films grown directly on Si is only beneficial if material quality can be improved."
+areas:
+  - "silicon-photonics"
+tags:
+  - "plasmonics"
+  - "GeSn"
+  - "group-IV photonics"
+  - "grating"
+featured: false
+selfRole: "co"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

@@ -1,0 +1,234 @@
+---
+import { Image } from "astro:assets";
+import { getEntries } from "astro:content";
+import PageLayout from "../../layouts/PageLayout.astro";
+import Authors from "../../components/Authors.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import CopyButton from "../../components/CopyButton.astro";
+import {
+  arxivUrl,
+  bibtex,
+  doiUrl,
+  getPosts,
+  getPublications,
+  pubTypeLabel,
+  venueLine,
+  type Publication,
+} from "../../utils/content";
+import { breadcrumbSchema, scholarlyArticleSchema } from "../../utils/schema";
+
+export async function getStaticPaths() {
+  const pubs = await getPublications();
+  return pubs.map((pub) => ({ params: { slug: pub.id }, props: { pub } }));
+}
+
+const { pub } = Astro.props as { pub: Publication };
+const d = pub.data;
+const path = `/publications/${pub.id}/`;
+const areas = await getEntries(d.areas);
+const posts = (await getPosts()).filter((p) => p.data.relatedPublications.some((r) => r.id === pub.id));
+const description = d.abstract
+  ? d.abstract.slice(0, 155).replace(/\s+\S*$/, "") + "…"
+  : `${d.title}. ${d.authors.slice(0, 3).join(", ")}${d.authors.length > 3 ? " et al." : ""}, ${d.venue} (${d.year}).`;
+const bib = bibtex(pub);
+---
+
+<PageLayout
+  title={d.title}
+  heading={d.title}
+  eyebrow={`${pubTypeLabel[d.type]} · ${d.year}`}
+  description={description}
+  type="article"
+  image={d.image?.src}
+  imageAlt={d.imageAlt}
+  narrow
+>
+  <Fragment slot="head">
+    <JsonLd data={scholarlyArticleSchema(Astro.site, pub, path)} />
+    <JsonLd
+      data={breadcrumbSchema(Astro.site, [
+        { name: "Home", path: "/" },
+        { name: "Publications", path: "/publications/" },
+        { name: d.title, path },
+      ])}
+    />
+    {/* Google Scholar indexing tags */}
+    <meta name="citation_title" content={d.title} />
+    {d.authors.map((a) => <meta name="citation_author" content={a} />)}
+    <meta name="citation_publication_date" content={d.date ? d.date.toISOString().slice(0, 10).replace(/-/g, "/") : String(d.year)} />
+    {d.type === "journal" && <meta name="citation_journal_title" content={d.venue} />}
+    {d.type === "conference" && <meta name="citation_conference_title" content={d.venue} />}
+    {d.volume && <meta name="citation_volume" content={d.volume} />}
+    {d.issue && <meta name="citation_issue" content={d.issue} />}
+    {d.doi && <meta name="citation_doi" content={d.doi} />}
+  </Fragment>
+
+  <div slot="header-extra" class="head-meta">
+    <p class="authors"><Authors authors={d.authors} /></p>
+    <p class="venue"><em>{venueLine(pub)}</em> ({d.year})</p>
+    <ul class="link-list">
+      {d.doi && <li><a class="chip" href={doiUrl(d.doi)} rel="noopener">DOI: {d.doi}</a></li>}
+      {d.arxiv && <li><a class="chip" href={arxivUrl(d.arxiv)} rel="noopener">arXiv:{d.arxiv}</a></li>}
+      {d.url && !d.doi && <li><a class="chip" href={d.url} rel="noopener">Publisher page</a></li>}
+      {d.pdf && <li><a class="chip" href={d.pdf} rel="noopener">PDF</a></li>}
+      {d.code && <li><a class="chip" href={d.code} rel="noopener">Code</a></li>}
+    </ul>
+  </div>
+
+  {
+    d.image && (
+      <figure class="lead-figure">
+        <Image src={d.image} alt={d.imageAlt ?? ""} widths={[480, 800, 1200]} sizes="(max-width: 800px) 100vw, 736px" />
+      </figure>
+    )
+  }
+
+  {
+    d.abstract && (
+      <section class="block">
+        <h2>Abstract</h2>
+        <p class="abstract">{d.abstract}</p>
+      </section>
+    )
+  }
+
+  {
+    d.figures.length > 0 && (
+      <section class="block">
+        <h2>Figures</h2>
+        {d.figures.map((f, i) => (
+          <figure class="figure">
+            <Image src={f.src} alt={f.alt} widths={[480, 800, 1200]} sizes="(max-width: 800px) 100vw, 736px" loading="lazy" />
+            <figcaption>
+              <strong>Figure {i + 1}.</strong> {f.caption}
+            </figcaption>
+          </figure>
+        ))}
+      </section>
+    )
+  }
+
+  {
+    (areas.length > 0 || d.tags.length > 0) && (
+      <section class="block">
+        <h2>Topics</h2>
+        <ul class="link-list">
+          {areas.map((a) => (
+            <li>
+              <a class="chip" href={`/research/${a.id}/`}>
+                {a.data.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+        {d.tags.length > 0 && (
+          <p class="tags">
+            {d.tags.map((t) => (
+              <span class="tag">{t}</span>
+            ))}
+          </p>
+        )}
+      </section>
+    )
+  }
+
+  {
+    posts.length > 0 && (
+      <section class="block">
+        <h2>Related notes</h2>
+        <ul>
+          {posts.map((p) => (
+            <li>
+              <a href={`/blog/${p.id}/`}>{p.data.title}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  <section class="block">
+    <h2>Cite</h2>
+    <div class="bib">
+      <pre id="bibtex"><code>{bib}</code></pre>
+      <CopyButton target="bibtex" label="Copy BibTeX" />
+    </div>
+  </section>
+
+  <p class="back"><a href="/publications/">← All publications</a></p>
+</PageLayout>
+
+<style>
+  .head-meta {
+    margin-top: var(--space-5);
+  }
+  .head-meta p {
+    font-size: 1rem !important;
+    color: var(--text-muted);
+    margin: 0 0 var(--space-2) !important;
+  }
+  .head-meta .venue em {
+    color: var(--text);
+  }
+  .head-meta ul {
+    margin-top: var(--space-4);
+  }
+  .block {
+    margin-bottom: var(--space-7);
+  }
+  .block h2 {
+    font-size: var(--step-0);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+  }
+  .abstract {
+    font-family: var(--font-serif);
+    font-size: 1.125rem;
+    line-height: 1.7;
+    max-width: var(--measure);
+  }
+  .lead-figure,
+  .figure {
+    margin: 0 0 var(--space-6);
+  }
+  .lead-figure img,
+  .figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  figcaption {
+    font-size: var(--step--1);
+    color: var(--text-muted);
+    margin-top: var(--space-3);
+    line-height: 1.5;
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+  .bib {
+    position: relative;
+  }
+  .bib pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-4);
+    padding-top: var(--space-6);
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .back {
+    margin-top: var(--space-7);
+  }
+</style>

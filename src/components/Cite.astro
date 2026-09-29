@@ -1,0 +1,25 @@
+---
+// Inline citation linking to a paper in the publication archive.
+// MDX: <Cite pub="2024-kawaguchi-sciadv" />  ->  (Kawaguchi et al., Sci. Adv. 2024)
+import { getEntry } from "astro:content";
+
+export interface Props {
+  pub: string;
+}
+const { pub } = Astro.props;
+const entry = await getEntry("publications", pub);
+if (!entry) throw new Error(`<Cite>: unknown publication id "${pub}"`);
+const d = entry.data;
+const family = d.authors[0].split(" ").pop();
+const label = `${family}${d.authors.length > 1 ? " et al." : ""}, ${d.venueShort ?? d.venue} ${d.year}`;
+---
+
+<span class="cite">(<a href={`/publications/${entry.id}/`} title={d.title}>{label}</a>)</span>
+
+<style>
+  .cite {
+    font-family: var(--font-sans);
+    font-size: 0.9em;
+    white-space: nowrap;
+  }
+</style>

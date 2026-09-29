@@ -1,0 +1,77 @@
+---
+import "katex/dist/katex.min.css";
+import "../../styles/prose.css";
+import { getEntries, render } from "astro:content";
+import PageLayout from "../../layouts/PageLayout.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { site } from "../../data/site";
+import { getProjects, type Project } from "../../utils/content";
+import { breadcrumbSchema } from "../../utils/schema";
+
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return projects.map((project) => ({ params: { slug: project.id }, props: { project } }));
+}
+
+const { project } = Astro.props as { project: Project };
+const d = project.data;
+const { Content } = await render(project);
+const areas = await getEntries(d.areas);
+const path = `/projects/${project.id}/`;
+---
+
+<PageLayout
+  title={d.title}
+  heading={d.title}
+  eyebrow="Project"
+  description={d.description}
+  lede={d.description}
+  image={d.image?.src}
+  imageAlt={d.imageAlt}
+>
+  <Fragment slot="head">
+    <JsonLd
+      data={{
+        "@context": "https://schema.org",
+        "@type": "SoftwareSourceCode",
+        name: d.title,
+        description: d.description,
+        codeRepository: d.repo,
+        programmingLanguage: "Python",
+        author: { "@type": "Person", name: site.name },
+        url: new URL(path, Astro.site).href,
+      }}
+    />
+    <JsonLd
+      data={breadcrumbSchema(Astro.site, [
+        { name: "Home", path: "/" },
+        { name: "Projects", path: "/projects/" },
+        { name: d.title, path },
+      ])}
+    />
+  </Fragment>
+
+  <div slot="header-extra" class="actions">
+    {d.repo && <a class="chip" href={d.repo} rel="noopener">GitHub repository</a>}
+    {d.website && <a class="chip" href={d.website} rel="noopener">Website</a>}
+    {areas.map((a) => <a class="chip" href={`/research/${a.id}/`}>{a.data.title}</a>)}
+  </div>
+
+  <div class="prose"><Content /></div>
+  <p class="back"><a href="/projects/">← All projects</a></p>
+</PageLayout>
+
+<style>
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-5);
+  }
+  .prose {
+    margin-inline: 0;
+  }
+  .back {
+    margin-top: var(--space-7);
+  }
+</style>

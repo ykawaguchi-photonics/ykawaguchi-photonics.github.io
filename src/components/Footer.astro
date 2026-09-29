@@ -1,0 +1,60 @@
+---
+import { profileLinks, site } from "../data/site";
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container inner">
+    <div>
+      <p class="name">{site.name}</p>
+      <p class="muted">{site.title} · {site.location}</p>
+    </div>
+    <nav aria-label="Profiles and feeds">
+      <ul class="link-list">
+        {profileLinks().map((l) => <li><a href={l.href} rel="me noopener">{l.label}</a></li>)}
+        <li><a href="/contact/">Contact</a></li>
+        <li><a href="/rss.xml">RSS</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="container legal">
+    <p>© {year} {site.name}. Built with Astro.</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--border);
+    margin-top: var(--space-8);
+    padding-block: var(--space-6) var(--space-5);
+    font-size: 0.9375rem;
+  }
+  .inner {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-5);
+  }
+  .name {
+    font-weight: 600;
+    margin: 0 0 var(--space-1);
+  }
+  .inner p.muted {
+    margin: 0;
+  }
+  .link-list {
+    gap: var(--space-2) var(--space-5);
+  }
+  .link-list a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .link-list a:hover {
+    color: var(--accent);
+  }
+  .legal p {
+    margin: var(--space-5) 0 0;
+    font-size: var(--step--1);
+    color: var(--text-faint);
+  }
+</style>

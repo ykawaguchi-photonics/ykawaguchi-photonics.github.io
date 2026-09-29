@@ -1,0 +1,29 @@
+title: "Development of a Full-Color Metalens for Near-Diffraction-Limited Focusing Performance"
+authors:
+  - "Atsushi Hasegawa"
+  - "Kosuke Nishiura"
+  - "Keisuke Ozawa"
+  - "Yuki Abe"
+  - "Yuma Kawaguchi"
+  - "Mineki Taoka"
+  - "Takeshi Yamagishi"
+  - "Kentaro Iwami"
+year: 2025
+date: "2025-07-13"
+venue: "2025 International Conference on Optical MEMS and Nanophotonics (OMN)"
+venueShort: "OMN 2025"
+pages: "1-2"
+type: "conference"
+doi: "10.1109/omn65869.2025.11125995"
+areas:
+  - "metalens-flat-optics"
+tags:
+  - "metalens"
+  - "full-color"
+  - "focusing"
+featured: false
+selfRole: "co"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

@@ -1,0 +1,35 @@
+---
+import PageLayout from "../../../layouts/PageLayout.astro";
+import PostCard from "../../../components/PostCard.astro";
+import CategoryNav from "../../../components/CategoryNav.astro";
+import JsonLd from "../../../components/JsonLd.astro";
+import { categories } from "../../../data/categories";
+import { getPosts } from "../../../utils/content";
+import { breadcrumbSchema } from "../../../utils/schema";
+
+export function getStaticPaths() {
+  return categories.map((c) => ({ params: { category: c.slug }, props: { cat: c } }));
+}
+
+const { cat } = Astro.props as { cat: (typeof categories)[number] };
+const posts = (await getPosts()).filter((p) => p.data.category === cat.slug);
+---
+
+<PageLayout
+  title={`${cat.label} — Blog`}
+  heading={cat.label}
+  eyebrow="Blog"
+  description={cat.description}
+  lede={cat.description}
+>
+  <JsonLd
+    slot="head"
+    data={breadcrumbSchema(Astro.site, [
+      { name: "Home", path: "/" },
+      { name: "Blog", path: "/blog/" },
+      { name: cat.label, path: `/blog/category/${cat.slug}/` },
+    ])}
+  />
+  <CategoryNav current={cat.slug} />
+  {posts.length > 0 ? posts.map((p) => <PostCard post={p} />) : <p class="muted">No posts in this category yet.</p>}
+</PageLayout>

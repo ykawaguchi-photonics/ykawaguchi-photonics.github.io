@@ -10,22 +10,30 @@ export type TimelineEntry = {
 
 export const positions: TimelineEntry[] = [
   {
-    period: "Present",
+    period: "Nov 2024 –Present",
     role: "Researcher",
     org: "Samsung R&D",
     place: "Yokohama, Japan",
+    detail:
+      "Metalens and Meta-optics.",
   },
   {
-    period: "",
-    role: "Visiting Researcher (one-year research stay)",
-    org: "University of Stuttgart",
-    place: "Stuttgart, Germany",
+    period: "Sep 2024 – Oct 2024 ",
+    role: "Visiting Researcher",
+    org: " Brandenburg University of Technology",
+    place: "Cottbus, Germany",
+  },
+   {
+    period: "Jun 2024 – Aug 2024 ",
+    role: "Postdoctral Researcher",
+    org: "The City College of New York, CUNY",
+    place: "New York, USA",
   },
 ];
 
 export const education: TimelineEntry[] = [
   {
-    period: "2024",
+    period: "Aug 2024 – Jun 2024",
     role: "Ph.D., Electrical Engineering",
     org: "The City College of New York, CUNY",
     place: "New York, USA",
@@ -33,19 +41,34 @@ export const education: TimelineEntry[] = [
       "Dissertation: Ring Resonators Integrating With Dichroic Materials and in Spin-Valley Controlled Photonic Topological System.",
   },
   {
-    period: "",
+    period: "Apr 2017 – Mar 2019",
     role: "M.Sc.",
     org: "Toyohashi University of Technology",
     place: "Toyohashi, Japan",
   },
   {
-    period: "",
-    role: "B.Sc.",
-    org: "Toyohashi University of Technology",
-    place: "Toyohashi, Japan",
+    period: "Sep 2017 – Sep 2018",
+    role: "Visiting Research Graduate Student",
+    org: "University of Stuttgart",
+    place: "Stuttgart, Germany",
+  },
+  {
+    period: "Apr 2010 – Mar 2015",
+    role: "Associate Degree in Eng.",
+    org: "Sasebo National College of Technology",
+    place: "Nagasaki, Japan",
   },
 ];
 
 export const honors: TimelineEntry[] = [
-  { period: "2023", role: "Quad Fellowship", org: "Quad Fellowship" },
+  { 
+    period: "2017", role: "Tobitate! Study Abroad Initiative", org: "Ministry of Education, Culture, Sports, Science and Technology (MEXT), Japan",
+  detail:
+      "Japan’s flagship public-private scholarship program supporting students pursuing international study and global experiences.",
+  },
+  { 
+    period: "2023", role: "Quad Fellowship", org: "Quad Fellowship",
+  detail:
+      "International STEM fellowship for emerging researchers from Australia, India, Japan, and the United States.",
+  },
 ];

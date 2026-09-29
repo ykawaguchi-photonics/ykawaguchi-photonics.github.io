@@ -28,6 +28,9 @@ tags:
 featured: false
 selfRole: "co"
 
-# Optional figure: put an image in this folder and uncomment.
-# image: ./figure.png
-# imageAlt: "Describe what the figure shows"
+image: ./cover.jpg
+imageAlt: "Journal cover art showing excitons on a patterned triangular-lattice metamaterial with two differently colored topological domains."
+figures:
+  - src: ./cover.jpg
+    alt: "Journal cover art showing excitons on a patterned triangular-lattice metamaterial with two differently colored topological domains."
+    caption: "Inside front cover, Small Structures 6(11), November 2025, featuring this work on topological polaritonic metamaterials in bulk TMD crystals."

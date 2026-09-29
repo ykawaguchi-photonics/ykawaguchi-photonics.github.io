@@ -76,7 +76,25 @@ const bib = bibtex(pub);
   </div>
 
   {
-    d.image && (
+    d.figures.length > 0 && (
+      <section class="figures" aria-label="Figures">
+        {d.figures.map((f, i) => (
+          <figure class="figure">
+            <Image src={f.src} alt={f.alt} widths={[480, 800, 1200]} sizes="(max-width: 800px) 100vw, 736px" loading={i === 0 ? "eager" : "lazy"} />
+            {f.caption && (
+              <figcaption>
+                {d.figures.length > 1 && <strong>Figure {i + 1}. </strong>}
+                {f.caption}
+              </figcaption>
+            )}
+          </figure>
+        ))}
+      </section>
+    )
+  }
+
+  {
+    d.image && d.figures.length === 0 && (
       <figure class="lead-figure">
         <Image src={d.image} alt={d.imageAlt ?? ""} widths={[480, 800, 1200]} sizes="(max-width: 800px) 100vw, 736px" />
       </figure>
@@ -88,22 +106,6 @@ const bib = bibtex(pub);
       <section class="block">
         <h2>Abstract</h2>
         <p class="abstract">{d.abstract}</p>
-      </section>
-    )
-  }
-
-  {
-    d.figures.length > 0 && (
-      <section class="block">
-        <h2>Figures</h2>
-        {d.figures.map((f, i) => (
-          <figure class="figure">
-            <Image src={f.src} alt={f.alt} widths={[480, 800, 1200]} sizes="(max-width: 800px) 100vw, 736px" loading="lazy" />
-            <figcaption>
-              <strong>Figure {i + 1}.</strong> {f.caption}
-            </figcaption>
-          </figure>
-        ))}
       </section>
     )
   }
@@ -198,6 +200,11 @@ const bib = bibtex(pub);
     display: block;
     width: 100%;
     height: auto;
+    max-height: 70vh;
+    object-fit: contain;
+    /* Paper figures are drawn for white paper (some have transparent backgrounds). */
+    background: #fff;
+    padding: var(--space-3);
     border-radius: var(--radius);
     border: 1px solid var(--border);
   }

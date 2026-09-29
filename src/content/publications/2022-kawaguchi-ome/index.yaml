@@ -24,6 +24,9 @@ tags:
 featured: false
 selfRole: "first"
 
-# Optional figure: put an image in this folder and uncomment.
-# image: ./figure.png
-# imageAlt: "Describe what the figure shows"
+image: ./figure.png
+imageAlt: "Schematic of a bus waveguide coupled to a magneto-optical ring resonator, which in turn couples to a second ring, with forward and backward propagation directions indicated."
+figures:
+  - src: ./figure.png
+    alt: "Schematic of a bus waveguide coupled to a magneto-optical ring resonator, which in turn couples to a second ring, with forward and backward propagation directions indicated."
+    caption: "Double-ring system: a magneto-optical ring (γ_MO, ω_MO) coupled to a bus waveguide and to a second gain/loss ring (γ₂, ω₂), with coupling rates κ₁, κ₂ and gaps g₁, g₂. From Kawaguchi, Alù & Khanikaev, Opt. Mater. Express 12, 1453 (2022)."

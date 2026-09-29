@@ -1,9 +1,11 @@
 ---
+import { Image } from "astro:assets";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import JsonLd from "../components/JsonLd.astro";
 import PubItem from "../components/PubItem.astro";
 import PostCard from "../components/PostCard.astro";
 import { profileLinks, site } from "../data/site";
+import { headshot, headshotAlt, headshotSchemaPath } from "../data/headshot";
 import { getPosts, getProjects, getPublications, getResearchAreas } from "../utils/content";
 import { personSchema, websiteSchema } from "../utils/schema";
 
@@ -12,19 +14,35 @@ const featured = pubs.filter((p) => p.data.featured).slice(0, 5);
 const areas = await getResearchAreas();
 const project = (await getProjects())[0];
 const posts = (await getPosts()).slice(0, 3);
+const photoPath = await headshotSchemaPath();
 ---
 
 <BaseLayout>
   <Fragment slot="head">
-    <JsonLd data={personSchema(Astro.site)} />
+    <JsonLd data={personSchema(Astro.site, photoPath)} />
     <JsonLd data={websiteSchema(Astro.site)} />
   </Fragment>
 
   <div class="container page">
     <section class="intro" aria-labelledby="name">
-      <p class="eyebrow">{site.title}</p>
-      <h1 id="name">{site.name}</h1>
-      <p class="tagline">{site.tagline}</p>
+      <div class="identity">
+        <Image
+          class="photo"
+          src={headshot}
+          alt={headshotAlt}
+          width={112}
+          height={112}
+          densities={[1, 2]}
+          fit="cover"
+          loading="eager"
+          fetchpriority="high"
+        />
+        <div>
+          <p class="eyebrow">{site.title}</p>
+          <h1 id="name">{site.name}</h1>
+          <p class="tagline">{site.tagline}</p>
+        </div>
+      </div>
       <div class="bio">
         <p>
           I am a {site.position} at {site.affiliation} in {site.location}. I received my Ph.D. in Electrical Engineering
@@ -105,6 +123,35 @@ const posts = (await getPosts()).slice(0, 3);
   .intro {
     max-width: var(--content-width);
     padding-top: var(--space-5);
+  }
+  .identity {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    margin-bottom: var(--space-6);
+  }
+  .identity .tagline {
+    margin-bottom: 0;
+  }
+  .photo {
+    flex: none;
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+  @media (max-width: 560px) {
+    .identity {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-4);
+    }
+    .photo {
+      width: 88px;
+      height: 88px;
+    }
   }
   h1 {
     font-size: clamp(2.25rem, 5vw, 3.25rem);

@@ -15,6 +15,12 @@ export const positions: TimelineEntry[] = [
     org: "Samsung R&D",
     place: "Yokohama, Japan",
   },
+  {
+    period: "",
+    role: "Visiting Researcher (one-year research stay)",
+    org: "University of Stuttgart",
+    place: "Stuttgart, Germany",
+  },
 ];
 
 export const education: TimelineEntry[] = [
@@ -29,8 +35,14 @@ export const education: TimelineEntry[] = [
   {
     period: "",
     role: "M.Sc.",
-    org: "University of Stuttgart",
-    place: "Stuttgart, Germany",
+    org: "Toyohashi University of Technology",
+    place: "Toyohashi, Japan",
+  },
+  {
+    period: "",
+    role: "B.Sc.",
+    org: "Toyohashi University of Technology",
+    place: "Toyohashi, Japan",
   },
 ];
 

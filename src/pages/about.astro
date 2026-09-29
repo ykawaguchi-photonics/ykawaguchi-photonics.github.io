@@ -1,11 +1,15 @@
 ---
 import "../styles/prose.css";
+import { Image } from "astro:assets";
 import PageLayout from "../layouts/PageLayout.astro";
 import JsonLd from "../components/JsonLd.astro";
 import Timeline from "../components/Timeline.astro";
 import { profileLinks, site } from "../data/site";
 import { education, positions } from "../data/timeline";
 import { personSchema } from "../utils/schema";
+import { headshot, headshotAlt, headshotSchemaPath } from "../data/headshot";
+
+const photoPath = await headshotSchemaPath();
 ---
 
 <PageLayout
@@ -16,7 +20,18 @@ import { personSchema } from "../utils/schema";
   type="profile"
   narrow
 >
-  <JsonLd slot="head" data={personSchema(Astro.site)} />
+  <JsonLd slot="head" data={personSchema(Astro.site, photoPath)} />
+
+  <Image
+    class="portrait"
+    src={headshot}
+    alt={headshotAlt}
+    width={200}
+    height={212}
+    densities={[1, 2]}
+    fit="cover"
+    loading="eager"
+  />
 
   <div class="prose">
     <p>
@@ -27,8 +42,9 @@ import { personSchema } from "../utils/schema";
       explored how light can be made to flow in one direction and along protected paths: ring resonators integrating
       dichroic and magneto-optical materials for on-chip nonreciprocity, all-optical nonreciprocity from valley
       polarization in two-dimensional semiconductors, and topological photonic systems whose boundary modes carry
-      pseudo-spin and valley degrees of freedom. Before that, I completed my master's studies at the University of
-      Stuttgart in Germany, where I worked on integrated plasmonic refractive-index sensors.
+      pseudo-spin and valley degrees of freedom. Before that, I received my B.Sc. and M.Sc. from Toyohashi University of
+      Technology in Japan, and spent a year as a visiting researcher at the University of Stuttgart in Germany, working
+      on integrated refractive-index sensors.
     </p>
     <p>
       Across these topics, my approach combines physical insight with computational design. I use full-wave simulation
@@ -57,3 +73,24 @@ import { personSchema } from "../utils/schema";
     </ul>
   </section>
 </PageLayout>
+
+<style>
+  .portrait {
+    float: right;
+    width: 200px;
+    height: auto;
+    aspect-ratio: 200 / 212;
+    object-fit: cover;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin: 0.35rem 0 var(--space-5) var(--space-6);
+  }
+  @media (max-width: 640px) {
+    .portrait {
+      float: none;
+      display: block;
+      width: 160px;
+      margin: 0 0 var(--space-5);
+    }
+  }
+</style>

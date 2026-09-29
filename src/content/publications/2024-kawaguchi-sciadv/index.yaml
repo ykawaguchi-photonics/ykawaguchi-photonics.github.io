@@ -29,6 +29,9 @@ tags:
 featured: true
 selfRole: "first"
 
-# Optional figure: put an image in this folder and uncomment.
-# image: ./figure.png
-# imageAlt: "Describe what the figure shows"
+image: ./figure.png
+imageAlt: "Illustration of a topological boundary mode propagating along the interface between two domains of a silicon photonic metasurface, with left- and right-circularly polarized and linearly polarized emission."
+figures:
+  - src: ./figure.png
+    alt: "Illustration of a topological boundary mode propagating along the interface between two domains of a silicon photonic metasurface, with left- and right-circularly polarized and linearly polarized emission."
+    caption: "Heterogeneous topological boundary mode at a domain interface of a silicon metasurface: its pseudo-spin/valley character, and hence the far-field polarization, evolves continuously along the interface. From Kawaguchi et al., Sci. Adv. 10, eadn6095 (2024)."

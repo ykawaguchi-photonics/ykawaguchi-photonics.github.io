@@ -3,7 +3,7 @@ import type { Post, Publication } from "./content";
 
 const siteUrl = (site_: URL | undefined) => (site_ ?? new URL("https://ykawaguchi-photonics.github.io")).origin;
 
-export function personSchema(base: URL | undefined) {
+export function personSchema(base: URL | undefined, imagePath?: string) {
   const origin = siteUrl(base);
   const sameAs = Object.values(site.links).filter(Boolean);
   return {
@@ -17,6 +17,7 @@ export function personSchema(base: URL | undefined) {
     alumniOf: site.education.map((e) => ({ "@type": "CollegeOrUniversity", name: e.name, url: e.url })),
     address: { "@type": "PostalAddress", addressLocality: "Yokohama", addressCountry: "JP" },
     knowsAbout: site.knowsAbout,
+    ...(imagePath ? { image: `${origin}${imagePath}` } : {}),
     sameAs,
   };
 }

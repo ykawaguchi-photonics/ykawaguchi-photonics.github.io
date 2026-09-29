@@ -10,7 +10,7 @@ export type TimelineEntry = {
 
 export const positions: TimelineEntry[] = [
   {
-    period: "Nov 2024 –Present",
+    period: "Nov 2024 – Present",
     role: "Researcher",
     org: "Samsung R&D",
     place: "Yokohama, Japan",
@@ -25,7 +25,7 @@ export const positions: TimelineEntry[] = [
   },
    {
     period: "Jun 2024 – Aug 2024 ",
-    role: "Postdoctral Researcher",
+    role: "Postdoctoral Researcher",
     org: "The City College of New York, CUNY",
     place: "New York, USA",
   },
@@ -33,7 +33,7 @@ export const positions: TimelineEntry[] = [
 
 export const education: TimelineEntry[] = [
   {
-    period: "Aug 2024 – Jun 2024",
+    period: "Aug 2019 – Jun 2024",
     role: "Ph.D., Electrical Engineering",
     org: "The City College of New York, CUNY",
     place: "New York, USA",

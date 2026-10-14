@@ -18,13 +18,13 @@ export const positions: TimelineEntry[] = [
       "Metalens and Meta-optics.",
   },
   {
-    period: "Sep 2024 – Oct 2024 ",
+    period: "Sep 2024 – Oct 2024",
     role: "Visiting Researcher",
-    org: " Brandenburg University of Technology",
+    org: "Brandenburg University of Technology",
     place: "Cottbus, Germany",
   },
    {
-    period: "Jun 2024 – Aug 2024 ",
+    period: "Jun 2024 – Aug 2024",
     role: "Postdoctoral Researcher",
     org: "The City College of New York, CUNY",
     place: "New York, USA",

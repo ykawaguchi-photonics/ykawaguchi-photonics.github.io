@@ -1,0 +1,282 @@
+---
+title: "Ring Resonators in Silicon Photonics: Resonance, Coupling, and Spectral Response"
+description: "Why a waveguide loop coupled to a bus produces sharp transmission dips, what sets their position, spacing, width and depth, how to tell under- from over-coupling, and how these predictions compare with 2D FDTD simulations of racetrack and add-drop resonators in Meep. English and Japanese."
+date: 2026-10-20
+category: technical-notes
+tags: [silicon photonics, ring resonator, critical coupling, Q factor, Meep, FDTD, tutorial series]
+areas: [silicon-photonics]
+draft: true
+---
+
+import Figure from "@/components/Figure.astro";
+import fig1 from "./fig1_geometry.png";
+import fig2 from "./fig2_field.png";
+import fig3 from "./fig3_spectrum.png";
+import fig4 from "./fig4_resonance_fit.png";
+import fig5 from "./fig5_regimes.png";
+import fig6 from "./fig6_add_drop.png";
+
+**Language:** [English](#english) · [日本語](#日本語)
+
+*Part 3 of a four-part series on the physics behind photonic integrated circuits: [directional couplers](/blog/directional-couplers-cmt-fdtd/) → [Mach–Zehnder interferometers](/blog/mach-zehnder-interferometers/) → ring resonators → [how they fit together](/blog/coupling-interference-resonance-pic/).*
+
+## English
+
+In Part 2, two paths interfered once. A ring resonator closes a waveguide on itself next to a bus waveguide, so light that couples in goes round and round and interferes with itself on every pass. At most wavelengths the circulating light arrives back out of step and barely builds up. At a discrete set of wavelengths it arrives in step, builds up strongly, and the bus transmission dips. Those resonances are narrow, regularly spaced and very sensitive to the ring's optical length, which makes rings the workhorse of compact filters, modulators and sensors.[^bogaerts]
+
+This article derives the ring's transfer function, separates the two conditions that are easiest to confuse, **resonance** and **critical coupling**, and checks both against 2D FDTD simulations from my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit).
+
+### The model used here
+
+Same model as Parts 1–2: a **2D effective-index** silicon strip waveguide ($n_\text{core}=2.7$, $n_\text{clad}=1.44$, 500 nm wide), TE polarization, non-dispersive materials, O-band. The rings are **racetracks** (Fig. 1): two half-circles of radius $R=5$ µm joined by straight sections of length $L_c$, with a 200 nm gap to the bus along one straight section. Changing $L_c$ changes the coupling strength while the gap stays fixed. The round-trip length is $L = 2\pi R + 2L_c$.
+
+A small electrical conductivity is added to the ring material only, as a controlled stand-in for propagation loss. Its absorption alone, from a mode-solver perturbation calculation, is $\alpha_\text{abs} = 2.8\times10^{-3}$ µm⁻¹ (about 120 dB/cm), much larger than in a real silicon ring and chosen so that the loss is clearly visible. The simulations use a coarser grid (25 pixels/µm) than Parts 1–2, so the numbers are best read as illustrations of the physics rather than converged design values.
+
+<Figure src={fig1} alt="Two schematic panels: left, a racetrack ring below a single straight bus waveguide with ports in and through; right, the same ring between two bus waveguides with ports in, through, add and drop." caption="The simulated racetrack resonators: an all-pass ring with one bus (left) and an add-drop ring with two buses (right). R = 5 µm, gap 200 nm, coupling-section length Lc = 2–4 µm (Lc = 4 µm drawn). Drawn from data/design_points/racetrack.yaml." number={1} size="wide" />
+
+### 1. Resonance: the round-trip phase
+
+Write the bus–ring coupler as in Part 1, with **self-coupling** $t$ (field amplitude that stays in the bus) and **cross-coupling** $\kappa$, $t^2+\kappa^2=1$ for a lossless coupler. One trip around the ring multiplies the circulating field by $a\,e^{j\phi}$, where $a$ is the single-pass amplitude transmission ($a^2 = e^{-\alpha L}$ for a power attenuation coefficient $\alpha$) and
+
+$$
+\phi = \beta L = \frac{2\pi\, n_\text{eff}}{\lambda} L
+$$
+
+is the round-trip phase. Summing all the round trips gives the all-pass transmission[^yariv]
+
+$$
+T(\phi) = \left|\frac{t - a\,e^{j\phi}}{1 - t a\,e^{j\phi}}\right|^2 = \frac{a^2 - 2at\cos\phi + t^2}{1 - 2at\cos\phi + a^2t^2}.
+$$
+
+The transmission dips whenever the circulating light returns in phase with itself:
+
+$$
+\phi = 2\pi m \quad\Longleftrightarrow\quad \lambda_m = \frac{n_\text{eff}\,L}{m}, \qquad m = 1, 2, 3, \dots
+$$
+
+This is the **resonance condition**. It is a condition on the **phase** only, and it says nothing about how deep the dip is. Neighbouring resonances are separated by the free spectral range, which, as for the MZI fringes in Part 2, involves the group index:
+
+$$
+\mathrm{FSR} = \frac{\lambda^2}{n_g L}, \qquad n_g = n_\text{eff} - \lambda\frac{dn_\text{eff}}{d\lambda}.
+$$
+
+<Figure src={fig2} alt="Two field maps of the racetrack and bus. Left, at a resonance wavelength, a strong standing pattern fills the whole ring and the bus field after the ring is weak. Right, off resonance, the field runs straight along the bus and the ring is nearly dark." caption="Re(Hz) from FDTD for Lc = 4 µm (arbitrary units). Left: at the resonance near 1308.5 nm, the field builds up all around the ring and the transmitted bus field is reduced. Right: off resonance (1316.3 nm), the light passes the ring almost untouched. Gray bands: absorbing boundary layers. From notebooks/05_racetrack_resonator.ipynb, Section 11." number={2} size="wide" />
+
+The full-band spectrum of the $L_c=3$ µm racetrack (Fig. 3) shows six resonances between 1310 and 1395 nm, spaced 15.6 to 17.2 nm apart; the spacing grows with wavelength, as $\lambda^2$ predicts. With $L = 37.4$ µm the spacing gives $n_g \approx 2.98$. That value is limited to about ±2 % by the 0.33 nm wavelength grid, and it is consistent with the straight waveguide's $n_g = 2.93$. The phase index is much lower, $n_\text{eff}\approx 2.42$, so the resonances here have azimuthal order $m \approx 66$–67.
+
+That last point is a practical trap. A single resonance fixes only $n_\text{eff}L/m$, and $m$ is not known in advance; neighbouring orders change the fitted $n_\text{eff}$ by $\lambda/L \approx 0.035$. A fit to one resonance with a constant $n_\text{eff}$ can therefore return quite different $n_\text{eff}$ values for the same waveguide. Worse, if that constant $n_\text{eff}$ is also used to convert wavelength into phase, the linewidth is mapped with $n_\text{eff}$ instead of $n_g$, and the extracted coupling and loss are biased by roughly $n_\text{eff}/n_g$. The fits below therefore take the phase slope from the measured FSR (that is, from $n_g$), not from $n_\text{eff}$.
+
+<Figure src={fig3} alt="Through-port transmission from 1300 to 1400 nm with six sharp dips reaching 0.3 to 0.5; arrows between dips are labelled 15.6, 16.0, 16.4, 16.5 and 17.2 nm." caption="Through-port power of the all-pass racetrack (Lc = 3 µm) over the O-band. Arrows: spacing between neighbouring resonances, which grows as λ². The dips are under-resolved on this 0.33 nm grid; their exact depth and width come from the finer runs in Fig. 4. From notebooks/05_racetrack_resonator.ipynb, Section 6." number={3} />
+
+### 2. Depth and width: coupling versus loss
+
+Near resonance the dip has a width (full width at half depth)
+
+$$
+\Delta\lambda_\text{FWHM} = \frac{(1-at)\,\lambda^2}{\pi\, n_g L \sqrt{at}},
+$$
+
+and the ring's **loaded quality factor** is $Q_L = \lambda/\Delta\lambda_\text{FWHM}$. This follows from the transmission formula in the high-finesse limit[^yariv] once the round-trip phase is converted to wavelength with $d\phi/d\lambda = -2\pi n_g L/\lambda^2$, which brings in the group index for a dispersive waveguide.[^bogaerts] The width depends on the product $at$: both loss ($a<1$) and coupling ($t<1$) let light leave the ring and broaden the resonance.
+
+The depth is a different story. On resonance,
+
+$$
+T_\text{min} = \frac{(a-t)^2}{(1-at)^2},
+$$
+
+which vanishes when $t = a$: the light coupled out of the ring per round trip exactly cancels the light that never entered, because the coupling loss equals the internal loss. This is **critical coupling**.[^yariv] With $t > a$ (coupling weaker than loss) the ring is **under-coupled**; with $t < a$ it is **over-coupled**. Critical coupling is a condition on **amplitudes**, and a ring can be perfectly on resonance and still far from critical coupling.
+
+Here is the difficulty. For the through port of an all-pass ring, both formulas above are symmetric in $t$ and $a$: swapping them leaves the power spectrum unchanged. From the through-port power alone you cannot tell whether a given dip comes from weak coupling and strong loss or the other way round.[^mckinnon] Fig. 4 shows this for the $L_c = 4$ µm racetrack, measured on a fine 0.04 nm grid. The two fits, $t=0.975,\ a=0.922$ and $t=0.922,\ a=0.975$, are indistinguishable in power.
+
+Two pieces of independent information break the symmetry.
+
+- **The phase.** The transmitted field's phase behaves differently in the two regimes. Under-coupled, it swings a little and returns. Over-coupled, it jumps by a full $2\pi$ across the resonance.[^heebner] The FDTD phase (Fig. 4, right) follows the under-coupled curve, and for all five simulated coupling lengths its swing stays below 0.7 rad.
+- **Physics of the parameters.** McKinnon et al. point out that coupling and loss can be told apart from how they vary with device parameters.[^mckinnon] Here the under-coupled branch gives a cross-coupling $\kappa^2 = 1-t^2$ that grows steadily with the coupling length (0.023, 0.030, 0.037, 0.041, 0.049 for $L_c = 2$ to 4 µm), as a longer coupler should. It also gives a loss $\alpha$ of 0.0033–0.0054 µm⁻¹, which never drops below the material absorption ($2.8\times10^{-3}$ µm⁻¹). The over-coupled branch would require $\alpha \approx 0.001$ µm⁻¹, *less* than the absorption alone, which is impossible.
+
+So these racetracks are under-coupled. The fitted loss exceeds the absorption by 20–95 %, varying between geometries. A plausible origin is radiation and scattering from the curved, coarsely discretized ring, though this was not isolated here.
+
+<Figure src={fig4} alt="Two panels for one resonance near 1308.5 nm. Left: through power with FDTD points; two fitted curves with swapped t and a overlap perfectly. Right: detrended phase; FDTD points follow the under-coupled fit, a small wiggle, while the over-coupled fit shows a 2 pi phase jump." caption="One resonance of the Lc = 4 µm racetrack (fine 0.04 nm grid). Left: the through power is fitted equally well with t and a swapped. Right: the phase of S21 (linear trend removed) follows only the under-coupled solution; the over-coupled one would jump by 2π. Fits use the all-pass formula with the phase slope fixed by the measured group index. From the coupling-length sweep of notebooks/05_racetrack_resonator.ipynb." number={4} size="wide" />
+
+For the $L_c = 4$ µm ring, the width formula with the fitted $t$, $a$ and $n_g$ predicts 0.50 nm, against 0.52 nm measured. That gives $Q_L \approx 2500$. Separating the two loss channels, the **intrinsic** quality factor $Q_i = 2\pi n_g/(\lambda\alpha) \approx 3500$ describes the ring alone, and the loaded value follows from $1/Q_L = 1/Q_i + 1/Q_c$, with a coupling-limited $Q_c \approx 9000$. At critical coupling the two channels are equal, $Q_c = Q_i$.
+
+### 3. Coupling regimes in one picture
+
+Fig. 5 puts this together. The gray curve is $T_\text{min}$ as a function of the power cross-coupling $\kappa^2$ for the average fitted loss ($a = 0.924$). The transmission falls to zero at critical coupling, $\kappa^2 = 1 - a^2 = 0.145$, and rises again in the over-coupled region. All five simulated racetracks lie on the under-coupled side. Lengthening the coupling section from 2 to 4 µm doubles $\kappa^2$, and the dip deepens from 0.45 to about 0.31. Reaching critical coupling would need about three times more coupling: a longer section or a smaller gap.
+
+<Figure src={fig5} alt="On-resonance through power versus power cross-coupling from 0 to 0.4: a gray theory curve falls from 1 to 0 at kappa squared 0.145 and rises again; five colored FDTD points lie between kappa squared 0.02 and 0.05 at transmissions 0.3 to 0.55." caption="Coupling regimes. Gray: all-pass theory for the mean fitted single-pass transmission a = 0.924. Dotted: critical coupling, t = a. Points: the five FDTD racetracks (each has its own fitted loss, so they scatter about the curve). All are under-coupled. Fitted values from the notebook 05 sweep data." number={5} />
+
+### 4. The add-drop ring
+
+Adding a second bus turns the ring into a wavelength filter. On resonance, light that builds up in the ring can leave through the second bus, the **drop** port, instead of only being lost. With self-couplings $t_1$ (input bus) and $t_2$ (drop bus),[^little] [^bogaerts]
+
+$$
+T_\text{through} = \frac{t_2^2a^2 - 2t_1t_2a\cos\phi + t_1^2}{1 - 2t_1t_2a\cos\phi + (t_1t_2a)^2}, \qquad
+T_\text{drop} = \frac{(1-t_1^2)(1-t_2^2)\,a}{1 - 2t_1t_2a\cos\phi + (t_1t_2a)^2}.
+$$
+
+The through port now vanishes on resonance when $t_1 = a\,t_2$: seen from the input bus, the second bus simply changes the internal loss parameter from $a$ to $a\,t_2$.[^yariv] In a lossless, symmetric ring ($a=1$, $t_1=t_2$) all of the light at a resonance is dropped. Little et al. analysed such channel-dropping filters, and cascades of them, with coupled-mode theory in time.[^little]
+
+The simulated add-drop ring ($L_c = 4$ µm, Fig. 6) drops 26 % of the light at 1353.5 nm while the through port falls to 29 %; the remainder is absorbed in the deliberately lossy ring. A joint fit of all four measured transfer functions gives $a = 0.940$ (the same loss as the all-pass rings) and $t_1 = 0.968 > a\,t_2 = 0.897$, so this ring is also under-coupled. The two nominally identical couplers fit to different strengths ($\kappa_1^2 = 0.063$, $\kappa_2^2 = 0.091$). The same asymmetry shows up directly in the data, because exciting the ring from the add port gives a deeper through-type dip than exciting it from the input. This is most likely a discretization effect of the coarse grid, and it is why the single model in Fig. 6 does not match the drop peak exactly.
+
+<Figure src={fig6} alt="Through and drop power versus wavelength around 1353.5 nm: the through power dips to 0.29 while the drop power peaks at 0.26; gray model curves follow both, slightly overshooting the drop peak." caption="Add-drop ring (Lc = 4 µm) around one resonance: through and drop ports with the add-drop model from a joint fit to all four transfer functions (loaded Q ≈ 2000). The model overshoots the drop peak slightly because the two simulated couplers are not identical (see text). From notebooks/10_add_drop_ring_resonator.ipynb, narrowband run." number={6} />
+
+### 5. Why rings matter
+
+Because the resonance condition ties a phase of $2\pi m$ to the optical length $n_\text{eff}L$, a ring converts tiny index changes into large transmission changes. A shift $\delta n_\text{eff}$ moves the resonance by $\delta\lambda = \lambda\,\delta n_\text{eff}/n_g$, and the transmission changes appreciably once that shift is a fraction of the linewidth $\lambda/Q_L$. A higher $Q$ therefore means higher sensitivity. This is why a ring 12 µm in diameter can modulate light with the same plasma-dispersion effect that needs millimetres in an MZI,[^xu] and why rings are widely used as label-free sensors.[^bogaerts] The price is bandwidth: the ring responds only near its resonances, and their position drifts with temperature and fabrication.
+
+### 6. Summary
+
+| Quantity | Formula | 2D FDTD racetracks |
+|---|---|---|
+| Resonance | $\phi = 2\pi m$, $\lambda_m = n_\text{eff}L/m$ | $m \approx 66$–67 |
+| Spacing | $\mathrm{FSR} = \lambda^2/(n_gL)$ | 15.6–17.2 nm, $n_g \approx 2.98$ |
+| Width, $Q$ | $\Delta\lambda = (1-at)\lambda^2/(\pi n_gL\sqrt{at})$ | 0.50 nm predicted vs 0.52 nm, $Q_L\approx 2500$ ($L_c$ = 4 µm) |
+| Depth | $T_\text{min} = (a-t)^2/(1-at)^2$, zero at $t=a$ | 0.31–0.55: under-coupled |
+| Regime | phase: small swing (under) vs $2\pi$ jump (over) | small swing, < 0.7 rad |
+| Add-drop | through null at $t_1 = a t_2$ | drop 26 %, through 29 % |
+
+Resonance is about phase; critical coupling is about the balance of coupling and loss. A dip's position tells you the first; its depth and width, read together with the phase or with how the parameters change across a series of devices, tell you the second. **[Part 4](/blog/coupling-interference-resonance-pic/)** puts directional couplers, MZIs and rings side by side and looks at how they are combined into circuits.
+
+### Code and data
+
+- All-pass racetrack (baseline, coupling-length sweep, field maps): [`notebooks/05_racetrack_resonator.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/05_racetrack_resonator.ipynb)
+- Add-drop ring: [`notebooks/10_add_drop_ring_resonator.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/10_add_drop_ring_resonator.ipynb)
+- Simulation modules: [`racetrack.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/racetrack.py), [`add_drop_ring.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/add_drop_ring.py)
+- The fits in this article (phase slope from the measured group index, regime from the phase and from the absorption bound), Figs. 1 and 3–6 and all numbers are produced from the saved data by `scripts/blog_figures/article3_ring.py` in the same repository. Fig. 2 is the notebook's saved field plot. No new FDTD runs were needed.
+
+---
+
+## 日本語
+
+第2回では、2つの経路が一度だけ干渉しました。リング共振器では、バス導波路の隣で導波路を輪にして閉じるので、結合して入った光は何周も回り、そのたびに自分自身と干渉します。ほとんどの波長では、周回した光は位相がずれて戻ってくるためほとんど蓄積しません。ところが特定のとびとびの波長では位相がそろって戻り、強く蓄積して、バスの透過率に谷が生じます。この共鳴は鋭く、等間隔に並び、リングの光学長にきわめて敏感です。そのためリングは、小型のフィルタ、変調器、センサの主力素子になっています[^bogaerts]。
+
+本記事では、リングの伝達関数を導き、混同しやすい2つの条件、**共鳴**と**臨界結合**を区別し、どちらも[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)の2次元FDTDシミュレーションと照合します。
+
+### 本記事のモデル
+
+モデルは第1–2回と同じで、**2次元等価屈折率**のシリコン細線導波路($n_\text{core}=2.7$、$n_\text{clad}=1.44$、幅500 nm)、TE偏波、材料分散なし、Oバンドです。リングは**レーストラック型**(図1)で、半径 $R=5$ µmの半円2つを長さ $L_c$ の直線部でつなぎ、その一方の直線部に沿ってバスとのギャップを200 nmに保っています。ギャップを固定したまま $L_c$ を変えると、結合の強さを変えられます。1周の長さは $L = 2\pi R + 2L_c$ です。
+
+伝搬損失を制御された形で再現するため、リングの材料にだけ小さな導電率を加えています。この吸収だけによる損失は、モードソルバの摂動計算から $\alpha_\text{abs} = 2.8\times10^{-3}$ µm⁻¹(約120 dB/cm)です。実際のシリコンリングよりはるかに大きく、損失がはっきり見えるように選んだ値です。また、シミュレーションは第1–2回より粗い格子(25 pixels/µm)で行っているので、数値は収束した設計値ではなく、物理を示す例として読んでください。
+
+<Figure src={fig1} alt="2つの模式図:左は1本の直線バス導波路の下にあるレーストラック型リング(ポート:入力、スルー)、右は同じリングを2本のバス導波路で挟んだもの(ポート:入力、スルー、アッド、ドロップ)。" caption="シミュレーションしたレーストラック共振器:バス1本のオールパス型(左)とバス2本のアッドドロップ型(右)。R = 5 µm、ギャップ200 nm、結合部の長さLc = 2–4 µm(図はLc = 4 µm)。data/design_points/racetrack.yaml から描画。" number={1} size="wide" />
+
+### 1. 共鳴:1周の位相
+
+バスとリングの間のカプラを第1回と同じように、**自己結合** $t$(バスに残る場の振幅)と**交差結合** $\kappa$ で表します。無損失なカプラでは $t^2+\kappa^2=1$ です。リングを1周すると、周回する場には $a\,e^{j\phi}$ が掛かります。$a$ は1周あたりの振幅透過率(パワー減衰係数 $\alpha$ に対して $a^2 = e^{-\alpha L}$)、$\phi$ は1周の位相です。
+
+$$
+\phi = \beta L = \frac{2\pi\, n_\text{eff}}{\lambda} L
+$$
+
+すべての周回を足し合わせると、オールパス型の透過率が得られます[^yariv]。
+
+$$
+T(\phi) = \left|\frac{t - a\,e^{j\phi}}{1 - t a\,e^{j\phi}}\right|^2 = \frac{a^2 - 2at\cos\phi + t^2}{1 - 2at\cos\phi + a^2t^2}
+$$
+
+周回した光が自分自身と同位相で戻るたびに、透過率は谷になります。
+
+$$
+\phi = 2\pi m \quad\Longleftrightarrow\quad \lambda_m = \frac{n_\text{eff}\,L}{m}, \qquad m = 1, 2, 3, \dots
+$$
+
+これが**共鳴条件**です。これは**位相**だけの条件で、谷の深さについては何も言っていません。隣り合う共鳴の間隔は自由スペクトル領域(FSR)で、第2回のMZIの干渉縞と同じく群屈折率で決まります。
+
+$$
+\mathrm{FSR} = \frac{\lambda^2}{n_g L}, \qquad n_g = n_\text{eff} - \lambda\frac{dn_\text{eff}}{d\lambda}
+$$
+
+<Figure src={fig2} alt="レーストラックとバスの電場分布2枚。左は共鳴波長で、リング全体に強い定在パターンが満ち、リング通過後のバスの場は弱い。右は非共鳴で、場はバスに沿ってそのまま進み、リングはほぼ暗い。" caption="Lc = 4 µmのFDTDによるRe(Hz)(任意単位)。左:1308.5 nm付近の共鳴では、場がリング全周で蓄積し、透過するバスの場は弱まる。右:非共鳴(1316.3 nm)では、光はリングの影響をほとんど受けずに通過する。灰色の帯は吸収境界層。notebooks/05_racetrack_resonator.ipynb、11節より。" number={2} size="wide" />
+
+$L_c=3$ µmのレーストラックの全帯域スペクトル(図3)には、1310–1395 nmに6つの共鳴があり、間隔は15.6–17.2 nmです。$\lambda^2$ から予測されるとおり、間隔は波長とともに広がります。$L = 37.4$ µmとすると、この間隔から $n_g \approx 2.98$ が得られます。この値は0.33 nmの波長格子によって約±2 %の精度に制限されており、直線導波路の $n_g = 2.93$ と矛盾しません。位相屈折率はずっと小さく $n_\text{eff}\approx 2.42$ なので、ここでの共鳴の方位次数は $m \approx 66$–67です。
+
+最後の点は実務上の落とし穴です。1つの共鳴から決まるのは $n_\text{eff}L/m$ だけで、$m$ は事前にはわかりません。隣の次数を選ぶと、フィットされる $n_\text{eff}$ は $\lambda/L \approx 0.035$ 変わります。そのため、一定の $n_\text{eff}$ で1つの共鳴だけをフィットすると、同じ導波路なのにまったく異なる $n_\text{eff}$ が得られることがあります。さらに悪いことに、その一定の $n_\text{eff}$ を波長から位相への換算にも使うと、線幅が $n_g$ ではなく $n_\text{eff}$ で写像され、求めた結合と損失がおよそ $n_\text{eff}/n_g$ だけ偏ります。そこで以下のフィットでは、位相の傾きを $n_\text{eff}$ ではなく、測定したFSR(つまり $n_g$)から決めています。
+
+<Figure src={fig3} alt="1300から1400 nmのスルー透過率。0.3から0.5まで下がる鋭い谷が6つあり、谷の間の矢印に15.6、16.0、16.4、16.5、17.2 nmと記されている。" caption="オールパス型レーストラック(Lc = 3 µm)のOバンド全体でのスルー側パワー。矢印は隣り合う共鳴の間隔で、λ²に比例して広がる。この0.33 nmの格子では谷が十分に分解されていないので、正確な深さと幅は図4のより細かい計算から求める。notebooks/05_racetrack_resonator.ipynb、6節より。" number={3} />
+
+### 2. 深さと幅:結合と損失
+
+共鳴付近の谷の幅(半分の深さでの全幅)は
+
+$$
+\Delta\lambda_\text{FWHM} = \frac{(1-at)\,\lambda^2}{\pi\, n_g L \sqrt{at}}
+$$
+
+で、リングの**負荷Q値**は $Q_L = \lambda/\Delta\lambda_\text{FWHM}$ です。これは高フィネス極限での透過率の式[^yariv]から得られ、1周の位相を $d\phi/d\lambda = -2\pi n_g L/\lambda^2$ で波長に換算するので、分散のある導波路では群屈折率が入ります[^bogaerts]。幅は積 $at$ で決まります。損失($a<1$)と結合($t<1$)はどちらも光をリングから逃がし、共鳴を広げます。
+
+深さは話が別です。共鳴では
+
+$$
+T_\text{min} = \frac{(a-t)^2}{(1-at)^2}
+$$
+
+となり、$t = a$ のときゼロになります。1周ごとにリングから結合して出ていく光が、リングに入らなかった光とちょうど打ち消し合うためで、結合による損失が内部損失と等しくなっています。これが**臨界結合**です[^yariv]。$t > a$(結合が損失より弱い)ならリングは**アンダーカップリング**、$t < a$ なら**オーバーカップリング**です。臨界結合は**振幅**の条件であり、リングが完全に共鳴していても、臨界結合からは遠いということがありえます。
+
+ここに難しさがあります。オールパス型リングのスルー側では、上の2つの式はどちらも $t$ と $a$ について対称で、入れ替えてもパワースペクトルは変わりません。スルー側のパワーだけからは、ある谷が「弱い結合と強い損失」によるのか、その逆なのかを見分けられません[^mckinnon]。図4は、$L_c = 4$ µmのレーストラックを0.04 nmの細かい格子で計算した例です。$t=0.975,\ a=0.922$ と $t=0.922,\ a=0.975$ の2つのフィットは、パワーでは区別がつきません。
+
+この対称性は、2つの独立な情報で破れます。
+
+- **位相。** 透過する場の位相は、2つの領域で振る舞いが異なります。アンダーカップリングでは少し振れて元に戻り、オーバーカップリングでは共鳴をまたいで $2\pi$ だけ跳びます[^heebner]。FDTDの位相(図4右)はアンダーカップリングの曲線に従っており、計算した5つの結合長すべてで振れ幅は0.7 rad未満です。
+- **パラメータの物理。** McKinnonらは、結合と損失がデバイスパラメータとともにどう変化するかから両者を区別できると指摘しています[^mckinnon]。アンダーカップリング側の解では、交差結合 $\kappa^2 = 1-t^2$ が結合長とともに着実に増えます($L_c = 2$–4 µmで0.023、0.030、0.037、0.041、0.049)。これは結合部が長いほど結合が強いという期待どおりです。損失 $\alpha$ は0.0033–0.0054 µm⁻¹で、材料吸収($2.8\times10^{-3}$ µm⁻¹)を下回ることがありません。オーバーカップリング側の解では $\alpha \approx 0.001$ µm⁻¹ となり、吸収だけより*小さく*なってしまうので、物理的にありえません。
+
+したがって、これらのレーストラックはアンダーカップリングです。フィットした損失は吸収を20–95 %上回り、その割合は形状ごとに異なります。曲がった部分を粗い格子で離散化したことによる放射や散乱が原因と考えられますが、ここでは切り分けていません。
+
+<Figure src={fig4} alt="1308.5 nm付近の1つの共鳴の2パネル。左:FDTDの点に、tとaを入れ替えた2つのフィット曲線が完全に重なる。右:トレンドを除いた位相。FDTDの点はアンダーカップリングのフィット(小さな振れ)に従い、オーバーカップリングのフィットは2πの跳びを示す。" caption="Lc = 4 µmのレーストラックの1つの共鳴(0.04 nmの細かい格子)。左:スルー側パワーは、tとaを入れ替えても同じようにフィットできる。右:S21の位相(線形トレンドを除去)はアンダーカップリングの解にだけ一致し、オーバーカップリングなら2π跳ぶはずである。フィットは、位相の傾きを測定した群屈折率で固定したオールパス式による。notebooks/05_racetrack_resonator.ipynb の結合長掃引データより。" number={4} size="wide" />
+
+$L_c = 4$ µmのリングでは、フィットした $t$、$a$、$n_g$ を幅の式に入れると0.50 nmとなり、測定値0.52 nmとよく合います。これから $Q_L \approx 2500$ です。2つの損失経路を分けると、リング単体を表す**固有**Q値は $Q_i = 2\pi n_g/(\lambda\alpha) \approx 3500$ で、負荷Q値は $1/Q_L = 1/Q_i + 1/Q_c$ から、結合で決まる $Q_c \approx 9000$ を用いて得られます。臨界結合では2つの経路が等しく、$Q_c = Q_i$ です。
+
+### 3. 結合の領域を1枚の図で
+
+図5はこれをまとめたものです。灰色の曲線は、フィットした損失の平均($a = 0.924$)に対する、パワー交差結合 $\kappa^2$ の関数としての $T_\text{min}$ です。透過率は臨界結合 $\kappa^2 = 1 - a^2 = 0.145$ でゼロまで下がり、オーバーカップリング側で再び上がります。シミュレーションした5つのレーストラックはすべてアンダーカップリング側にあります。結合部を2 µmから4 µmに延ばすと $\kappa^2$ は2倍になり、谷は0.45から約0.31まで深くなります。臨界結合に到達するには、さらに約3倍の結合、つまりより長い結合部かより狭いギャップが必要です。
+
+<Figure src={fig5} alt="パワー交差結合0から0.4に対する共鳴時のスルー側パワー。灰色の理論曲線は1から下がってκ² = 0.145でゼロになり、再び上がる。5つの色付きFDTD点がκ² = 0.02–0.05、透過率0.3–0.55の範囲にある。" caption="結合の領域。灰色:フィットした1周透過率の平均 a = 0.924 に対するオールパス理論。点線:臨界結合 t = a。点:5つのFDTDレーストラック(それぞれ自分の損失をもつため曲線のまわりにばらつく)。いずれもアンダーカップリング。値はノートブック05の掃引データへのフィットによる。" number={5} />
+
+### 4. アッドドロップ型リング
+
+バスを2本にすると、リングは波長フィルタになります。共鳴でリングに蓄積した光は、単に失われるだけでなく、2本目のバスである**ドロップ**ポートから出ていけるようになります。入力側の自己結合を $t_1$、ドロップ側を $t_2$ とすると[^little] [^bogaerts]、
+
+$$
+T_\text{through} = \frac{t_2^2a^2 - 2t_1t_2a\cos\phi + t_1^2}{1 - 2t_1t_2a\cos\phi + (t_1t_2a)^2}, \qquad
+T_\text{drop} = \frac{(1-t_1^2)(1-t_2^2)\,a}{1 - 2t_1t_2a\cos\phi + (t_1t_2a)^2}
+$$
+
+です。スルー側が共鳴でゼロになる条件は $t_1 = a\,t_2$ です。入力側のバスから見ると、2本目のバスは内部損失のパラメータを $a$ から $a\,t_2$ に変えるだけだからです[^yariv]。無損失で対称なリング($a=1$、$t_1=t_2$)では、共鳴波長の光はすべてドロップされます。Littleらは、このようなチャネルドロップフィルタとその多段構成を、時間領域の結合モード理論で解析しました[^little]。
+
+シミュレーションしたアッドドロップ型リング($L_c = 4$ µm、図6)は、1353.5 nmで光の26 %をドロップし、スルー側は29 %まで下がります。残りは意図的に損失を与えたリングで吸収されます。測定した4つの伝達関数をまとめてフィットすると、$a = 0.940$(オールパス型と同程度の損失)、$t_1 = 0.968 > a\,t_2 = 0.897$ となり、このリングもアンダーカップリングです。名目上同一の2つのカプラは異なる強さにフィットされます($\kappa_1^2 = 0.063$、$\kappa_2^2 = 0.091$)。この非対称はデータにも直接現れていて、アッドポートから励振すると、入力から励振した場合よりスルー型の谷が深くなります。粗い格子による離散化の影響である可能性が高く、図6の1つのモデルがドロップのピークに完全には合わない理由にもなっています。
+
+<Figure src={fig6} alt="1353.5 nm付近のスルー・ドロップパワー。スルーは0.29まで下がり、ドロップは0.26でピークになる。灰色のモデル曲線が両方に沿い、ドロップのピークではわずかに上回る。" caption="アッドドロップ型リング(Lc = 4 µm)の1つの共鳴付近:スルー・ドロップポートと、4つの伝達関数すべてへの同時フィットによるアッドドロップモデル(負荷Q ≈ 2000)。2つのカプラが同一でないため、モデルはドロップのピークをわずかに上回る(本文参照)。notebooks/10_add_drop_ring_resonator.ipynb の狭帯域計算より。" number={6} />
+
+### 5. リングが重要な理由
+
+共鳴条件は $2\pi m$ の位相を光学長 $n_\text{eff}L$ に結びつけるので、リングはわずかな屈折率変化を大きな透過率変化に変換します。$\delta n_\text{eff}$ の変化は共鳴を $\delta\lambda = \lambda\,\delta n_\text{eff}/n_g$ だけずらし、そのずれが線幅 $\lambda/Q_L$ の数分の1に達すると透過率がはっきり変わります。つまりQ値が高いほど感度が高くなります。このため、MZIでは数mm必要なプラズマ分散効果でも、直径12 µmのリングで光を変調でき[^xu]、リングはラベルフリーセンサとしても広く使われています[^bogaerts]。その代償は帯域で、リングは共鳴付近でしか応答せず、共鳴の位置は温度や作製ばらつきでずれます。
+
+### 6. まとめ
+
+| 量 | 式 | 2D FDTDのレーストラック |
+|---|---|---|
+| 共鳴 | $\phi = 2\pi m$、$\lambda_m = n_\text{eff}L/m$ | $m \approx 66$–67 |
+| 間隔 | $\mathrm{FSR} = \lambda^2/(n_gL)$ | 15.6–17.2 nm、$n_g \approx 2.98$ |
+| 幅、Q値 | $\Delta\lambda = (1-at)\lambda^2/(\pi n_gL\sqrt{at})$ | 予測0.50 nmに対し0.52 nm、$Q_L\approx 2500$($L_c$ = 4 µm) |
+| 深さ | $T_\text{min} = (a-t)^2/(1-at)^2$、$t=a$ でゼロ | 0.31–0.55:アンダーカップリング |
+| 結合の領域 | 位相:小さな振れ(アンダー)か $2\pi$ の跳び(オーバー)か | 小さな振れ、0.7 rad未満 |
+| アッドドロップ | $t_1 = a t_2$ でスルーがゼロ | ドロップ26 %、スルー29 % |
+
+共鳴は位相の問題、臨界結合は結合と損失のバランスの問題です。谷の位置は前者を教えてくれます。後者を知るには、谷の深さと幅を、位相や一連のデバイスでのパラメータ変化と合わせて読む必要があります。**[第4回](/blog/coupling-interference-resonance-pic/)**では、方向性結合器・MZI・リングを並べて比べ、それらがどのように回路へ組み合わされるかを見ていきます。
+
+### コードとデータ
+
+- オールパス型レーストラック(ベースライン、結合長掃引、電場分布):[`notebooks/05_racetrack_resonator.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/05_racetrack_resonator.ipynb)
+- アッドドロップ型リング:[`notebooks/10_add_drop_ring_resonator.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/10_add_drop_ring_resonator.ipynb)
+- シミュレーションモジュール:[`racetrack.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/racetrack.py)、[`add_drop_ring.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/add_drop_ring.py)
+- 本記事のフィット(位相の傾きは測定した群屈折率から、結合の領域は位相と吸収の下限から判定)、図1および3–6と本文の数値は、保存済みデータから同リポジトリの `scripts/blog_figures/article3_ring.py` で作成しました。図2はノートブックに保存された電場の図です。新たなFDTD計算は行っていません。
+
+---
+
+## References / 参考文献
+
+[^yariv]: A. Yariv, "Universal relations for coupling of optical power between microresonators and dielectric waveguides," *Electronics Letters* **36**, 321–322 (2000). [doi:10.1049/el:20000340](https://doi.org/10.1049/el:20000340)
+[^little]: B. E. Little, S. T. Chu, H. A. Haus, J. Foresi and J.-P. Laine, "Microring resonator channel dropping filters," *Journal of Lightwave Technology* **15**, 998–1005 (1997). [doi:10.1109/50.588673](https://doi.org/10.1109/50.588673)
+[^bogaerts]: W. Bogaerts, P. De Heyn, T. Van Vaerenbergh, K. De Vos, S. Kumar Selvaraja, T. Claes, P. Dumon, P. Bienstman, D. Van Thourhout and R. Baets, "Silicon microring resonators," *Laser & Photonics Reviews* **6**, 47–73 (2012). [doi:10.1002/lpor.201100017](https://doi.org/10.1002/lpor.201100017)
+[^mckinnon]: W. R. McKinnon, D.-X. Xu, C. Storey, E. Post, A. Densmore, A. Delâge, P. Waldron, J. H. Schmid and S. Janz, "Extracting coupling and loss coefficients from a ring resonator," *Optics Express* **17**, 18971 (2009). [doi:10.1364/OE.17.018971](https://doi.org/10.1364/OE.17.018971)
+[^heebner]: J. E. Heebner, V. Wong, A. Schweinsberg, R. W. Boyd and D. J. Jackson, "Optical transmission characteristics of fiber ring resonators," *IEEE Journal of Quantum Electronics* **40**, 726–730 (2004). [doi:10.1109/JQE.2004.828232](https://doi.org/10.1109/JQE.2004.828232)
+[^xu]: Q. Xu, B. Schmidt, S. Pradhan and M. Lipson, "Micrometre-scale silicon electro-optic modulator," *Nature* **435**(7040), 325–327 (2005). [doi:10.1038/nature03569](https://doi.org/10.1038/nature03569)

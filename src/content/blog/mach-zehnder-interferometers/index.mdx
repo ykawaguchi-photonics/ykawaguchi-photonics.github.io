@@ -1,0 +1,287 @@
+---
+title: "Mach–Zehnder Interferometers in Silicon Photonics: Phase, Interference, and Optical Switching"
+description: "How two directional couplers and a pair of arms turn a phase difference into a power switch: the MZI transfer function, why one output nulls perfectly and the other does not, how the fringe spacing measures the group index, and how a small index change switches the light, compared with 2D FDTD simulations in Meep. English and Japanese."
+date: 2026-10-20
+category: technical-notes
+tags: [silicon photonics, Mach-Zehnder interferometer, modulator, interference, Meep, FDTD, tutorial series]
+areas: [silicon-photonics]
+draft: true
+---
+
+import Figure from "@/components/Figure.astro";
+import fig1 from "./fig1_layout.png";
+import fig2 from "./fig2_transfer.png";
+import fig3 from "./fig3_spectrum.png";
+import fig4 from "./fig4_dL_sweep.png";
+import fig5 from "./fig5_switching.png";
+
+**Language:** [English](#english) · [日本語](#日本語)
+
+*Part 2 of a four-part series on the physics behind photonic integrated circuits: [directional couplers](/blog/directional-couplers-cmt-fdtd/) → Mach–Zehnder interferometers → [ring resonators](/blog/ring-resonators/) → [how they fit together](/blog/coupling-interference-resonance-pic/).*
+
+## English
+
+Part 1 ended with a 50:50 directional coupler whose two outputs carry equal power and a fixed 90° phase difference. A Mach–Zehnder interferometer (MZI) uses two of them. The first splits the light into two arms; the arms delay the two halves by different amounts; the second coupler recombines them. Whether the light leaves through one output or the other then depends only on the **phase difference** between the arms. That single fact makes the MZI the building block of optical switches, modulators, wavelength filters and programmable photonic meshes.
+
+This article derives the MZI transfer function, checks each prediction against 2D FDTD simulations from my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit), and ends with switching by a small change of refractive index.
+
+### The model used here
+
+The model is the one from Part 1: a **2D effective-index** description of a silicon strip waveguide ($n_\text{core}=2.7$, $n_\text{clad}=1.44$, 500 nm wide), non-dispersive materials, TE polarization ($H_z$ out of plane), 1.30–1.40 µm with $\lambda_0=1.35$ µm. Both couplers are the saved 50:50 design of Part 1 (gap 200 nm, coupling length 13.71 µm). The numbers are specific to this model, not to a fabricated device.
+
+<Figure src={fig1} alt="Layout of a Mach–Zehnder interferometer: two directional couplers at the ends, a straight upper arm, and a lower arm with a deep smooth bump that makes it 12.5 micrometres longer." caption="The simulated MZI (saved design point, ΔL = 12.5 µm). Two copies of the 50:50 coupler of Part 1 are joined by a straight reference arm and a delay arm whose raised-cosine bump (17.3 µm deep) adds 12.5 µm of path. Ports: light enters at 1; outputs 3 (bar) and 4 (cross). Drawn from data/design_points/mzi.yaml." number={1} size="wide" />
+
+### 1. Phase and path length
+
+A guided mode that travels a length $L$ picks up the phase
+
+$$
+\phi = \beta L = \frac{2\pi\, n_\text{eff}}{\lambda}\,L ,
+$$
+
+where $n_\text{eff}$ is the effective (phase) index and $\lambda$ the vacuum wavelength. Two arms of lengths $L_1$ and $L_2 = L_1 + \Delta L$ in the same waveguide therefore differ in phase by
+
+$$
+\Delta\phi(\lambda) = \frac{2\pi\, n_\text{eff}(\lambda)}{\lambda}\,\Delta L .
+$$
+
+There are two ways to change $\Delta\phi$. A **passive** MZI uses a fixed path difference $\Delta L$, so $\Delta\phi$ varies with wavelength and the device becomes a filter. An **active** MZI has equal arms but changes $n_\text{eff}$ in one or both arms (thermally or electrically), so $\Delta\phi$ follows a control signal and the device becomes a switch or modulator. Both appear below.
+
+### 2. The transfer function
+
+Use the coupler of Part 1, now written as a matrix acting on the two field amplitudes. A lossless, symmetric coupler with **cross power fraction** $K$ is
+
+$$
+\mathbf{C} = \begin{pmatrix} t & -jk \\ -jk & t \end{pmatrix}, \qquad t=\sqrt{1-K},\quad k=\sqrt{K},
+$$
+
+where the $-j$ is the 90° phase between the through and cross outputs (Part 1). The arms multiply each amplitude by its own phase factor, $\mathbf{A} = \mathrm{diag}(e^{-j\phi_1}, e^{-j\phi_2})$. Light entering port 1 leaves as
+
+$$
+\begin{pmatrix} b_3 \\ b_4 \end{pmatrix} = \mathbf{C}\,\mathbf{A}\,\mathbf{C} \begin{pmatrix} 1 \\ 0 \end{pmatrix}
+= \begin{pmatrix} t^2 e^{-j\phi_1} - k^2 e^{-j\phi_2} \\ -jtk\left(e^{-j\phi_1} + e^{-j\phi_2}\right) \end{pmatrix}.
+$$
+
+Taking the squared magnitudes gives the output **powers**:
+
+$$
+P_\text{bar} = |b_3|^2 = 1 - 4K(1-K)\cos^2\!\frac{\Delta\phi}{2}, \qquad
+P_\text{cross} = |b_4|^2 = 4K(1-K)\cos^2\!\frac{\Delta\phi}{2}.
+$$
+
+For ideal 50:50 couplers ($K=1/2$) these reduce to the familiar $P_\text{bar}=\sin^2(\Delta\phi/2)$ and $P_\text{cross}=\cos^2(\Delta\phi/2)$: with equal arms all the light crosses over, and a half-wave difference $\Delta\phi=\pi$ sends it all to the bar port.[^chrostowski] [^madsen] Three cautions come with this result.
+
+- **The labels depend on the convention.** Which output is "$\sin^2$" and which is "$\cos^2$" depends on the coupler's phase convention and on which port is called which. Here the two 90° phases of the couplers add up, so equal arms send the light to the cross port.
+- **Amplitude, not power, interferes.** The two arm contributions add as complex amplitudes in $b_3$ and $b_4$; the $\cos^2$ comes from squaring their sum. Adding the two arm *powers* would give no interference at all.
+- **Imperfect couplers affect the two outputs differently.** The cross output contains the sum of two equal terms, $t k$ each, so it nulls perfectly at $\Delta\phi=\pi$ for any $K$; only its maximum drops to $4K(1-K)$. The bar output contains the difference of $t^2$ and $k^2$, which cancel only if $K=1/2$. Its floor is $(1-2K)^2$, so the bar-port extinction ratio is $1/(1-2K)^2$: a 45:55 coupler already limits it to 20 dB (Fig. 2). Splitter imbalance is the classic limit on MZI extinction, and compensating it is a central problem in large MZI meshes.[^miller]
+
+<Figure src={fig2} alt="Two panels of bar and cross output power versus arm phase difference from 0 to 4 pi. With K equal to 0.5 both outputs swing between 0 and 1. With K equal to 0.4 the cross output still reaches 0 but peaks at 0.96, and the bar output never drops below 0.04." caption="Ideal MZI outputs versus arm phase difference, from the transfer matrices above. Left: 50:50 couplers. Right: 40:60 couplers. The cross port still nulls perfectly, but the bar port cannot go below (1 − 2K)² = 0.04." number={2} size="wide" />
+
+### 3. A passive MZI in FDTD
+
+The saved design has $\Delta L = 12.5$ µm (Fig. 1). The FDTD simulation launches the guided mode into port 1 and projects the fields at ports 3 and 4 onto the guided mode, giving complex S-parameters $S_{31}$ (bar) and $S_{41}$ (cross). Their sum with the reflection stays between 0.96 and 0.99 across the band; the rest is lost, mostly to radiation.
+
+Fig. 3 shows the result. Both outputs oscillate with wavelength, as $\Delta\phi(\lambda)$ sweeps through multiples of $\pi$, and they do so in antiphase. The two outputs are not equally deep:
+
+| Output | Deepest minimum | Coupler cross power $K$ at that wavelength | Predicted floor |
+|---|---|---|---|
+| cross ($S_{41}$) | −36.3 dB at 1337 nm and −37.1 dB at 1388 nm | 0.47, 0.60 | 0 (any $K$) |
+| bar ($S_{31}$) | −14.7 dB at 1313 nm | 0.41 | $(1-2K)^2$ = 0.031 (−15.1 dB) |
+| bar ($S_{31}$) | −26.5 dB at 1362 nm | 0.53 | 0.004 (−23.9 dB) |
+
+This is Section 2 in action. The cross port nulls to below −36 dB at both its minima, even where the coupler is 60:40. The bar port's floor follows the coupler's own split ratio, measured independently in Part 1: deepest where $K$ is close to 0.5, shallow at 1313 nm where $K=0.41$.
+
+The comparison can be made complete with a **circuit model**. Take the coupler S-parameters measured in Part 1, a phase factor for the arm from the waveguide's mode index $n_\text{eff}(\lambda)$, and the matrix product $\mathbf{C}\mathbf{A}\mathbf{C}$. The only fitted parameter is a constant phase offset, which absorbs the extra phase of the bends and of the coupler reference planes. The dashed curves in Fig. 3 are this model: it reproduces the full-device FDTD spectrum to an rms difference of 0.013 in power. This kind of composition, small simulated building blocks combined by their S-matrices, is how circuits are designed in practice, and it is the subject of Part 4.
+
+<Figure src={fig3} alt="Bar and cross transmission in dB versus wavelength from 1300 to 1400 nm. Both oscillate in antiphase with a period near 50 nm; the cross port has nulls near minus 37 dB, the bar port has shallower minima of minus 15 and minus 26 dB. Dashed gray curves of a circuit model lie on top of the FDTD curves." caption="FDTD transmission of the ΔL = 12.5 µm MZI to the bar (out 3) and cross (out 4) ports. Dashed: circuit model built from the separately simulated coupler S-parameters (Part 1) and the arm phase, with one fitted constant phase offset. Very deep nulls are sensitive to tiny errors, so the curves differ most there. From notebooks/07_mzi.ipynb." number={3} />
+
+### 4. Fringe spacing measures the group index
+
+Adjacent transmission maxima are separated by a $2\pi$ change of $\Delta\phi$. Differentiating $\Delta\phi(\lambda)$, and remembering that $n_\text{eff}$ itself depends on $\lambda$, gives the **free spectral range**
+
+$$
+\mathrm{FSR} \approx \frac{\lambda^2}{n_g\,\Delta L}, \qquad n_g = n_\text{eff} - \lambda\,\frac{dn_\text{eff}}{d\lambda} .
+$$
+
+The fringe spacing is set by the **group index** $n_g$, not the phase index.[^chrostowski] This is also why MZIs with several arm differences are a standard way to measure the dispersion of fabricated waveguides.[^dwivedi] For a 2D waveguide in this model $n_\text{eff}=2.418$ but $n_g = 2.928$ (from the mode solver), a 20 % difference that would be badly wrong if ignored.
+
+Fig. 4 shows how the fringes compress as $\Delta L$ grows from 2.5 to 15 µm. Only $\Delta L \ge 10$ µm puts two full maxima inside the 100 nm band. For each pair of adjacent maxima at $\lambda_1$ and $\lambda_2$, the exact relation for constant $n_g$, $n_g = \lambda_1\lambda_2/[(\lambda_2-\lambda_1)\Delta L]$, gives $n_g = 2.91 \pm 0.04$ over five pairs, within 0.7 % of the mode-solver value. (Using $\lambda^2$ at a fixed 1.35 µm instead of the actual fringe wavelengths biases the estimate by a few percent; the fringes here lie between 1.31 and 1.40 µm.)
+
+<Figure src={fig4} alt="Six cross-port spectra, offset vertically, for arm differences from 2.5 to 15 micrometres. Short arm differences give slow variations across the band; longer ones show two or three full fringes." caption="Cross-port power versus wavelength for six arm-length differences (curves offset vertically by 1.1). The fringe period shrinks as 1/ΔL. From notebooks/07_mzi.ipynb, Section 10." number={4} />
+
+### 5. Switching with a small index change
+
+A modulator or switch keeps the arms equal and changes the phase electrically. In a **push-pull** design one arm gets $+\Delta n/2$ and the other $-\Delta n/2$, so the arm phase difference is
+
+$$
+\Delta\phi = \frac{2\pi}{\lambda}\,\Gamma\,\Delta n\,L ,
+$$
+
+where $L$ is the length of the phase shifter and $\Gamma = \Delta n_\text{eff}/\Delta n$ says how much of the material index change shows up in the mode index. Switching the light from the cross to the bar output needs $\Delta\phi=\pi$, i.e. $L = \lambda/(2\Gamma\Delta n)$; the corresponding drive voltage is called $V_\pi$.
+
+The toolkit's modulator model uses $\Delta n = 2\times10^{-3}$ and a 331 µm phase shifter between two 50:50 couplers (an earlier calibration of the Part 1 design, coupling length 13.85 µm). Sweeping $\Delta n$ (Fig. 5) moves the power smoothly from the cross to the bar output, following $\cos^2(\Delta\phi/2)$ and $\sin^2(\Delta\phi/2)$ as Section 2 predicts. The phase can be read off without ambiguity from the complex ratio of the outputs: for 50:50 couplers $S_{31}/S_{41} = \tan(\Delta\phi/2)$, a real number whose sign flips when $\Delta\phi$ passes $\pi$. It grows linearly, 0.26π per $5\times10^{-4}$, and reaches $1.04\pi$ at $\Delta n=2\times10^{-3}$. That corresponds to $\Gamma = 1.06$. A mode-solver perturbation calculation gives $\Delta n_\text{eff}/\Delta n = 1.03$; the remaining 3.6 % difference is not yet explained, and the modulator simulations ran on a coarser grid than the rest of this article. Note that $\Gamma$ is not a confinement factor bounded by 1: the mode-solver calculation itself gives a value above 1 for this high-contrast guide.
+
+How realistic is $\Delta n = 2\times10^{-3}$? In silicon the practical mechanism is free-carrier plasma dispersion: injecting or depleting about $10^{18}$ carriers/cm³ changes the index by about $1.5\times10^{-3}$ at 1.3 µm.[^soref] A realistic depletion-mode phase shifter changes the carrier density by about $10^{17}$ cm⁻³, which gives $\Delta n \sim 10^{-4}$, and only in part of the mode. Depletion-based Mach–Zehnder modulators therefore typically need phase shifters a few millimetres long.[^rahim] [^reed] The first silicon-waveguide modulator demonstrated experimentally with more than 1 GHz bandwidth was an MZI, with MOS-capacitor (carrier-accumulation) phase shifters in both arms.[^liu] The value used here is a convenient choice for a compact simulation, not a model of a specific junction.
+
+<Figure src={fig5} alt="Bar and cross output power versus push-pull index change from 0 to 2 times ten to the minus three: the cross output falls from 0.99 to near zero while the bar output rises to 0.98; gray curves of sine and cosine squared pass through the points. A top axis shows the phase difference reaching about 1.04 pi." caption="Switching by a push-pull index change in the modulator model (331 µm phase shifter, λ = 1.35 µm). Points: FDTD. Gray: cos²(Δφ/2) and sin²(Δφ/2) with Δφ growing linearly with Δn (top axis). From notebooks/08_mzm.ipynb, Section 9." number={5} />
+
+### 6. Summary
+
+| Quantity | Theory | This 2D FDTD model |
+|---|---|---|
+| Output powers (50:50) | $\sin^2(\Delta\phi/2)$, $\cos^2(\Delta\phi/2)$ | followed by both the passive and the switched device |
+| Cross-port null | 0 for any $K$ | below −36 dB |
+| Bar-port floor | $(1-2K)^2$ | tracks the coupler's measured $K$ |
+| Fringe spacing | $\lambda^2/(n_g\Delta L)$, $n_g = 2.928$ | $n_g = 2.91 \pm 0.04$ |
+| Circuit model vs full device | — | rms difference 0.013 in power |
+| Push-pull switching | $\Delta\phi \propto \Delta n$ | linear; $1.04\pi$ at $\Delta n=2\times10^{-3}$ |
+
+An MZI turns a phase difference into a power ratio, using the 90° phase of the directional couplers. Its depth on one output depends on how exactly the couplers split, and its fringe spacing measures the group index, not the phase index. **[Part 3](/blog/ring-resonators/)** keeps the coupler but closes one arm on itself: instead of two paths interfering once, light circulates and interferes with itself many times.
+
+### Code and data
+
+- MZI notebook (geometry, baseline, ΔL sweep, FSR, design point): [`notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/07_mzi.ipynb)
+- Modulator notebook (push-pull Δn sweep): [`notebooks/08_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/08_mzm.ipynb)
+- Simulation modules: [`mzi.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/mzi.py), [`mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/mzm.py); compact (SAX) model: [`models/mzi.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/mzi.py)
+- Figures, the circuit model, the group-index extraction and the phase readout are produced from the saved data by `scripts/blog_figures/article2_mzi.py` in the same repository. No new FDTD runs were needed.
+
+---
+
+## 日本語
+
+第1回の最後に、2つの出力に等しいパワーと一定の90°の位相差を与える50:50方向性結合器ができました。Mach–Zehnder interferometer(MZI)はこれを2個使います。1個目で光を2本のアームに分け、アームで2つの成分に異なる遅延を与え、2個目で再び合わせます。すると、光がどちらの出力から出るかはアーム間の**位相差**だけで決まります。この一点によって、MZIは光スイッチ、変調器、波長フィルタ、プログラマブルな光メッシュの基本素子になっています。
+
+本記事では、MZIの伝達関数を導き、その予測を[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)の2次元FDTDシミュレーションと一つずつ照合し、最後に小さな屈折率変化による光スイッチングを扱います。
+
+### 本記事のモデル
+
+モデルは第1回と同じで、シリコン細線導波路の**2次元等価屈折率**モデル($n_\text{core}=2.7$、$n_\text{clad}=1.44$、幅500 nm)、材料分散なし、TE偏波($H_z$ が面外)、波長1.30–1.40 µm、$\lambda_0=1.35$ µmです。2つのカプラはどちらも第1回で保存した50:50設計(ギャップ200 nm、結合長13.71 µm)です。数値はこのモデル固有のもので、作製したデバイスの予測値ではありません。
+
+<Figure src={fig1} alt="Mach–Zehnder干渉計のレイアウト:両端に方向性結合器、上側は直線のアーム、下側は深くなめらかなこぶで12.5マイクロメートル長くしたアーム。" caption="シミュレーションしたMZI(保存済み設計、ΔL = 12.5 µm)。第1回の50:50カプラ2個を、直線の参照アームと、raised-cosine型のこぶ(深さ17.3 µm)で光路を12.5 µm延ばした遅延アームでつないでいる。ポート:光は1から入り、出力は3(バー)と4(クロス)。data/design_points/mzi.yaml から描画。" number={1} size="wide" />
+
+### 1. 位相と光路長
+
+長さ $L$ を伝わる導波モードは次の位相を得ます。
+
+$$
+\phi = \beta L = \frac{2\pi\, n_\text{eff}}{\lambda}\,L
+$$
+
+$n_\text{eff}$ は実効(位相)屈折率、$\lambda$ は真空中の波長です。同じ導波路で長さ $L_1$ と $L_2 = L_1 + \Delta L$ の2本のアームがあると、その位相差は
+
+$$
+\Delta\phi(\lambda) = \frac{2\pi\, n_\text{eff}(\lambda)}{\lambda}\,\Delta L
+$$
+
+となります。$\Delta\phi$ を変える方法は2つあります。**受動**MZIは光路差 $\Delta L$ を固定するので、$\Delta\phi$ が波長とともに変わり、フィルタとして働きます。**能動**MZIはアームの長さを等しくし、一方または両方のアームの $n_\text{eff}$ を(熱や電気で)変えるので、$\Delta\phi$ が制御信号に従い、スイッチや変調器として働きます。以下ではその両方を扱います。
+
+### 2. 伝達関数
+
+第1回のカプラを、2つの場の振幅に作用する行列として書きます。**クロス側のパワー比** $K$ をもつ無損失・対称なカプラは
+
+$$
+\mathbf{C} = \begin{pmatrix} t & -jk \\ -jk & t \end{pmatrix}, \qquad t=\sqrt{1-K},\quad k=\sqrt{K}
+$$
+
+で、$-j$ はスルー出力とクロス出力の間の90°の位相差です(第1回)。アームはそれぞれの振幅に自分の位相因子を掛けるので、$\mathbf{A} = \mathrm{diag}(e^{-j\phi_1}, e^{-j\phi_2})$ です。ポート1から入った光は次のように出ていきます。
+
+$$
+\begin{pmatrix} b_3 \\ b_4 \end{pmatrix} = \mathbf{C}\,\mathbf{A}\,\mathbf{C} \begin{pmatrix} 1 \\ 0 \end{pmatrix}
+= \begin{pmatrix} t^2 e^{-j\phi_1} - k^2 e^{-j\phi_2} \\ -jtk\left(e^{-j\phi_1} + e^{-j\phi_2}\right) \end{pmatrix}
+$$
+
+絶対値の2乗を取ると、出力の**パワー**が得られます。
+
+$$
+P_\text{bar} = |b_3|^2 = 1 - 4K(1-K)\cos^2\!\frac{\Delta\phi}{2}, \qquad
+P_\text{cross} = |b_4|^2 = 4K(1-K)\cos^2\!\frac{\Delta\phi}{2}
+$$
+
+理想的な50:50カプラ($K=1/2$)では、よく知られた $P_\text{bar}=\sin^2(\Delta\phi/2)$、$P_\text{cross}=\cos^2(\Delta\phi/2)$ になります。アームが等しければ光はすべてクロス側へ渡り、半波長分の差 $\Delta\phi=\pi$ があればすべてバー側へ出ます[^chrostowski] [^madsen]。この結果には注意点が3つあります。
+
+- **ラベルは慣習に依存する。** どちらの出力が「$\sin^2$」でどちらが「$\cos^2$」になるかは、カプラの位相の慣習とポートの呼び方で変わります。ここでは2つのカプラの90°が足し合わさるため、アームが等しいと光はクロス側へ出ます。
+- **干渉するのはパワーではなく振幅。** $b_3$ と $b_4$ では、2本のアームの寄与が複素振幅として足し合わされ、その和を2乗することで $\cos^2$ が現れます。アームの*パワー*を足しても干渉は起こりません。
+- **不完全なカプラは2つの出力に異なる影響を与える。** クロス出力は大きさ $tk$ の等しい2項の和なので、どんな $K$ でも $\Delta\phi=\pi$ で完全にゼロになり、下がるのは最大値($4K(1-K)$)だけです。バー出力は $t^2$ と $k^2$ の差で、両者が打ち消し合うのは $K=1/2$ のときだけです。その下限は $(1-2K)^2$ なので、バー側の消光比は $1/(1-2K)^2$ となり、45:55のカプラでもう20 dBに制限されます(図2)。分岐比の不均衡はMZIの消光比を制限する古典的な要因であり、大規模なMZIメッシュではその補償が中心的な課題になっています[^miller]。
+
+<Figure src={fig2} alt="アーム位相差0から4πに対するバー・クロス出力の2パネル。K = 0.5では両出力が0と1の間を振動する。K = 0.4ではクロス出力は0まで下がるが最大値は0.96、バー出力は0.04より下がらない。" caption="上の伝達行列から求めた理想的なMZI出力とアーム位相差の関係。左:50:50カプラ。右:40:60カプラ。クロス側は完全にゼロになるが、バー側は (1 − 2K)² = 0.04 より下がらない。" number={2} size="wide" />
+
+### 3. FDTDでみる受動MZI
+
+保存済みの設計は $\Delta L = 12.5$ µmです(図1)。FDTDでは導波モードをポート1から入射し、ポート3と4の場を導波モードに射影して、複素Sパラメータ $S_{31}$(バー)と $S_{41}$(クロス)を求めます。反射を含めた和は帯域全体で0.96–0.99で、残りは主に放射として失われています。
+
+結果を図3に示します。$\Delta\phi(\lambda)$ が $\pi$ の倍数を次々に通過するので、2つの出力は波長とともに逆位相で振動します。ただし、2つの出力の谷の深さは同じではありません。
+
+| 出力 | 最も深い極小 | その波長でのカプラのクロス比 $K$ | 予測される下限 |
+|---|---|---|---|
+| クロス($S_{41}$) | 1337 nmで−36.3 dB、1388 nmで−37.1 dB | 0.47、0.60 | 0(任意の $K$) |
+| バー($S_{31}$) | 1313 nmで−14.7 dB | 0.41 | $(1-2K)^2$ = 0.031(−15.1 dB) |
+| バー($S_{31}$) | 1362 nmで−26.5 dB | 0.53 | 0.004(−23.9 dB) |
+
+これは2節の内容そのものです。クロス側は、カプラが60:40になっている波長でも、両方の極小で−36 dBより深くゼロに近づきます。バー側の下限は、第1回で独立に測ったカプラ自身の分岐比に従っています。$K$ が0.5に近いところで最も深く、$K=0.41$ の1313 nmでは浅くなります。
+
+**回路モデル**を使うと、比較を完全なものにできます。第1回で測ったカプラのSパラメータ、導波路のモード屈折率 $n_\text{eff}(\lambda)$ から求めたアームの位相因子、そして行列積 $\mathbf{C}\mathbf{A}\mathbf{C}$ を使います。フィットするのは一定の位相オフセット1つだけで、これがベンドやカプラの基準面に由来する余分な位相を吸収します。図3の破線がこのモデルで、デバイス全体のFDTDスペクトルをパワーのrms差0.013で再現しています。シミュレーションした小さな部品をSマトリクスで組み合わせるこの方法は、実際の回路設計のやり方そのものであり、第4回のテーマです。
+
+<Figure src={fig3} alt="1300から1400 nmにおけるバー・クロス透過率(dB)。両者は周期約50 nmで逆位相に振動する。クロス側の谷は約−37 dB、バー側の谷は−15 dBと−26 dBと浅い。回路モデルの灰色破線がFDTDの曲線にほぼ重なる。" caption="ΔL = 12.5 µmのMZIのバー(出力3)とクロス(出力4)へのFDTD透過率。破線:別途シミュレーションしたカプラのSパラメータ(第1回)とアーム位相から組み立て、一定の位相オフセットを1つだけフィットした回路モデル。非常に深い谷はわずかな誤差に敏感なので、差が最も出るのはそこである。notebooks/07_mzi.ipynb より。" number={3} />
+
+### 4. 干渉縞の間隔は群屈折率を測る
+
+隣り合う透過の極大は、$\Delta\phi$ が $2\pi$ 変わるごとに現れます。$n_\text{eff}$ 自体も $\lambda$ に依存することに注意して $\Delta\phi(\lambda)$ を微分すると、**自由スペクトル領域(FSR)**が得られます。
+
+$$
+\mathrm{FSR} \approx \frac{\lambda^2}{n_g\,\Delta L}, \qquad n_g = n_\text{eff} - \lambda\,\frac{dn_\text{eff}}{d\lambda}
+$$
+
+干渉縞の間隔を決めるのは、位相屈折率ではなく**群屈折率** $n_g$ です[^chrostowski]。そのため、アーム長差の異なる複数のMZIは、作製した導波路の分散を測る標準的な方法になっています[^dwivedi]。このモデルの2次元導波路では $n_\text{eff}=2.418$ に対して $n_g = 2.928$(モードソルバの値)で、20 %も違うので、取り違えると大きな誤りになります。
+
+図4は、$\Delta L$ を2.5 µmから15 µmへ増やすと干渉縞が詰まっていく様子です。100 nmの帯域に2つの極大が完全に入るのは $\Delta L \ge 10$ µmのときだけです。隣り合う極大 $\lambda_1$、$\lambda_2$ の各組に、$n_g$ が一定のときの厳密な関係 $n_g = \lambda_1\lambda_2/[(\lambda_2-\lambda_1)\Delta L]$ を当てはめると、5組から $n_g = 2.91 \pm 0.04$ が得られ、モードソルバの値と0.7 %以内で一致します。(実際の干渉縞の波長ではなく1.35 µm固定の $\lambda^2$ を使うと、推定値が数%ずれます。ここでの干渉縞は1.31–1.40 µmにあります。)
+
+<Figure src={fig4} alt="アーム長差2.5から15マイクロメートルの6本のクロス側スペクトルを縦にずらして並べた図。アーム長差が小さいと帯域内でゆっくり変化し、大きいと2–3周期の干渉縞が現れる。" caption="6通りのアーム長差に対するクロス側パワーの波長依存性(各曲線を1.1ずつ縦にずらして表示)。干渉縞の周期は1/ΔLで縮む。notebooks/07_mzi.ipynb、10節より。" number={4} />
+
+### 5. 小さな屈折率変化によるスイッチング
+
+変調器やスイッチでは、アームの長さを等しくしたまま電気的に位相を変えます。**プッシュプル**方式では、一方のアームに $+\Delta n/2$、もう一方に $-\Delta n/2$ を与えるので、アーム間の位相差は
+
+$$
+\Delta\phi = \frac{2\pi}{\lambda}\,\Gamma\,\Delta n\,L
+$$
+
+となります。$L$ は位相シフタの長さ、$\Gamma = \Delta n_\text{eff}/\Delta n$ は材料の屈折率変化のうちどれだけがモード屈折率に現れるかを表します。光をクロス側からバー側へ切り替えるには $\Delta\phi=\pi$、つまり $L = \lambda/(2\Gamma\Delta n)$ が必要で、これに対応する駆動電圧を $V_\pi$ と呼びます。
+
+ツールキットの変調器モデルでは、2個の50:50カプラ(第1回の設計の以前の較正値、結合長13.85 µm)の間に長さ331 µmの位相シフタを置き、$\Delta n = 2\times10^{-3}$ を与えています。$\Delta n$ を掃引すると(図5)、パワーはクロス側からバー側へなめらかに移り、2節の予測どおり $\cos^2(\Delta\phi/2)$ と $\sin^2(\Delta\phi/2)$ に従います。位相は出力の複素比から曖昧さなく読み取れます。50:50カプラでは $S_{31}/S_{41} = \tan(\Delta\phi/2)$ が実数となり、$\Delta\phi$ が $\pi$ を超えると符号が反転するからです。位相差は $5\times10^{-4}$ ごとに0.26πずつ直線的に増え、$\Delta n=2\times10^{-3}$ で $1.04\pi$ に達します。これは $\Gamma = 1.06$ に相当します。モードソルバによる摂動計算では $\Delta n_\text{eff}/\Delta n = 1.03$ で、残る3.6 %の差はまだ説明できていません。なお、変調器のシミュレーションは本記事の他の計算より粗い格子で行っています。なお $\Gamma$ は1以下に限られる閉じ込め係数ではなく、この高屈折率差の導波路ではモードソルバの計算自体が1を超える値を与えます。
+
+$\Delta n = 2\times10^{-3}$ はどれくらい現実的でしょうか。シリコンでの実用的な機構は自由キャリアプラズマ分散で、約 $10^{18}$ cm⁻³ のキャリアを注入または空乏化すると、波長1.3 µmで屈折率が約 $1.5\times10^{-3}$ 変わります[^soref]。現実的な空乏型位相シフタで変えられるキャリア密度は約 $10^{17}$ cm⁻³ で、これは $\Delta n \sim 10^{-4}$ に相当し、しかもモードの一部の領域でしか変わりません。そのため、空乏型のMach–Zehnder変調器は通常、長さ数mmの位相シフタを必要とします[^rahim] [^reed]。1 GHzを超える帯域を初めて実験で示したシリコン導波路変調器もMZIで、両アームにMOSキャパシタ型(キャリア蓄積型)の位相シフタを備えていました[^liu]。本記事の値は小さなシミュレーション領域で済ませるための便宜的な値で、特定の接合構造をモデル化したものではありません。
+
+<Figure src={fig5} alt="プッシュプル屈折率変化0から2×10⁻³に対するバー・クロス出力。クロス出力は0.99からほぼ0に下がり、バー出力は0.98まで上がる。sin²とcos²の灰色の曲線が点を通る。上軸は位相差が約1.04πに達することを示す。" caption="変調器モデル(位相シフタ331 µm、λ = 1.35 µm)におけるプッシュプル屈折率変化によるスイッチング。点:FDTD。灰色:Δφ がΔnに比例して増えるとした cos²(Δφ/2) と sin²(Δφ/2)(上軸)。notebooks/08_mzm.ipynb、9節より。" number={5} />
+
+### 6. まとめ
+
+| 量 | 理論 | 本記事の2D FDTDモデル |
+|---|---|---|
+| 出力パワー(50:50) | $\sin^2(\Delta\phi/2)$、$\cos^2(\Delta\phi/2)$ | 受動デバイスでもスイッチ動作でも成立 |
+| クロス側のゼロ | 任意の $K$ で0 | −36 dB以下 |
+| バー側の下限 | $(1-2K)^2$ | カプラの実測 $K$ に追従 |
+| 干渉縞の間隔 | $\lambda^2/(n_g\Delta L)$、$n_g = 2.928$ | $n_g = 2.91 \pm 0.04$ |
+| 回路モデルとデバイス全体の比較 | — | パワーのrms差0.013 |
+| プッシュプルスイッチング | $\Delta\phi \propto \Delta n$ | 直線的、$\Delta n=2\times10^{-3}$ で $1.04\pi$ |
+
+MZIは、方向性結合器の90°の位相を使って、位相差をパワー比に変換します。一方の出力の谷の深さはカプラの分岐の正確さで決まり、干渉縞の間隔は位相屈折率ではなく群屈折率を測ります。**[第3回](/blog/ring-resonators/)**ではカプラはそのままに、一方のアームを自分自身へ閉じます。2つの経路が一度だけ干渉するのではなく、光が周回して自分自身と何度も干渉するようになります。
+
+### コードとデータ
+
+- MZIのノートブック(形状、ベースライン、ΔL掃引、FSR、設計値):[`notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/07_mzi.ipynb)
+- 変調器のノートブック(プッシュプルΔn掃引):[`notebooks/08_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/08_mzm.ipynb)
+- シミュレーションモジュール:[`mzi.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/mzi.py)、[`mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/mzm.py)、コンパクトモデル(SAX):[`models/mzi.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/mzi.py)
+- 図、回路モデル、群屈折率の抽出、位相の読み取りは、保存済みデータから同リポジトリの `scripts/blog_figures/article2_mzi.py` で作成しました。新たなFDTD計算は行っていません。
+
+---
+
+## References / 参考文献
+
+[^madsen]: C. K. Madsen and J. H. Zhao, *Optical Filter Design and Analysis: A Signal Processing Approach* (Wiley, 1999). [doi:10.1002/0471213756](https://doi.org/10.1002/0471213756)
+[^chrostowski]: L. Chrostowski and M. Hochberg, *Silicon Photonics Design: From Devices to Systems* (Cambridge University Press, 2015). [doi:10.1017/CBO9781316084168](https://doi.org/10.1017/CBO9781316084168)
+[^miller]: D. A. B. Miller, "Perfect optics with imperfect components," *Optica* **2**, 747 (2015). [doi:10.1364/OPTICA.2.000747](https://doi.org/10.1364/OPTICA.2.000747)
+[^dwivedi]: S. Dwivedi, A. Ruocco, M. Vanslembrouck, T. Spuesens, P. Bienstman, P. Dumon, T. Van Vaerenbergh and W. Bogaerts, "Experimental extraction of effective refractive index and thermo-optic coefficients of silicon-on-insulator waveguides using interferometers," *Journal of Lightwave Technology* **33**, 4471–4477 (2015). [doi:10.1109/JLT.2015.2476603](https://doi.org/10.1109/JLT.2015.2476603)
+[^soref]: R. A. Soref and B. R. Bennett, "Electrooptical effects in silicon," *IEEE Journal of Quantum Electronics* **23**, 123–129 (1987). [doi:10.1109/JQE.1987.1073206](https://doi.org/10.1109/JQE.1987.1073206)
+[^reed]: G. T. Reed, G. Mashanovich, F. Y. Gardes and D. J. Thomson, "Silicon optical modulators," *Nature Photonics* **4**, 518–526 (2010). [doi:10.1038/nphoton.2010.179](https://doi.org/10.1038/nphoton.2010.179)
+[^rahim]: A. Rahim, A. Hermans, B. Wohlfeil, D. Petousi, B. Kuyken, D. Van Thourhout and R. Baets, "Taking silicon photonics modulators to a higher performance level: state-of-the-art and a review of new technologies," *Advanced Photonics* **3**, 024003 (2021). [doi:10.1117/1.AP.3.2.024003](https://doi.org/10.1117/1.AP.3.2.024003)
+[^liu]: A. Liu, R. Jones, L. Liao, D. Samara-Rubio, D. Rubin, O. Cohen, R. Nicolaescu and M. Paniccia, "A high-speed silicon optical modulator based on a metal–oxide–semiconductor capacitor," *Nature* **427**, 615–618 (2004). [doi:10.1038/nature02310](https://doi.org/10.1038/nature02310)

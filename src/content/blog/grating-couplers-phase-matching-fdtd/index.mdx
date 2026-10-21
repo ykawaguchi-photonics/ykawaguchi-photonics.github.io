@@ -1,0 +1,333 @@
+---
+title: "Grating Couplers: Phase Matching, Directionality and Mode Overlap in FDTD"
+description: "How a waveguide grating sends light up into a fiber, why only part of it arrives, and how phase matching, directionality, the buried-oxide thickness and mode overlap set the coupling efficiency, checked with 2D FDTD simulations in Meep against published designs. English and Japanese."
+date: 2026-10-20
+category: technical-notes
+tags: [silicon photonics, silicon nitride, grating coupler, fiber coupling, Meep, FDTD]
+areas: [silicon-photonics]
+draft: true
+---
+
+import Figure from "@/components/Figure.astro";
+import fig1 from "./fig1_stack.png";
+import fig2 from "./fig2_phase_matching.png";
+import fig3 from "./fig3_field.png";
+import fig4 from "./fig4_power_budget.png";
+import fig5 from "./fig5_box_sweep.png";
+import fig6 from "./fig6_spectrum.png";
+
+**Language:** [English](#english) · [日本語](#日本語)
+
+## English
+
+A single-mode fiber carries light in a mode about 9 µm across. An integrated waveguide confines it to a few hundred nanometres. Getting light from one to the other efficiently is one of the basic problems of photonic integration.
+
+There are two broad answers. **Edge (in-plane) couplers** bring the fiber to a polished chip facet; they offer high efficiency, broad bandwidth and low polarization dependence, but need facet preparation and cannot be tested on the wafer. **Grating (out-of-plane) couplers** diffract light up from the chip surface. They are less efficient, narrower in bandwidth and polarization dependent, but they can sit anywhere on the chip and allow wafer-scale testing.[^marchetti] The Ghent group demonstrated an out-of-plane grating coupler for compact high-index-contrast (GaAs/AlOx) waveguides in 2002 and then developed the approach for silicon-on-insulator wires.[^taillaert2002] [^taillaert2006]
+
+This article follows the light through a grating coupler and asks, at each step, where the power goes. The numbers come from 2D FDTD simulations in my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit), checked against two published silicon-nitride designs.
+
+### The model used here
+
+The main device is a grating etched into a **400 nm silicon-nitride (SiN) core** ($n=2.0$) on a buried oxide (BOX) layer over a silicon substrate, with oxide top cladding (Fig. 1). The light is TE-polarized (electric field along the grating lines) at $\lambda_0 = 1.35$ µm, and it couples to an SMF-28 fiber (mode-field diameter 9.2 µm) tilted 10° in the oxide.
+
+The simulations are **2D cross-sections** (the propagation direction $x$ and the vertical $z$) with bulk refractive indices. Materials are non-dispersive, and the structure is assumed infinitely wide along the grating lines. A 2D model therefore has no lateral mode mismatch and no taper loss, so its efficiencies are upper bounds for a real device. All runs use Meep[^meep] at 160 pixels/µm (6.25 nm cells) for the final numbers, after a mesh-convergence study.
+
+<Figure src={fig1} alt="Schematic cross-section: silicon substrate, buried oxide, a silicon-nitride core with rectangular grooves etched into its top, oxide cladding, and a fiber tilted above the grating." caption="The SiN grating coupler studied here (schematic, not to scale). The 22-period grating has period P = 926 nm, 530 nm unetched teeth and a 203 nm etch, values found by gradient-based optimization. BOX 4.58 µm. Design point: meta/data/sin_grating_conventional.yaml." number={1} size="wide" />
+
+### 1. Phase matching: where the light goes
+
+A guided mode travels along $x$ with propagation constant $\beta = 2\pi n_B/\lambda$. In a periodic structure the relevant index is the **Bloch index** $n_B$ of the grating section, which lies between the indices of the etched and unetched slab. A grating of period $P$ adds or removes multiples of the grating vector $K=2\pi/P$ from $\beta$. The $m$-th diffraction order can leave the waveguide when its in-plane wave vector fits inside the cladding's light cone, which gives the grating equation for the angle $\theta$ from the vertical:[^marchetti]
+
+$$
+n_\text{clad}\,\sin\theta = n_B - m\,\frac{\lambda}{P}, \qquad m = 1 .
+$$
+
+Here $n_\text{clad}$ is the cladding index (1.44), and $\lambda$ the vacuum wavelength. Only the first order radiates for the periods used here.
+
+The simulation measures $n_B$ directly from the phase slope of the emitted field: $n_B = 1.708$, between the etched (1.613) and unetched (1.779) slab indices from an exact transfer-matrix solution. For a 10° fiber at 1.35 µm, the grating equation gives $P = \lambda/(n_B - n_\text{clad}\sin\theta) = 0.926$ µm.
+
+Why tilt the fiber at all? At exactly vertical emission ($\theta=0$), $P=\lambda/n_B$, and the **second** diffraction order then satisfies the Bragg condition $2K = 2\beta$: it couples the forward mode straight back into the waveguide. Tilting the emission slightly away from the vertical suppresses this strong back-reflection; silicon designs typically use about 8–10°, and other platforms use angles from a few degrees up to about 15°.[^taillaert2006] [^marchetti]
+
+The grating equation also fixes how the beam moves with wavelength. Ignoring the dispersion of $n_B$, differentiating gives $d\theta/d\lambda = -1/(P\,n_\text{clad}\cos\theta) \approx -0.044°$ per nm (Fig. 2). Across a 40 nm band the beam swings by almost 2°, so its overlap with a fiber held at a fixed angle falls off on both sides of the design wavelength. That is the origin of a grating coupler's limited bandwidth (Section 5).
+
+<Figure src={fig2} alt="Line plot: emission angle in oxide falls linearly from 13 degrees at 1280 nm to 7 degrees at 1420 nm, crossing the 10 degree fiber angle at 1350 nm." caption="First-order emission angle in the oxide cladding versus wavelength, from the grating equation with the measured Bloch index n_B = 1.708 and P = 926 nm (dispersion of n_B neglected). The beam meets the 10° fiber angle at the 1.35 µm design wavelength and swings by about 0.044° per nm." number={2} />
+
+### 2. Where the power goes: directionality
+
+Once the grating radiates, the incident guided power splits four ways: radiated **up** toward the fiber, radiated **down** into the substrate, **transmitted** past the grating without being scattered, and **reflected** back into the input waveguide. The fraction going up is described by the **directionality**
+
+$$
+D = \frac{P_\text{up}}{P_\text{up} + P_\text{down}},
+$$
+
+the ratio of upward to total radiated power.[^korcek] It is a property of the vertical structure: a grating whose teeth are symmetric about the core scatters roughly equally up and down, and only the reflection from the layers below breaks that balance.
+
+<Figure src={fig3} alt="Field map of the grating cross-section: the guided mode enters from the left in the core; a tilted wave pattern radiates upward into the cladding and a weaker pattern downward into the buried oxide." caption="Re(E_y) at 1.35 µm in the optimized SiN grating (x along the waveguide, z vertical; gray lines mark the core and the BOX/substrate interface). The guided mode enters from the left. Tilted wavefronts leave the grating upward, and a weaker beam travels down through the BOX, where its reflection from the silicon substrate interferes with the downward wave. From meta/notebooks/02_uniform_adam.ipynb (res 160)." number={3} size="wide" />
+
+The coupling efficiency $\eta$ into the fiber is never larger than $P_\text{up}$. It is convenient to write it as
+
+$$
+\eta = P_\text{up} \times M ,
+$$
+
+which defines the **mode-match factor** $M$: the fraction of the upward-radiated power that actually matches the fiber mode. Fig. 4 shows the budget for the optimized single-etch SiN grating: 60 % goes up, 22 % down, 13 % passes the grating unradiated and almost nothing is reflected. So $D = 0.73$, $M = 0.65$, and $\eta = 0.596 \times 0.647 = 0.385$, i.e. **−4.14 dB**.
+
+Two things limit this design. The SiN/oxide index contrast is moderate, so each tooth scatters weakly: the grating needs a long length to radiate the light, which hurts both the mode match and the transmitted fraction. And with a single etch depth the scattering stays nearly symmetric vertically.[^korcek]
+
+The second bar group in Fig. 4 shows what breaking that symmetry does. Here the grating is not etched into the SiN but formed in a 220 nm **amorphous-silicon (a-Si) overlay** on top of it (the uniform design of Fraser et al.).[^fraser] The high-index overlay above the core pushes most of the scattered light upward: $D = 0.93$, 89 % radiated up, and $\eta = -1.66$ dB.
+
+<Figure src={fig4} alt="Grouped bar chart of power fractions for two designs. Single-etch SiN: up 0.60, down 0.22, transmitted 0.13, reflected 0.00. a-Si overlay: up 0.89, down 0.07, transmitted 0.02, reflected 0.01." caption="Power budget at the design wavelength for the optimized single-etch SiN grating (1.35 µm, oxide top) and the a-Si-overlay grating on SiN (1.31 µm, air top). The two differ in wavelength and top cladding, so this compares mechanisms, not identical devices. η: coupling efficiency to SMF-28; D: directionality. From meta/notebooks/02_uniform_adam.ipynb and 04_asi_overlay.ipynb." number={4} />
+
+### 3. The buried oxide as a vertical interferometer
+
+The light radiated downward crosses the BOX at angle $\theta$, partly reflects at the oxide/silicon interface and returns upward, where it interferes with the light radiated up directly. The extra path of the reflected beam is $2\,n_\text{ox}\,t\cos\theta$ for a BOX thickness $t$. Upward power therefore oscillates with $t$, with a period of one wavelength of extra path:
+
+$$
+\Delta t = \frac{\lambda}{2\,n_\text{ox}\cos\theta} = \frac{1.35\ \mu\text{m}}{2\cdot 1.44\cdot\cos 10^\circ} = 0.476\ \mu\text{m}.
+$$
+
+A sweep of 81 BOX thicknesses from 1 to 5 µm (Fig. 5) shows exactly this. The fitted period is 0.473 µm, and the upward fraction swings between 0.20 and 0.63. The reflection strength is set by the oxide/silicon index step, not by $t$, so the oscillation does not die out for a thick BOX: the thickness only decides whether the reflection helps or hurts.
+
+This makes the BOX thickness a design parameter, but a manufacturer usually fixes it. Rather than tune a custom stack, the simulated design uses the interference maximum closest to a standard SiN-platform value of 4.5 µm (the BOX of Fraser et al.'s platform, for example[^fraser]): 4.58 µm. The same reasoning motivated adding a metal or multilayer mirror below the grating. In silicon-on-insulator, a gold bottom mirror raised the measured efficiency to 69 %.[^vanlaere]
+
+<Figure src={fig5} alt="Line plot versus BOX thickness from 1 to 5 micrometres: the upward fraction oscillates between about 0.2 and 0.63 with a period near 0.47 micrometres, and the coupling efficiency follows it between 0.1 and 0.37." caption="Upward-radiated fraction and coupling efficiency at 1.35 µm versus BOX thickness for the SiN grating (81 FDTD runs at res 40; the starting design, not the final one). The oscillation period, 0.473 µm, matches λ/(2 n_ox cos θ) = 0.476 µm. Red line: chosen BOX; dotted line: the 4.5 µm standard value. From meta/notebooks/01_sin_validation_mesh.ipynb, Section 7." number={5} />
+
+### 4. Mode overlap: why a uniform grating cannot reach 100 %
+
+Even the light that goes up is not all collected. The fiber accepts only the part of the radiated field that matches its own mode, a tilted Gaussian beam. The toolkit evaluates this on a horizontal line 1 µm above the core with a power-normalized overlap integral,
+
+$$
+\eta = \frac{\left|\int \left(\mathbf{E}_\text{s}\times\mathbf{H}_\text{f}^{*} + \mathbf{E}_\text{f}^{*}\times\mathbf{H}_\text{s}\right)\cdot\hat{\mathbf{z}}\,dx\right|^2}{4\,P_\text{in}\,P_\text{f}},
+$$
+
+where $(\mathbf{E}_\text{s},\mathbf{H}_\text{s})$ is the simulated field, $(\mathbf{E}_\text{f},\mathbf{H}_\text{f})$ the fiber mode, $P_\text{in}$ the incident guided power and $P_\text{f}$ the fiber mode's power through the line (both $P$ as $\mathrm{Re}\int(\mathbf{E}\times\mathbf{H}^*)\cdot\hat{\mathbf{z}}\,dx$). By reciprocity this is also the efficiency from fiber to chip. A field identical to the fiber mode carrying all the input power gives $\eta = 1$, which the toolkit checks numerically, together with the analytic result for two offset Gaussian beams. In code ([`sin_grating.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/sin_grating.py)):
+
+```python
+def eta_overlap(x, ez, hx, wl, p_in, p, x0):
+    # Physical Ey = -Ez(Meep): the x-z cross-section swaps one pair of axes
+    ey_s, hx_s = -ez, hx
+    ey_f, hx_f = fiber_mode(x, x0, wl, p)        # tilted Gaussian, Hx = -n cos(theta) Ey
+    dx = x[1] - x[0]
+    X = np.sum(ey_s * np.conj(hx_f) + np.conj(ey_f) * hx_s) * dx
+    p_f = abs(np.real(np.sum(ey_f * np.conj(hx_f))) * dx)
+    return float(np.abs(X) ** 2 / (4 * p_f * p_in))
+```
+
+The shape mismatch is built into a uniform grating. Each period scatters a fixed fraction of the power still in the waveguide, so the emitted intensity decays exponentially along the grating, $I(x)\propto e^{-x/L_c}$, while the fiber mode is Gaussian with waist $w_0 = 4.6$ µm. Here $L_c$ is the 1/e decay length of the intensity. A short calculation shows that the best overlap of such a one-sided exponential with a Gaussian is **80.1 %**, reached when $L_c \approx w_0/1.37 = 3.4$ µm (for emission near the vertical; the tilt adds a factor $\cos\theta$). This is the well-known ≈80 % limit of a uniform grating.[^taillaert2006] [^marchetti] No uniform grating can exceed it, which is why high-efficiency designs **apodize** the grating, varying its strength along $x$ to make the emitted profile Gaussian-like. In Fraser et al.'s simulations, their final, apodized design raises the overlap from 77 % to 90 %.[^fraser]
+
+The optimized SiN grating has $L_c = 10.1$ µm, three times longer than ideal, because the weak SiN teeth cannot radiate faster. For that decay length an ideal exponential gives 0.60, close to the 0.65 found in the simulation. The a-Si overlay scatters more strongly ($L_c = 5.2$ µm) and reaches $M = 0.77$, the same 77 % that Fraser et al. report for this uniform design.[^fraser]
+
+### 5. Bandwidth
+
+Fig. 6 shows the coupling efficiency of the SiN grating with the fiber held at its optimum position. The peak, −4.04 dB, lies at 1345 nm, and the efficiency stays within 1 dB of it over about 40 nm. The sampled wavelengths (spaced ≈5 nm) that lie within 1 dB span 36 nm; interpolating between samples gives 41 nm. The fall-off on both sides follows from Section 1: away from the design wavelength the beam's angle no longer matches the fiber's.
+
+<Figure src={fig6} alt="Coupling efficiency in dB versus wavelength from 1300 to 1405 nm, peaking near minus 4 dB around 1345 nm and falling to minus 8.7 dB at 1300 nm and minus 12.5 dB at 1405 nm, with a shaded 1-dB band about 41 nm wide." caption="Coupling-efficiency spectrum of the optimized SiN grating, fiber held at its 1.35 µm optimum. Shaded: the interpolated 1-dB band (41 nm). From meta/notebooks/02_uniform_adam.ipynb (res 160)." number={6} />
+
+### 6. Does the model reproduce published devices?
+
+A simulation that gives plausible numbers is not yet a validated one. Before optimizing anything, the same 2D model was run on two published SiN designs from the Cheben/Benedikovič group:
+
+| Design | Quantity | This model | Published |
+|---|---|---|---|
+| Single-etch 400 nm SiN, air top, 1.55 µm (Korček et al.)[^korcek] | efficiency | −3.67 dB | −3.6 dB simulated, −3.9 dB measured |
+| | directionality | 73 % | 72 % |
+| a-Si overlay on SiN, 1.31 µm, uniform (Fraser et al.)[^fraser] | efficiency | −1.66 dB | −1.7 dB (simulated) |
+| | directionality | 0.93 | 93 % |
+| | mode overlap | 0.77 | 77 % |
+
+The published simulations used Lumerical FDTD; the Fraser et al. numbers are simulations only, and Korček et al.'s measured −3.9 dB device had a 65 % duty cycle against the 70 % design. Both agree within 0.1 dB. The measured device is 0.3 dB below its simulation, which is typical of what a 2D model leaves out: lateral mode mismatch, fabrication variation and the taper. Two numerical checks are also worth knowing. First, the efficiency of the single-etch SiN grating converges smoothly with resolution only when the geometry is represented as a per-cell fill fraction; Meep's subpixel-averaged blocks scatter by a few tenths of a dB from one resolution to the next, so the final numbers use 6.25 nm cells. Second, for the a-Si overlay the spread over 100–160 pixels/µm is 0.29 dB, which sets its numerical uncertainty.
+
+### 7. Going to 3D
+
+A 2D model treats the grating as infinitely wide. A real grating must also match the fiber mode laterally, and it is fed from a 0.5 µm wire through a taper. A companion true-3D simulation in the toolkit, a compact fan-shaped focusing grating in 220 nm silicon with a metal mirror under a 1.25 µm BOX, coupling to a 2.5 µm lensed-fiber spot, shows how the same budget extends to 3D:
+
+- 83 % radiated up and only 1.3 % down, because the mirror removes the substrate loss;
+- mode match along and across the grating 0.94 and 0.99;
+- predicted product $0.832 \times 0.942 \times 0.993 = 0.78$, against a computed 3D overlap of **0.71 (−1.49 dB)**; including the 3.3 % Fresnel loss at the chip surface, 0.75 against 0.69 (−1.63 dB).
+
+These 3D numbers carry about ±10 % uncertainty from the 36.7 nm grid. Details are in [`3d/notebooks/09b_grating_coupler_3d.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/3d/notebooks/09b_grating_coupler_3d.ipynb).
+
+### 8. Summary
+
+The efficiency of a grating coupler factors into three questions, each with its own physics:
+
+| Question | Physics | Lever |
+|---|---|---|
+| Does the light leave at the fiber's angle? | grating equation, $n_\text{clad}\sin\theta = n_B - \lambda/P$ | period, fiber tilt |
+| How much goes up rather than down? | directionality; BOX interference with period $\lambda/(2n_\text{ox}\cos\theta)$ | vertical asymmetry (overlay, dual etch), BOX thickness, bottom mirror |
+| Does the upward beam match the fiber mode? | overlap of an exponential with a Gaussian, ≤ 80 % if uniform | grating strength, apodization |
+
+For a single-etch 400 nm SiN grating the result is −4.1 dB in 2D, limited by weak scattering and a directionality of 0.73. Breaking the vertical symmetry with an a-Si overlay raises the directionality to 0.93 and the efficiency to −1.7 dB, matching the published design.
+
+### Code and data
+
+- SiN study overview and literature notes: [`meta/README.md`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/README.md), [`meta/literature.md`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/literature.md)
+- Model validation, mesh, BOX sweep and the Korček benchmark: [`meta/notebooks/01_sin_validation_mesh.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/01_sin_validation_mesh.ipynb)
+- Optimized single-etch grating: [`meta/notebooks/02_uniform_adam.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/02_uniform_adam.ipynb); a-Si overlay: [`meta/notebooks/04_asi_overlay.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/04_asi_overlay.ipynb)
+- Simulation modules: [`sin_grating.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/sin_grating.py), [`asi_grating.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/asi_grating.py)
+- The toolkit also contains a 2D model of a 220 nm silicon grating ([`notebooks/09_grating_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/09_grating_coupler.ipynb)). Its numbers are not used here because its resolution convergence has not yet been checked.
+- Figures 1, 2, 4–6 and all numbers above were produced from the saved simulation data by `scripts/blog_figures/grating_coupler.py` in the same repository; Fig. 3 shows the saved field map. No new FDTD runs were needed.
+
+---
+
+## 日本語
+
+シングルモードファイバの光は直径約9 µmのモードで伝わりますが、集積導波路はそれを数百nmに閉じ込めます。この2つの間で光を効率よく受け渡すことは、光集積回路の基本的な課題の一つです。
+
+方法は大きく2つあります。**エッジ(面内)カプラ**は、研磨したチップ端面にファイバを突き合わせる方式で、高効率・広帯域・低偏波依存ですが、端面加工が必要でウェハ状態では測定できません。**グレーティング(面外)カプラ**は、チップ表面から光を上方へ回折させる方式です。効率と帯域では劣り偏波依存性もありますが、チップ上のどこにでも配置でき、ウェハレベルの測定が可能です[^marchetti]。ゲント大学のグループは2002年に高屈折率差の小型導波路(GaAs/AlOx)向けの面外グレーティングカップラーを実証し、その後シリコン細線(SOI)向けに発展させました[^taillaert2002] [^taillaert2006]。
+
+本記事では、グレーティングカップラーを通る光を追いかけながら、各段階でパワーがどこへ行くのかを見ていきます。数値は[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)の2次元FDTDシミュレーションによるもので、窒化シリコン(SiN)の2つの既発表設計と照合しています。
+
+### 本記事のモデル
+
+主に扱うのは、シリコン基板上の埋め込み酸化膜(BOX)の上に置いた**厚さ400 nmのSiNコア**($n=2.0$)にグレーティングを刻み、上部を酸化膜で覆った素子です(図1)。光はTE偏光(電場がグレーティングの溝に平行)で波長 $\lambda_0 = 1.35$ µm、結合先は酸化膜中で10°傾けたSMF-28ファイバ(モードフィールド径9.2 µm)です。
+
+シミュレーションは、伝搬方向 $x$ と鉛直方向 $z$ の**2次元断面**で、バルクの屈折率を用いています。材料分散は無視し、構造は溝の方向に無限に一様と仮定しています。そのため横方向のモード不整合やテーパ損失が含まれず、効率は実デバイスに対する上限値になります。最終的な数値は、メッシュ収束の確認を経て、Meep[^meep]で160 pixels/µm(セル6.25 nm)で計算したものです。
+
+<Figure src={fig1} alt="断面の模式図:シリコン基板、埋め込み酸化膜、上面に矩形の溝を刻んだ窒化シリコンコア、酸化膜クラッド、グレーティング上方に傾けたファイバ。" caption="本記事で扱うSiNグレーティングカップラー(模式図、縮尺は正確ではない)。22周期、周期P = 926 nm、エッチしない歯の幅530 nm、エッチ深さ203 nmで、いずれも勾配法による最適化で得た値。BOXは4.58 µm。設計値:meta/data/sin_grating_conventional.yaml。" number={1} size="wide" />
+
+### 1. 位相整合:光はどこへ出ていくか
+
+導波モードは伝搬定数 $\beta = 2\pi n_B/\lambda$ で $x$ 方向に進みます。周期構造の中で効いてくるのはグレーティング部の**ブロッホ屈折率** $n_B$ で、その値はエッチした部分としない部分のスラブ屈折率の間にあります。周期 $P$ のグレーティングは、$\beta$ にグレーティングベクトル $K=2\pi/P$ の整数倍を足し引きします。$m$ 次の回折光は、面内波数がクラッドの光円錐に収まるときに導波路から出ていけます。これが鉛直から測った角度 $\theta$ についてのグレーティング方程式です[^marchetti]。
+
+$$
+n_\text{clad}\,\sin\theta = n_B - m\,\frac{\lambda}{P}, \qquad m = 1
+$$
+
+$n_\text{clad}$ はクラッドの屈折率(1.44)、$\lambda$ は真空中の波長です。ここで使う周期では1次の回折光だけが放射されます。
+
+シミュレーションでは、放射場の位相の傾きから $n_B$ を直接求めており、$n_B = 1.708$ でした。これは厳密な転送行列法で求めたエッチ部(1.613)と非エッチ部(1.779)のスラブ屈折率の間にあります。波長1.35 µm、ファイバ角10°の場合、グレーティング方程式から $P = \lambda/(n_B - n_\text{clad}\sin\theta) = 0.926$ µm が得られます。
+
+そもそもなぜファイバを傾けるのでしょうか。真上に放射させる($\theta=0$)と $P=\lambda/n_B$ となり、このとき**2次**の回折がブラッグ条件 $2K = 2\beta$ を満たして、前進する導波モードをそのまま導波路へ反射し返してしまいます。放射方向を鉛直からわずかに傾けると、この強い後方反射を抑えられます。シリコンの設計では8–10°程度がよく使われ、他のプラットフォームでは数度から15°程度までの角度が使われます[^taillaert2006] [^marchetti]。
+
+グレーティング方程式は、波長によってビームがどう動くかも決めます。$n_B$ の分散を無視して微分すると $d\theta/d\lambda = -1/(P\,n_\text{clad}\cos\theta) \approx -0.044°$/nm となります(図2)。40 nmの帯域でビームは約2°振れるので、角度を固定したファイバとの重なりは設計波長の両側で下がります。これがグレーティングカップラーの帯域が限られる原因です(5節)。
+
+<Figure src={fig2} alt="折れ線グラフ:酸化膜中の放射角が、1280 nmの13度から1420 nmの7度まで直線的に減少し、1350 nmでファイバ角10度と交わる。" caption="酸化膜クラッド中の1次放射角と波長の関係。測定したブロッホ屈折率 n_B = 1.708 と P = 926 nm を用いたグレーティング方程式による(n_B の分散は無視)。ビームは設計波長1.35 µmでファイバ角10°と一致し、1 nmあたり約0.044°振れる。" number={2} />
+
+### 2. パワーの行き先:方向性
+
+グレーティングが放射を始めると、入射した導波光のパワーは4つに分かれます。ファイバへ向かう**上向き放射**、基板へ向かう**下向き放射**、散乱されずにグレーティングを通り過ぎる**透過**、入力導波路へ戻る**反射**です。上へ向かう割合は**方向性(directionality)**で表します。
+
+$$
+D = \frac{P_\text{up}}{P_\text{up} + P_\text{down}}
+$$
+
+これは放射された全パワーに対する上向き放射の比です[^korcek]。方向性は鉛直方向の構造で決まる性質です。歯がコアに対して上下対称なら上下にほぼ等しく散乱し、そのバランスを崩すのは下の層からの反射だけです。
+
+<Figure src={fig3} alt="グレーティング断面の電場分布:導波モードが左からコアに入り、傾いた波面がクラッドへ上向きに、より弱い波が埋め込み酸化膜へ下向きに放射される。" caption="最適化したSiNグレーティングの1.35 µmにおけるRe(E_y)(xは導波路方向、zは鉛直方向。灰色の線はコアとBOX/基板の境界)。導波モードは左から入る。グレーティングから傾いた波面が上へ出ていき、より弱いビームがBOXを下へ進んで、シリコン基板からの反射が下向きの波と干渉している。meta/notebooks/02_uniform_adam.ipynb(res 160)より。" number={3} size="wide" />
+
+ファイバへの結合効率 $\eta$ は $P_\text{up}$ を超えることはありません。そこで
+
+$$
+\eta = P_\text{up} \times M
+$$
+
+と書くと便利です。これは**モード整合係数** $M$ の定義で、上向きに放射されたパワーのうち実際にファイバモードと整合する割合を表します。図4は最適化した単一エッチSiNグレーティングのパワー収支です。60 %が上、22 %が下へ出て、13 %は放射されずに通り抜け、反射はほぼゼロです。したがって $D = 0.73$、$M = 0.65$ で、$\eta = 0.596 \times 0.647 = 0.385$、つまり**−4.14 dB**です。
+
+この設計を制限している要因は2つあります。SiNと酸化膜の屈折率差は中程度なので、一つ一つの歯の散乱が弱く、光を放射しきるまでに長いグレーティングが必要になります。これがモード整合と透過損失の両方を悪化させます。また、エッチ深さが1種類だけだと散乱は上下ほぼ対称のままです[^korcek]。
+
+図4の2組目の棒は、この対称性を崩すとどうなるかを示しています。この設計では、グレーティングをSiN自体ではなく、その上の厚さ220 nmの**アモルファスシリコン(a-Si)オーバーレイ**に作っています(Fraserらの一様設計)[^fraser]。コアの上にある高屈折率のオーバーレイが散乱光の大半を上へ押し上げ、$D = 0.93$、上向き放射89 %、$\eta = -1.66$ dBとなります。
+
+<Figure src={fig4} alt="2つの設計のパワー割合を比べた棒グラフ。単一エッチSiN:上0.60、下0.22、透過0.13、反射0.00。a-Siオーバーレイ:上0.89、下0.07、透過0.02、反射0.01。" caption="設計波長における最適化単一エッチSiNグレーティング(1.35 µm、上部酸化膜)とSiN上のa-Siオーバーレイグレーティング(1.31 µm、上部空気)のパワー収支。両者は波長と上部クラッドが異なるため、同一デバイスの比較ではなく仕組みの比較である。η:SMF-28への結合効率、D:方向性。meta/notebooks/02_uniform_adam.ipynb と 04_asi_overlay.ipynb より。" number={4} />
+
+### 3. 鉛直方向の干渉計としての埋め込み酸化膜
+
+下向きに放射された光は角度 $\theta$ でBOXを横切り、酸化膜とシリコンの界面で一部が反射して上へ戻り、直接上へ放射された光と干渉します。BOXの厚さを $t$ とすると、反射光の余分な光路は $2\,n_\text{ox}\,t\cos\theta$ です。そのため上向きパワーは $t$ に対して振動し、その周期は余分な光路がちょうど1波長分増える厚さです。
+
+$$
+\Delta t = \frac{\lambda}{2\,n_\text{ox}\cos\theta} = \frac{1.35\ \mu\text{m}}{2\cdot 1.44\cdot\cos 10^\circ} = 0.476\ \mu\text{m}
+$$
+
+BOX厚を1–5 µmの81点で掃引すると(図5)、まさにこの振る舞いが現れます。フィットした周期は0.473 µmで、上向き割合は0.20から0.63まで変わります。反射の強さは $t$ ではなく酸化膜とシリコンの屈折率差で決まるので、BOXを厚くしても振動は消えません。厚さは、反射が効率を上げる側に働くか下げる側に働くかを決めるだけです。
+
+このためBOX厚は設計パラメータになりますが、通常は製造側が決めています。そこで今回の設計では、特注の積層構造に合わせ込むのではなく、標準的なSiNプラットフォームの値4.5 µm(たとえばFraserらのプラットフォームのBOX厚[^fraser])に最も近い干渉の極大、4.58 µmを使いました。同じ考え方から、グレーティングの下に金属や多層膜のミラーを入れる手法も生まれています。SOIでは金の下部ミラーにより、測定効率が69 %まで上がりました[^vanlaere]。
+
+<Figure src={fig5} alt="BOX厚1から5マイクロメートルに対する折れ線グラフ:上向き割合が約0.47マイクロメートル周期で0.2と0.63の間を振動し、結合効率も0.1と0.37の間でそれに追随する。" caption="SiNグレーティングの1.35 µmにおける上向き放射割合と結合効率のBOX厚依存性(res 40で81回のFDTD計算。最終設計ではなく初期設計)。振動周期0.473 µmは λ/(2 n_ox cos θ) = 0.476 µm と一致する。赤線:採用したBOX厚、点線:標準値4.5 µm。meta/notebooks/01_sin_validation_mesh.ipynb、7節より。" number={5} />
+
+### 4. モード整合:一様なグレーティングが100 %に届かない理由
+
+上へ出た光も、すべてが取り込まれるわけではありません。ファイバが受け取れるのは、放射場のうち自分のモード(傾いたガウシアンビーム)と整合する部分だけです。ツールキットでは、コアの1 µm上の水平線上でパワー規格化した重なり積分を計算しています。
+
+$$
+\eta = \frac{\left|\int \left(\mathbf{E}_\text{s}\times\mathbf{H}_\text{f}^{*} + \mathbf{E}_\text{f}^{*}\times\mathbf{H}_\text{s}\right)\cdot\hat{\mathbf{z}}\,dx\right|^2}{4\,P_\text{in}\,P_\text{f}}
+$$
+
+$(\mathbf{E}_\text{s},\mathbf{H}_\text{s})$ はシミュレーションの場、$(\mathbf{E}_\text{f},\mathbf{H}_\text{f})$ はファイバモード、$P_\text{in}$ は入射導波光のパワー、$P_\text{f}$ はファイバモードがその線を通るパワーです(どちらの $P$ も $\mathrm{Re}\int(\mathbf{E}\times\mathbf{H}^*)\cdot\hat{\mathbf{z}}\,dx$)。相反性により、これはファイバからチップへの効率にも等しくなります。入力パワーをすべて運ぶファイバモードと同一の場を入れると $\eta = 1$ となることを、ツールキットでは数値的に確認しています。オフセットした2つのガウシアンビームの解析解との一致も確認済みです。コード([`sin_grating.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/sin_grating.py))は次のとおりです。
+
+```python
+def eta_overlap(x, ez, hx, wl, p_in, p, x0):
+    # 物理的な Ey = -Ez(Meep):x-z断面では軸の組が1つ入れ替わる
+    ey_s, hx_s = -ez, hx
+    ey_f, hx_f = fiber_mode(x, x0, wl, p)        # 傾いたガウシアン、Hx = -n cos(theta) Ey
+    dx = x[1] - x[0]
+    X = np.sum(ey_s * np.conj(hx_f) + np.conj(ey_f) * hx_s) * dx
+    p_f = abs(np.real(np.sum(ey_f * np.conj(hx_f))) * dx)
+    return float(np.abs(X) ** 2 / (4 * p_f * p_in))
+```
+
+一様なグレーティングには、形の不整合が本質的に組み込まれています。各周期は導波路に残っているパワーの一定割合を散乱するので、放射強度はグレーティングに沿って指数関数的に減衰し、$I(x)\propto e^{-x/L_c}$ となります。一方、ファイバモードはビームウエスト $w_0 = 4.6$ µmのガウシアンです。ここで $L_c$ は強度の1/e減衰長です。簡単な計算から、このような片側指数関数とガウシアンの重なりの最大値は**80.1 %**で、$L_c \approx w_0/1.37 = 3.4$ µmのときに得られることがわかります(鉛直に近い放射の場合。傾きがあると $\cos\theta$ の係数が加わります)。これは一様グレーティングについてよく知られた約80 %という上限です[^taillaert2006] [^marchetti]。一様なグレーティングではこれを超えられません。そのため高効率の設計では、グレーティングの強さを $x$ に沿って変える**アポダイゼーション**を行い、放射分布をガウシアンに近づけます。Fraserらのシミュレーションでは、最終的なアポダイズ設計により重なりが77 %から90 %に上がっています[^fraser]。
+
+最適化したSiNグレーティングは $L_c = 10.1$ µmで、理想の3倍の長さです。SiNの弱い歯ではそれ以上速く放射できないためです。この減衰長に対して理想的な指数関数は0.60を与え、シミュレーションの0.65に近い値です。a-Siオーバーレイはより強く散乱し($L_c = 5.2$ µm)、$M = 0.77$ に達します。これはFraserらがこの一様設計について報告している77 %と同じ値です[^fraser]。
+
+### 5. 帯域
+
+図6は、ファイバを最適位置に固定したときのSiNグレーティングの結合効率です。ピークは1345 nmで−4.04 dBとなり、約40 nmの範囲でピークから1 dB以内に収まります。サンプリングした波長(間隔約5 nm)のうち1 dB以内に入る点の幅は36 nm、サンプル間を補間すると41 nmです。両側で効率が下がる理由は1節のとおりで、設計波長から離れるとビームの角度がファイバと合わなくなるためです。
+
+<Figure src={fig6} alt="1300から1405 nmにおける結合効率(dB)。1345 nm付近で約−4 dBのピークを持ち、1300 nmで−8.7 dB、1405 nmで−12.5 dBまで下がる。幅約41 nmの1 dB帯域が網掛けされている。" caption="最適化SiNグレーティングの結合効率スペクトル(ファイバは1.35 µmでの最適位置に固定)。網掛け:補間した1 dB帯域(41 nm)。meta/notebooks/02_uniform_adam.ipynb(res 160)より。" number={6} />
+
+### 6. モデルは既発表のデバイスを再現できるか
+
+もっともらしい数値が出るシミュレーションが、そのまま検証済みのシミュレーションとは限りません。最適化を始める前に、同じ2次元モデルでCheben/Benedikovičグループによる2つの既発表SiN設計を計算しました。
+
+| 設計 | 量 | 本モデル | 文献値 |
+|---|---|---|---|
+| 単一エッチ400 nm SiN、上部空気、1.55 µm(Korčekら)[^korcek] | 効率 | −3.67 dB | シミュレーション−3.6 dB、測定−3.9 dB |
+| | 方向性 | 73 % | 72 % |
+| SiN上のa-Siオーバーレイ、1.31 µm、一様(Fraserら)[^fraser] | 効率 | −1.66 dB | −1.7 dB(シミュレーション) |
+| | 方向性 | 0.93 | 93 % |
+| | モード重なり | 0.77 | 77 % |
+
+文献のシミュレーションはLumerical FDTDによるものです。Fraserらの数値はすべてシミュレーション値で、Korčekらの測定値−3.9 dBのデバイスはデューティ比が設計の70 %ではなく65 %でした。どちらも0.1 dB以内で一致しています。測定値がシミュレーションより0.3 dB低いのは、横方向のモード不整合、作製ばらつき、テーパなど、2次元モデルが含まない要因の典型的な大きさです。数値面で知っておきたい点も2つあります。1つ目に、単一エッチSiNグレーティングの効率が解像度に対してなめらかに収束するのは、形状をセルごとの充填率で表した場合だけです。Meepのサブピクセル平均を使ったブロック表現では解像度を変えるたびに0.1 dBの数倍程度ばらつくため、最終値は6.25 nmのセルで求めています。2つ目に、a-Siオーバーレイでは100–160 pixels/µmの範囲でのばらつきが0.29 dBで、これが数値誤差の目安になります。
+
+### 7. 3次元へ
+
+2次元モデルはグレーティングを無限に幅広いものとして扱います。実際のグレーティングは横方向にもファイバモードと整合する必要があり、幅0.5 µmの細線からテーパを通して光を受け取ります。ツールキットにある3次元シミュレーションの例が、同じパワー収支が3次元にどう拡張されるかを示しています。これは220 nmシリコンの小型扇形集光グレーティングで、厚さ1.25 µmのBOXの下に金属ミラーを置き、2.5 µmのレンズドファイバのスポットに結合させたものです。
+
+- ミラーで基板への損失がなくなり、83 %が上へ、下へはわずか1.3 %
+- グレーティングの縦方向・横方向のモード整合はそれぞれ0.94と0.99
+- 予測値 $0.832 \times 0.942 \times 0.993 = 0.78$ に対し、3次元の重なり積分の計算値は**0.71(−1.49 dB)**。チップ表面での3.3 %のフレネル損失を含めると、0.75に対して0.69(−1.63 dB)
+
+36.7 nmの格子による誤差として、これらの3次元の数値には約±10 %の不確かさがあります。詳細は[`3d/notebooks/09b_grating_coupler_3d.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/3d/notebooks/09b_grating_coupler_3d.ipynb)を参照してください。
+
+### 8. まとめ
+
+グレーティングカップラーの効率は、それぞれ別の物理に対応する3つの問いに分解できます。
+
+| 問い | 物理 | 調整手段 |
+|---|---|---|
+| 光はファイバの角度で出ていくか | グレーティング方程式 $n_\text{clad}\sin\theta = n_B - \lambda/P$ | 周期、ファイバ角 |
+| どれだけ上に(下ではなく)出るか | 方向性、周期 $\lambda/(2n_\text{ox}\cos\theta)$ のBOX干渉 | 鉛直非対称性(オーバーレイ、2段エッチ)、BOX厚、下部ミラー |
+| 上向きビームはファイバモードと整合するか | 指数関数とガウシアンの重なり(一様なら80 %以下) | グレーティング強度、アポダイゼーション |
+
+単一エッチの400 nm SiNグレーティングでは、2次元で−4.1 dBとなり、弱い散乱と0.73という方向性が制限要因です。a-Siオーバーレイで鉛直の対称性を崩すと、方向性は0.93、効率は−1.7 dBまで上がり、既発表の設計と一致します。
+
+### コードとデータ
+
+- SiN研究の概要と文献メモ:[`meta/README.md`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/README.md)、[`meta/literature.md`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/literature.md)
+- モデル検証、メッシュ、BOX掃引、Korčekベンチマーク:[`meta/notebooks/01_sin_validation_mesh.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/01_sin_validation_mesh.ipynb)
+- 最適化した単一エッチグレーティング:[`meta/notebooks/02_uniform_adam.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/02_uniform_adam.ipynb)、a-Siオーバーレイ:[`meta/notebooks/04_asi_overlay.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/04_asi_overlay.ipynb)
+- シミュレーションモジュール:[`sin_grating.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/sin_grating.py)、[`asi_grating.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/asi_grating.py)
+- ツールキットには220 nmシリコングレーティングの2次元モデル([`notebooks/09_grating_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/09_grating_coupler.ipynb))もありますが、解像度収束をまだ確認していないため、本記事では数値を使っていません。
+- 図1、2、4–6と本文の数値は、保存済みのシミュレーションデータから同リポジトリの `scripts/blog_figures/grating_coupler.py` で作成しました。図3は保存済みの電場分布です。新たなFDTD計算は行っていません。
+
+---
+
+## References / 参考文献
+
+[^marchetti]: R. Marchetti, C. Lacava, L. Carroll, K. Gradkowski and P. Minzioni, "Coupling strategies for silicon photonics integrated chips [Invited]," *Photonics Research* **7**, 201–239 (2019). [doi:10.1364/PRJ.7.000201](https://doi.org/10.1364/PRJ.7.000201)
+[^taillaert2002]: D. Taillaert, W. Bogaerts, P. Bienstman, T. F. Krauss, P. Van Daele, I. Moerman, S. Verstuyft, K. De Mesel and R. Baets, "An out-of-plane grating coupler for efficient butt-coupling between compact planar waveguides and single-mode fibers," *IEEE Journal of Quantum Electronics* **38**, 949–955 (2002). [doi:10.1109/JQE.2002.1017613](https://doi.org/10.1109/JQE.2002.1017613)
+[^taillaert2006]: D. Taillaert, F. Van Laere, M. Ayre, W. Bogaerts, D. Van Thourhout, P. Bienstman and R. Baets, "Grating couplers for coupling between optical fibers and nanophotonic waveguides," *Japanese Journal of Applied Physics* **45**(8A), 6071–6077 (2006). [doi:10.1143/JJAP.45.6071](https://doi.org/10.1143/JJAP.45.6071)
+[^vanlaere]: F. Van Laere, G. Roelkens, M. Ayre, J. Schrauwen, D. Taillaert, D. Van Thourhout, T. F. Krauss and R. Baets, "Compact and highly efficient grating couplers between optical fiber and nanophotonic waveguides," *Journal of Lightwave Technology* **25**, 151–156 (2007). [doi:10.1109/JLT.2006.888164](https://doi.org/10.1109/JLT.2006.888164)
+[^korcek]: R. Korček, D. Medina Quiroz, Q. Wilmart, S. Edmond, P. Cheben, L. Vivien, C. Alonso-Ramos and D. Benedikovič, "Library of single-etch silicon nitride grating couplers for low-loss and fabrication-robust fiber-chip interconnection," *Scientific Reports* **13**, 17467 (2023). [doi:10.1038/s41598-023-44824-x](https://doi.org/10.1038/s41598-023-44824-x)
+[^fraser]: W. Fraser, D. Benedikovic, R. Korcek, M. Milanizadeh, D.-X. Xu, J. H. Schmid, P. Cheben and W. N. Ye, "High-efficiency self-focusing metamaterial grating coupler in silicon nitride with amorphous silicon overlay," *Scientific Reports* **14**, 11651 (2024). [doi:10.1038/s41598-024-62336-0](https://doi.org/10.1038/s41598-024-62336-0)
+[^meep]: A. F. Oskooi, D. Roundy, M. Ibanescu, P. Bermel, J. D. Joannopoulos and S. G. Johnson, "Meep: A flexible free-software package for electromagnetic simulations by the FDTD method," *Computer Physics Communications* **181**, 687–702 (2010). [doi:10.1016/j.cpc.2009.11.008](https://doi.org/10.1016/j.cpc.2009.11.008)

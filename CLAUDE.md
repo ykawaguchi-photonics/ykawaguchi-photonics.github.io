@@ -71,6 +71,9 @@ Available MDX components: `Figure` (`src/components/Figure.astro`),
 - Name, links, email, ORCID, Search Console token: `src/data/site.ts`.
 
 ## Conventions
+- Figures: no text, legend or label may overlap the drawn structure or the data
+  (labels outside the structure, legends outside busy axes; check every PNG).
+  Same rule as `photonics-simulation-toolkit/CLAUDE.md` §3.
 - Colors are defined only in `src/styles/tokens.css`. There is one amber accent
   (`--accent`), and categories are never color-coded.
 - Fonts: Inter (UI), Source Serif 4 (long-form), JetBrains Mono (code), all

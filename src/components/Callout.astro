@@ -1,0 +1,94 @@
+---
+// Key-point box. Same family as Symbols/Glossary (radius, padding, label style).
+//   kind="design": design takeaway — neutral surface with an amber left rule.
+//   kind="note":   caveat / assumptions — neutral surface with a grey left rule.
+// MDX:
+//   <Callout kind="design" title="What this means for design">
+//
+//   Markdown, $math$, lists ...
+//
+//   </Callout>
+// Japanese half: title="設計上の意味" / title="前提".
+export interface Props {
+  kind?: "design" | "note";
+  title?: string;
+}
+const { kind = "note", title } = Astro.props;
+const fallback = kind === "design" ? "Design takeaway" : "Note";
+const label = title ?? fallback;
+---
+
+<aside class:list={["callout", kind]} aria-label={label}>
+  <p class="callout-title" aria-hidden="true">{label}</p>
+  <div class="callout-body"><slot /></div>
+</aside>
+
+<style>
+  .callout {
+    margin: 1.75em 0;
+    padding: var(--space-4) var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: var(--radius);
+    font-size: 0.9375em;
+    line-height: 1.65;
+  }
+  .callout.design {
+    border-left-color: var(--accent);
+  }
+  .callout-title {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .callout.design .callout-title {
+    color: var(--accent);
+  }
+  .callout-body > :global(:first-child) {
+    margin-top: 0;
+  }
+  .callout-body > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  .callout-body :global(p),
+  .callout-body :global(ul),
+  .callout-body :global(ol),
+  .callout-body :global(.katex-display) {
+    margin: 0 0 0.75em;
+  }
+  .callout-body :global(ul),
+  .callout-body :global(ol) {
+    padding-left: 1.25em;
+  }
+  .callout-body :global(li + li) {
+    margin-top: 0.25em;
+  }
+  .callout-body :global(li > ul),
+  .callout-body :global(li > ol) {
+    margin: 0.25em 0 0;
+  }
+  .callout-body :global(table) {
+    margin: 0 0 0.75em;
+  }
+  @media (max-width: 480px) {
+    .callout {
+      padding: var(--space-3) var(--space-4);
+    }
+  }
+  @media print {
+    .callout {
+      background: none;
+      border-color: currentColor;
+      break-inside: avoid;
+    }
+    .callout-title,
+    .callout.design .callout-title {
+      color: inherit;
+    }
+  }
+</style>

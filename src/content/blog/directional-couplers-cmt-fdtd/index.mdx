@@ -1,14 +1,20 @@
 ---
-title: "Directional Couplers in Silicon Photonics: From Coupled-Mode Theory to FDTD Simulation"
-description: "How two closely spaced waveguides exchange power, what coupled-mode theory predicts for the coupling coefficient, coupling length and splitting ratio, and how those predictions compare with 2D FDTD simulations in Meep. English and Japanese."
+title: "Directional Couplers"
+description: "A directional coupler moves light between two nearby waveguides by evanescent coupling. How gap, length and wavelength set its split ratio, in theory and FDTD."
 date: 2026-10-20
+updated: 2026-10-22
 category: technical-notes
-tags: [silicon photonics, directional coupler, coupled-mode theory, Meep, FDTD, tutorial series]
+tags: [silicon photonics, directional coupler, coupled-mode theory, Meep, FDTD]
 areas: [silicon-photonics]
 draft: false
 ---
 
 import Figure from "@/components/Figure.astro";
+import Term from "@/components/Term.astro";
+import Glossary from "@/components/Glossary.astro";
+import Def from "@/components/Def.astro";
+import Symbols from "@/components/Symbols.astro";
+import Callout from "@/components/Callout.astro";
 import fig1 from "./fig1_geometry.png";
 import fig2 from "./fig2_supermodes.png";
 import fig3 from "./fig3_field_hz.png";
@@ -18,79 +24,237 @@ import fig6 from "./fig6_spectrum.png";
 
 **Language:** [English](#english) · [日本語](#日本語)
 
-*Part 1 of a four-part series on the physics behind photonic integrated circuits: directional couplers → [Mach–Zehnder interferometers](/blog/mach-zehnder-interferometers/) → [ring resonators](/blog/ring-resonators/) → [how they fit together](/blog/coupling-interference-resonance-pic/).*
-
 ## English
 
-A directional coupler is two waveguides that run side by side, close enough that light leaks from one into the other. It is the simplest way to split or combine light on a chip. It is also the building block inside the next two devices in this series: a Mach–Zehnder interferometer needs two of them, and a ring resonator needs one to let light in and out.
+A **directional coupler** is a photonic device that transfers optical power between two closely spaced waveguides through <Term id="en-evanescent" n={1}>evanescent coupling</Term>. In photonic integrated circuits (PICs) it is the basic element for splitting, combining and tapping light, and it sets the splitting ratio inside [Mach–Zehnder interferometers](/blog/mach-zehnder-interferometers/) and [ring resonators](/blog/ring-resonators/).
 
-This article builds the physics up from the evanescent field of a single waveguide to coupled-mode theory, then checks each prediction against FDTD simulations from my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit).
+### Overview
 
-### The model used here, stated up front
+#### What a directional coupler does
 
-All simulations in this article are **2D** and use an **effective-index** description of a silicon strip waveguide.[^eim] The core index is $n_\text{core}=2.7$ (an effective index for a 220 nm silicon layer, not bulk silicon's ≈3.45), the cladding is silica-like $n_\text{clad}=1.44$, the waveguides are 500 nm wide, and the materials are non-dispersive. The effective-index reduction is an approximation, and it is known to be less accurate for high-contrast silicon wires than for weakly guiding structures. The band is 1.30–1.40 µm (O-band) with a design wavelength of $\lambda_0=1.35$ µm. The polarization is Meep's 2D TE family ($H_z$ out of plane, $\mathbf{E}$ in plane), forced explicitly at every source and monitor.
+Light that enters one waveguide of a directional coupler leaves through two outputs: the same waveguide (the **through** port) and the neighbouring one (the **cross** port). The fraction that crosses over, the **splitting ratio**, is set by the geometry. A 50:50 coupler divides the power equally, a 1:99 coupler taps off a small monitor signal, and a full-transfer coupler moves all the light into the other waveguide.
 
-So the numbers below are specific to this model. They are not predictions for a fabricated 3D device. The physics and the method, however, carry over directly.
+This makes the directional coupler one of the most common PIC components. A Mach–Zehnder interferometer needs two of them to split and recombine light, and a ring resonator needs one to let light in and out of the ring.
+
+#### Basic structure
+
+Two waveguides approach each other through S-bends, run parallel for a **coupling length** $L$ at an edge-to-edge **gap** $g$, and separate again (Fig. 1). The designer chooses three things: the gap, the coupling length and the waveguide cross-section. The theory below explains how these choices set the splitting ratio, its wavelength dependence and its sensitivity to fabrication errors.
 
 <Figure src={fig1} alt="Top view of two waveguides that approach each other through S-bends, run parallel with a 200 nm gap for 13.71 micrometres, and separate again." caption="Geometry of the 50:50 coupler saved in the toolkit's design point: 500 nm wide waveguides, 200 nm gap, 13.71 µm straight coupling section (shaded), raised-cosine S-bends 6 µm long that open to a 2 µm port separation. Drawn from the parameters in data/design_points/coupler.yaml." number={1} size="wide" />
 
-### 1. Evanescent fields: where the coupling comes from
+<Glossary>
+<Def id="en-evanescent" n={1} term="Evanescent field and evanescent coupling">
+A guided mode is not entirely inside the waveguide core: part of its field extends into the cladding and decays exponentially with distance. This decaying tail is the evanescent field. When a second waveguide lies inside that tail, the field can drive its mode, and power is exchanged. That is evanescent coupling.
+</Def>
+</Glossary>
 
-A guided mode is confined by total internal reflection, but its field does not stop at the core edge. Outside the core it decays exponentially,
+### Theory
+
+#### Evanescent fields: why nearby waveguides couple
+
+A waveguide confines light by total internal reflection, but the guided field does not stop at the core edge. Outside the core it decays exponentially:
 
 $$
 H_z(y) \propto e^{-\gamma\,|y-y_\text{edge}|}, \qquad \gamma = k_0\sqrt{n_\text{eff}^2-n_\text{clad}^2},\qquad k_0=\frac{2\pi}{\lambda}.
 $$
 
-Here $n_\text{eff}$ is the mode's effective index and $\gamma$ (units µm⁻¹) is the decay constant of the evanescent tail. For a single 500 nm waveguide in this model, a mode solve gives $n_\text{eff}=2.418$ at 1.35 µm. That gives $\gamma=9.04\ \mu\text{m}^{-1}$, so the field falls by $1/e$ every $1/\gamma\approx 111$ nm outside the core.
+<Symbols>
 
-When a second waveguide sits within a few decay lengths, the tail of mode 1 overlaps the core of waveguide 2 and drives its mode, and vice versa (Fig. 2, left). This is **evanescent coupling**. Marcatili's 1969 analysis of rectangular dielectric guides for integrated optics already treated two parallel guides coupled this way, and showed that the coupling decreases exponentially with the guide separation measured in units of the field penetration depth.[^marcatili] The overlap scales with the tail amplitude at the neighbouring core, so the coupling strength should fall roughly as $e^{-\gamma g}$ with the edge-to-edge gap $g$. Section 5 tests this.
+- $H_z$ — the field component of the 2D TE mode (perpendicular to the chip plane), arbitrary units
+- $y$ — position across the waveguide; $y_\text{edge}$ — position of the core edge (µm)
+- $\gamma$ — decay constant of the evanescent tail (µm⁻¹); the field falls by $1/e$ over $1/\gamma$
+- $n_\text{eff}$ — <Term id="en-neff" n={2}>effective index</Term> of the guided mode (dimensionless)
+- $n_\text{clad}$ — refractive index of the cladding (dimensionless)
+- $k_0$ — vacuum wavenumber (µm⁻¹); $\lambda$ — vacuum wavelength (µm)
 
-### 2. Coupled-mode theory
+</Symbols>
 
-Coupled-mode theory (CMT) was formulated for coupled waveguides by Miller[^miller] and developed for guided-wave optics by Yariv.[^yariv] It writes the field in the coupled section as a superposition of the two isolated-waveguide modes, with amplitudes $a_1(z)$ and $a_2(z)$ that vary slowly along the propagation direction $z$. For two **identical** (phase-matched), **lossless** waveguides with **weak** coupling, the amplitudes obey (written in the common $-j\kappa$ convention; Yariv's paper uses an equivalent form)
+For the 500 nm waveguide simulated below, a mode solve gives $n_\text{eff}=2.418$ at 1.35 µm. That gives $\gamma=9.04\ \mu\text{m}^{-1}$, so the field falls by $1/e$ every $1/\gamma\approx 111$ nm outside the core.
+
+When a second waveguide sits within a few decay lengths, the tail of mode 1 overlaps the core of waveguide 2 and drives its mode, and vice versa (Fig. 2, left). Marcatili's 1969 analysis of rectangular dielectric guides for integrated optics already treated two parallel guides coupled this way, and showed that the coupling decreases exponentially with the guide separation measured in units of the field penetration depth.[^marcatili] Because the overlap scales with the tail amplitude at the neighbouring core, the coupling strength falls roughly as $e^{-\gamma g}$, where $g$ is the gap.
+
+<Glossary>
+<Def id="en-neff" n={2} term="Effective index (n_eff)">
+A guided mode travels along the waveguide as if it were in a uniform material of index $n_\text{eff}$: its phase advances by $2\pi n_\text{eff}/\lambda$ per unit length. The value lies between the cladding and core indices, and it is larger when the mode is more tightly confined in the core.
+</Def>
+</Glossary>
+
+<Callout kind="design" title="What this means for design">
+
+$\gamma$ is the link between the cross-section and the coupling. A mode that is more tightly confined (larger $n_\text{eff}$: a wider or thicker core, a higher core index, or a shorter wavelength) has a larger $\gamma$ and a shorter tail, so it couples more weakly at the same gap. The same $\gamma$ also sets how sensitive the coupling is to the gap, as shown below.
+
+</Callout>
+
+#### Coupled-mode theory: power oscillates between the guides
+
+<Term id="en-cmt" n={3}>Coupled-mode theory</Term> (CMT) was formulated for coupled waveguides by Miller[^miller] and developed for guided-wave optics by Yariv.[^yariv] The physical picture is simple. Each waveguide carries its own mode, and the evanescent tail of each mode continuously feeds a little light into the other. CMT writes the field in the coupled section as a superposition of the two isolated-waveguide modes, with amplitudes that vary slowly along the propagation direction. For two **identical** (<Term id="en-phasematch" n={4}>phase-matched</Term>), **lossless** waveguides with **weak** coupling, the amplitudes obey (written in the common $-j\kappa$ convention; Yariv's paper uses an equivalent form)
 
 $$
 \frac{da_1}{dz} = -j\kappa\,a_2, \qquad \frac{da_2}{dz} = -j\kappa\,a_1 .
 $$
 
-The common propagation phase $e^{-j\beta z}$ has been factored out. $\kappa$ is the **coupling coefficient**, a rate per unit length (µm⁻¹). The amplitudes are normalized so that $|a_i|^2$ is the power in waveguide $i$. With all the light launched into waveguide 1, $a_1(0)=1$ and $a_2(0)=0$, the solution is
+<Symbols>
+
+- $a_1(z)$, $a_2(z)$ — complex field amplitudes of the modes in waveguides 1 and 2, normalized so that $|a_i|^2$ is the power in waveguide $i$
+- $z$ — position along the coupler (µm)
+- $\kappa$ — **coupling coefficient**: how fast amplitude is exchanged per unit length (µm⁻¹)
+- $j$ — imaginary unit; the common propagation phase $e^{-j\beta z}$ has been factored out
+
+</Symbols>
+
+With all the light launched into waveguide 1, $a_1(0)=1$ and $a_2(0)=0$, the solution is
 
 $$
 a_1(z)=\cos(\kappa z),\qquad a_2(z) = -j\sin(\kappa z).
 $$
 
-Three results follow.
+<Symbols>
 
-- **Power oscillates between the guides.** $P_\text{through}=|a_1|^2=\cos^2(\kappa L)$ and $P_\text{cross}=|a_2|^2=\sin^2(\kappa L)$. The two sum to 1 because the model is lossless.
-- **Coupling length.** Complete transfer happens at $L_\pi=\pi/(2\kappa)$, and a 50:50 split at $L_\pi/2=\pi/(4\kappa)$.
-- **A fixed 90° phase.** The cross amplitude is $-j$ times a real number, so it is in quadrature with the through amplitude at every length. The sign of $\pm j$ depends on the time convention ($e^{+j\omega t}$ in engineering texts, $e^{-i\omega t}$ in Meep), but the 90° magnitude does not. This phase is what makes the MZI in Part 2 work.
+- $\cos(\kappa z)$ — amplitude remaining in waveguide 1 after a distance $z$
+- $-j\sin(\kappa z)$ — amplitude transferred to waveguide 2; the factor $-j$ means a 90° phase shift
+
+</Symbols>
+
+Three results follow, and each is a design rule.
+
+- **Power oscillates between the guides.** After a coupling length $L$, $P_\text{through}=|a_1|^2=\cos^2(\kappa L)$ and $P_\text{cross}=|a_2|^2=\sin^2(\kappa L)$. The two sum to 1 because the model is lossless. The splitting ratio depends only on the product $\kappa L$: once the gap fixes $\kappa$, the length sets the ratio.
+- **Coupling length.** Complete transfer happens at $L_\pi=\pi/(2\kappa)$, and a 50:50 split at $L_\pi/2=\pi/(4\kappa)$. A stronger coupling (smaller gap) gives a shorter, more compact coupler.
+- **A fixed 90° phase.** The cross amplitude is $-j$ times a real number, so it is in quadrature with the through amplitude at every length. The sign of $\pm j$ depends on the time convention ($e^{+j\omega t}$ in engineering texts, $e^{-i\omega t}$ in Meep), but the 90° magnitude does not. This phase is what makes a Mach–Zehnder interferometer work.
 
 Keep **amplitude** and **power** separate. $\kappa$ acts on field amplitudes, and the power fractions are squared magnitudes. A "50:50 coupler" means $|a_1|^2=|a_2|^2=1/2$, i.e. amplitudes $1/\sqrt2$.
 
-These equations rest on assumptions. With a phase mismatch $\delta=(\beta_1-\beta_2)/2$ between non-identical guides, the maximum transferable power drops to $\kappa^2/(\kappa^2+\delta^2)$, and the beat length shortens to $\pi/(2\sqrt{\kappa^2+\delta^2})$.[^yariv] The simple orthogonal form of CMT is reliable for weakly coupled, nearly identical guides. For strongly coupled or dissimilar guides, the non-orthogonality of the two isolated modes matters and an improved formulation is needed.[^huang]
+<Callout kind="note" title="Assumptions">
 
-### 3. The supermode picture
+These equations assume identical, lossless, weakly coupled waveguides. If the two guides are not identical, their propagation constants $\beta_1$ and $\beta_2$ differ by a phase mismatch $\delta=(\beta_1-\beta_2)/2$. The maximum transferable power then drops to $\kappa^2/(\kappa^2+\delta^2)$, reached after a shorter length $\pi/(2\sqrt{\kappa^2+\delta^2})$.[^yariv] So two guides of different width never exchange all their power, and a full-transfer coupler requires identical guides. For strongly coupled or dissimilar guides, the non-orthogonality of the two isolated modes matters and an improved formulation is needed.[^huang]
 
-The same physics can be read from the coupled pair's own eigenmodes, the **supermodes** (Fig. 2, right). The pair supports an even supermode with index $n_e$ and an odd supermode with index $n_o<n_e$. Light launched into one waveguide is approximately an equal mix of the two:
+</Callout>
+
+<Glossary>
+<Def id="en-cmt" n={3} term="Coupled-mode theory (CMT)">
+An approximate method that describes a complicated structure by a few known modes (here, the modes of each waveguide alone) whose amplitudes change slowly because the modes exchange energy. It reduces Maxwell's equations to a few ordinary differential equations.
+</Def>
+<Def id="en-phasematch" n={4} term="Phase matching">
+Two modes are phase-matched when they travel with the same propagation constant $\beta = 2\pi n_\text{eff}/\lambda$. Only then does the small amount of light transferred at each point add up in step along the whole coupler, allowing complete power transfer.
+</Def>
+</Glossary>
+
+#### Supermodes: computing κ with a mode solver
+
+The same physics can be read from the eigenmodes of the coupled pair itself, the <Term id="en-supermode" n={5}>supermodes</Term> (Fig. 2, right). The pair supports an even supermode with index $n_e$ and an odd supermode with index $n_o<n_e$. Light launched into one waveguide is approximately an equal mix of the two:
 
 $$
 \text{guide 1} \approx \tfrac{1}{\sqrt2}\left(\psi_e+\psi_o\right), \qquad \text{guide 2} \approx \tfrac{1}{\sqrt2}\left(\psi_e-\psi_o\right).
 $$
 
-The two supermodes accumulate phase at different rates. After a length $L$ their relative phase is $\Delta\beta\,L$ with $\Delta\beta=2\pi(n_e-n_o)/\lambda$, and when it reaches $\pi$ the light sits entirely in guide 2. So $L_\pi=\lambda/[2(n_e-n_o)]$, and equating this with $\pi/(2\kappa)$ gives
+<Symbols>
+
+- $\psi_e$, $\psi_o$ — field profiles of the even (symmetric) and odd (antisymmetric) supermodes
+- $n_e$, $n_o$ — their effective indices, $n_e > n_o$
+
+</Symbols>
+
+The two supermodes travel at different phase velocities, so they slowly slip out of step. After a length $L$ their relative phase is $\Delta\beta\,L$ with $\Delta\beta=2\pi(n_e-n_o)/\lambda$, and when it reaches $\pi$ the sum looks like guide 2: the light has crossed over. So $L_\pi=\lambda/[2(n_e-n_o)]$, and equating this with $\pi/(2\kappa)$ gives
 
 $$
 \kappa = \frac{\pi\,(n_e-n_o)}{\lambda}.
 $$
 
-This relation holds within the two-supermode picture, i.e. for a symmetric, weakly coupled pair. It turns coupler design into a mode-solving problem: compute $n_e$ and $n_o$ for the cross-section, and the coupling length follows. This mode-solver approach is the usual way silicon-photonic directional couplers are designed.[^chrostowski]
+<Symbols>
+
+- $\kappa$ — coupling coefficient (µm⁻¹)
+- $n_e - n_o$ — index difference between the even and odd supermodes (dimensionless)
+- $\lambda$ — vacuum wavelength (µm)
+
+</Symbols>
+
+This relation holds for a symmetric, weakly coupled pair. It turns coupler design into a mode-solving problem: compute $n_e$ and $n_o$ for the cross-section, and the coupling length follows. This mode-solver approach is the usual way silicon-photonic directional couplers are designed.[^chrostowski] A smaller gap splits $n_e$ and $n_o$ further apart, which means a larger $\kappa$ and a shorter coupler.
 
 <Figure src={fig2} alt="Two panels. Left: two single-waveguide mode profiles whose exponential tails overlap in the gap. Right: the even and odd supermodes of the coupled pair, with their effective indices." caption="Left: the Hz profiles of each waveguide on its own, with evanescent tails that reach into the neighbouring core (shaded bands are the 500 nm cores, gap 200 nm). Right: the even and odd supermodes of the pair at λ = 1.35 µm, nₑ = 2.4299 and nₒ = 2.4093, which give κ = π(nₑ − nₒ)/λ = 0.0480 µm⁻¹. The kinks at the core edges are physical: in this polarization Hz is continuous but its derivative jumps by the permittivity ratio. Computed with a 1D finite-difference mode solver (script listed under Code and data)." number={2} size="wide" />
 
-### 4. What the FDTD simulation measures
+<Glossary>
+<Def id="en-supermode" n={5} term="Supermode">
+A mode of the coupled two-waveguide structure as a whole, rather than of either waveguide alone. A symmetric pair has an even supermode (fields in the two cores in phase) and an odd supermode (out of phase). Each supermode keeps its shape as it propagates; coupling appears as their beating.
+</Def>
+</Glossary>
 
-The toolkit simulates the full coupler (Fig. 1) with Meep[^meep] and projects the fields at each port onto the waveguide's guided mode. The complex mode coefficients give genuine S-parameters, with both magnitude and phase. The core of the extraction in [`coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/coupler.py) is:
+#### From κ to the coupler matrix
+
+Circuits treat the whole coupler as one block that maps the two input amplitudes to the two output amplitudes. For a lossless, symmetric coupler of length $L$, the CMT solution gives
+
+$$
+\mathbf{C} = \begin{pmatrix} \cos\kappa L & -j\sin\kappa L \\ -j\sin\kappa L & \cos\kappa L \end{pmatrix}.
+$$
+
+<Symbols>
+
+- $\mathbf{C}$ — transfer matrix of the coupler: output amplitudes $= \mathbf{C} \times$ input amplitudes
+- $\cos\kappa L$ — field **through-coupling**, often written $t$
+- $\sin\kappa L$ — field **cross-coupling**, a dimensionless amplitude
+- $\sin^2\kappa L$ — power cross-coupling $K$, the splitting ratio
+
+</Symbols>
+
+Articles on interferometers and resonators usually write this matrix with $t=\cos\kappa L$ and a dimensionless cross-coupling, which is also called $\kappa$ there; then $t^2+\kappa^2=1$. In this article $\kappa$ is always the coupling per unit length (µm⁻¹). In a real coupler, $L$ is the straight section plus the extra coupling of the S-bends (the offset $L_0$ measured below).
+
+#### Wavelength dependence and fabrication tolerance
+
+The two remaining design questions follow from the same evanescent tail.
+
+- **Bandwidth.** At a longer wavelength the mode is less tightly confined, $\gamma$ falls, the tail reaches further into the neighbouring core, and $\kappa$ grows. Because the split depends on $\kappa L$, a coupler designed for 50:50 at one wavelength is unbalanced a few tens of nanometres away. This limited bandwidth is a well-known weakness of conventional directional couplers. Dispersion-engineered designs were developed specifically to flatten it. For example, Halir et al. showed in 3D FDTD simulations that a subwavelength-grating structure between the waveguides widens a silicon coupler's bandwidth about fivefold.[^halir]
+- **Gap tolerance.** Since $\kappa\propto e^{-\gamma g}$, a gap error changes the coupling by
+
+$$
+\frac{d\kappa}{\kappa} = -\gamma\,dg .
+$$
+
+<Symbols>
+
+- $d\kappa/\kappa$ — relative change of the coupling coefficient
+- $dg$ — error of the gap (µm)
+- $\gamma$ — evanescent decay constant (µm⁻¹)
+
+</Symbols>
+
+With $\gamma = 9.04\ \mu\text{m}^{-1}$, a 10 nm gap error changes $\kappa$ by about 9 %. At the 50:50 point $dP_\text{cross}/d(\kappa L)=\sin 2\kappa L = 1$, so the split moves by roughly ±7 percentage points (my estimate, not a simulated tolerance study). Shorter, tighter couplers are more compact but no less sensitive in relative terms.
+
+#### Design guide: what changes what
+
+<Callout kind="design" title="What changes what">
+
+| If you change… | …this happens | Why |
+|---|---|---|
+| gap $g$ ↑ | $\kappa$ falls exponentially; a longer coupler is needed for the same split | $\kappa\propto e^{-\gamma g}$ |
+| coupling length $L$ ↑ | the split ratio moves along $\sin^2(\kappa L)$; 50:50 at $\kappa L=\pi/4$, full transfer at $\pi/2$ | CMT solution |
+| wavelength $\lambda$ ↑ | $\gamma$ ↓, $\kappa$ ↑, so the split drifts (narrow bandwidth) | $\gamma = k_0\sqrt{n_\text{eff}^2-n_\text{clad}^2}$ |
+| confinement ↑ (wider or thicker core) | $\gamma$ ↑, $\kappa$ ↓ at the same gap | shorter evanescent tail |
+| unequal waveguides ($\delta \neq 0$) | full transfer is no longer possible; max. $\kappa^2/(\kappa^2+\delta^2)$ | phase mismatch |
+| S-bend shape | adds an effective length $L_0$ that must be subtracted from the straight section | coupling while the guides approach |
+| gap error of 10 nm | $\kappa$ changes by ≈ 9 %, split by ≈ ±7 points at 50:50 | $d\kappa/\kappa = -\gamma\,dg$ |
+
+A practical design sequence follows: choose the cross-section, choose a gap that is safely fabricable, compute $\kappa$ from the supermodes, set the length for the target ratio, and correct for the S-bends with one full simulation.
+
+</Callout>
+
+### Simulation
+
+#### The model used here
+
+All simulations in this article are **2D** and use an <Term id="en-eim" n={6}>effective-index</Term> description of a silicon strip waveguide.[^eim] The core index is $n_\text{core}=2.7$ (an effective index for a 220 nm silicon layer, not bulk silicon's ≈3.45), the cladding is silica-like $n_\text{clad}=1.44$, the waveguides are 500 nm wide, and the materials are non-dispersive. The effective-index reduction is an approximation, and it is known to be less accurate for high-contrast silicon wires than for weakly guiding structures. The band is 1.30–1.40 µm (O-band) with a design wavelength of $\lambda_0=1.35$ µm. The polarization is Meep's 2D TE family ($H_z$ out of plane, $\mathbf{E}$ in plane), forced explicitly at every source and monitor.
+
+So the numbers below are specific to this model. They are not predictions for a fabricated 3D device. The physics and the method, however, carry over directly. All runs use the <Term id="en-fdtd" n={7}>finite-difference time-domain (FDTD)</Term> method in Meep[^meep], with my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit).
+
+<Glossary>
+<Def id="en-eim" n={6} term="Effective-index method">
+A way to reduce a 3D waveguide to a 2D model: the vertical structure (here a 220 nm silicon layer) is first replaced by the effective index of its slab mode, and that index is then used as the core index of a 2D simulation. It is fast but approximate.
+</Def>
+<Def id="en-fdtd" n={7} term="FDTD (finite-difference time-domain)">
+A simulation method that solves Maxwell's equations directly on a grid, stepping the electric and magnetic fields forward in time. A single run with a short pulse gives the response over a whole wavelength band.
+</Def>
+</Glossary>
+
+#### What the FDTD simulation measures
+
+The toolkit simulates the full coupler (Fig. 1) and projects the fields at each port onto the waveguide's guided mode. The complex mode coefficients give genuine <Term id="en-sparam" n={8}>S-parameters</Term>, with both magnitude and phase. The core of the extraction in [`coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/coupler.py) is:
 
 ```python
 # Project each port's fields onto the TE guided mode (band 1).
@@ -109,13 +273,29 @@ T_through, T_cross = abs(S_through)**2, abs(S_cross)**2   # power fractions
 
 <Figure src={fig3} alt="Simulated real part of the Hz field: light enters the upper-left waveguide, and by the right edge appears in both output waveguides." caption="Re(Hz) from the FDTD simulation, light launched in the upper-left port (λ = 1.35 µm, notebook baseline run with Lc = 13 µm). Field visibly builds up in the lower waveguide along the coupling section, and both outputs carry roughly half the power. Gray bands: perfectly matched layers. From notebooks/06_directional_coupler.ipynb, Section 6." number={3} size="wide" />
 
-### 5. Coupling length: the beat curve
+<Glossary>
+<Def id="en-sparam" n={8} term="S-parameters">
+Complex numbers $S_{ij}$ that give the output amplitude at port $i$ for a unit input at port $j$. Their squared magnitude is the transmitted power fraction, and their angle is the phase shift.
+</Def>
+</Glossary>
+
+#### Coupling length: the beat curve
 
 Sweeping the straight coupling length $L_c$ from 0.25 to 26 µm at a 200 nm gap traces out the CMT beat curve (Fig. 4). A three-parameter fit,
 
 $$
 P_\text{cross}(L_c) = \eta\,\sin^2\!\big[\kappa\,(L_c + L_0)\big],
 $$
+
+<Symbols>
+
+- $P_\text{cross}$ — power fraction in the cross port
+- $L_c$ — length of the straight coupling section (µm)
+- $L_0$ — extra effective coupling length contributed by the S-bends (µm)
+- $\kappa$ — coupling coefficient (µm⁻¹)
+- $\eta$ — maximum transferable fraction, slightly below 1 because of radiation loss
+
+</Symbols>
 
 matches all 17 FDTD points with an rms residual of $2\times10^{-4}$. The fitted values are $\kappa = 0.04862\ \mu\text{m}^{-1}$, $L_0 = 2.46$ µm and $\eta = 0.998$.
 
@@ -127,26 +307,22 @@ The saved 50:50 design uses $L_c = 13.71$ µm, found by interpolating the sweep 
 
 <Figure src={fig4} alt="Cross-port and through-port power versus coupling length from 0 to 26 micrometres: FDTD points follow sine-squared and cosine-squared curves, crossing at 50 percent near 13.7 micrometres." caption="Power in the through (squares) and cross (circles) ports at λ = 1.35 µm versus straight coupling length Lc, gap 200 nm. Gray curves: CMT fit η sin²[κ(Lc + L0)] and its complement. The curves extrapolate to zero cross power at Lc = −L0 = −2.46 µm, not at 0, because the S-bends also couple. Diamond: the saved 50:50 design. Data: 17-point sweep in notebooks/06_directional_coupler.ipynb, Section 10." number={4} />
 
-### 6. Gap dependence: exponential sensitivity
+#### Gap dependence: exponential sensitivity
 
 At fixed wavelength, $\kappa$ is set almost entirely by the gap. The toolkit's 5 × 7 sweep (gaps 0.15–0.35 µm, lengths 2–26 µm) gives one fitted $\kappa$ per gap (Fig. 5).
 
-- **The decay is exponential.** The slope of $\ln\kappa$ versus $g$ is $-9.02\ \mu\text{m}^{-1}$, against $\gamma=9.04\ \mu\text{m}^{-1}$ from the isolated-mode tail in Section 1. That is the evanescent-coupling picture made quantitative. Strictly, $\kappa\propto e^{-\gamma g}$ is an asymptotic result for weak coupling (gaps of several decay lengths), as in Marcatili's analysis.[^marcatili]
+- **The decay is exponential.** The slope of $\ln\kappa$ versus $g$ is $-9.02\ \mu\text{m}^{-1}$, against $\gamma=9.04\ \mu\text{m}^{-1}$ from the isolated-mode tail. That is the evanescent-coupling picture made quantitative, and it confirms the gap-tolerance estimate of the Theory section. Strictly, $\kappa\propto e^{-\gamma g}$ is an asymptotic result for weak coupling (gaps of several decay lengths), as in Marcatili's analysis.[^marcatili]
 - **Supermode theory tracks the FDTD values.** It agrees to within 1–5 %. The largest difference is at the widest gap, where the coupled power stays below 13 % over the swept lengths, so the fit is least constrained.
-
-The same exponential is a fabrication warning. Since $d\kappa/\kappa = -\gamma\,dg$, a 10 nm gap error changes $\kappa$ by about 9 %. For a nominal 50:50 coupler, that moves the split by roughly ±7 percentage points (from $dP/d(\kappa L)=\sin 2\kappa L = 1$ at the 50:50 point; my estimate, not a simulated tolerance study). Shorter, tighter couplers are more compact but no less sensitive in relative terms.
 
 <Figure src={fig5} alt="Semilog plot of coupling coefficient versus gap from 0.15 to 0.35 micrometres: FDTD points fall on a straight line that matches both supermode theory and an exponential with the evanescent decay constant." caption="Coupling coefficient κ versus gap at λ = 1.35 µm (left axis) and the corresponding full-transfer length Lπ = π/2κ (right axis). Points: κ from CMT fits to the FDTD length sweep at each gap. Solid line: supermode theory π(nₑ − nₒ)/λ. Dashed line: e^(−γg) with γ = 9.04 µm⁻¹ from the isolated mode. Data: notebooks/06b_directional_coupler_gap_sweep.ipynb." number={5} />
 
-### 7. Wavelength dependence: why simple couplers are narrowband
+#### Wavelength dependence: why simple couplers are narrowband
 
-Fig. 6 shows the 50:50 design across the 100 nm band. The cross-port power rises from 0.385 at 1300 nm to 0.632 at 1400 nm, while the total stays near 1. The cause is the same evanescent tail. At longer wavelength the mode is less tightly confined, so $\gamma$ falls, the tail reaches further into the neighbouring core, and $\kappa$ grows. Because the split ratio depends on $\kappa L$, a coupler designed for 50:50 at one wavelength is unbalanced a few tens of nanometres away.
-
-This limited bandwidth is a well-known weakness of conventional directional couplers. Dispersion-engineered designs were developed specifically to flatten it. For example, Halir et al. showed in 3D FDTD simulations that a subwavelength-grating structure between the waveguides widens a silicon coupler's bandwidth about fivefold.[^halir] In this series the dispersion matters again in Part 2: an MZI built from these couplers has a fringe contrast that changes with wavelength.
+Fig. 6 shows the 50:50 design across the 100 nm band. The cross-port power rises from 0.385 at 1300 nm to 0.632 at 1400 nm, while the total stays near 1. This is the growth of $\kappa$ with wavelength predicted in the Theory section. An MZI built from such couplers therefore has a fringe contrast that changes with wavelength.
 
 <Figure src={fig6} alt="Through and cross power versus wavelength from 1300 to 1400 nanometres for the 50:50 design: the two lines cross at 1350 nanometres and diverge on either side, while their sum stays at one." caption="Spectrum of the saved 50:50 coupler (Lc = 13.71 µm, gap 200 nm). The split is exactly balanced only near the 1.35 µm design wavelength (dotted line). The dashed line is through + cross + reflection, which stays above 0.998. Data: data/sparams/coupler/selected, from notebooks/06_directional_coupler.ipynb, Section 11." number={6} />
 
-### 8. Summary
+#### Theory versus simulation
 
 | Quantity | Simple theory | This 2D FDTD model (λ = 1.35 µm, g = 200 nm) |
 |---|---|---|
@@ -156,7 +332,7 @@ This limited bandwidth is a well-known weakness of conventional directional coup
 | Through/cross phase | 90° | 90.01°–90.06° |
 | Gap dependence | $\propto e^{-\gamma g}$, $\gamma = 9.04\ \mu\text{m}^{-1}$ | slope 9.02 µm⁻¹ |
 
-Coupled-mode theory gets the essentials right for this symmetric, weakly coupled, nearly lossless coupler. The FDTD simulation adds what the ideal formula leaves out: coupling in the S-bends, a small radiation loss, and the wavelength dependence of $\kappa$. **[Part 2](/blog/mach-zehnder-interferometers/)** puts two of these 50:50 couplers around a pair of arms with different lengths, where the 90° phase becomes the key to interference.
+Coupled-mode theory gets the essentials right for this symmetric, weakly coupled, nearly lossless coupler. The FDTD simulation adds what the ideal formula leaves out: coupling in the S-bends, a small radiation loss, and the wavelength dependence of $\kappa$. How two such couplers turn a phase difference into a switch is described in the article on [Mach–Zehnder interferometers](/blog/mach-zehnder-interferometers/).
 
 ### Code and data
 
@@ -169,75 +345,235 @@ Coupled-mode theory gets the essentials right for this symmetric, weakly coupled
 
 ## 日本語
 
-Directional coupler(方向性結合器)は、2本の導波路を光が染み出すほど近づけて並べた素子です。チップ上で光を分岐・合波する最も単純な方法であり、このシリーズで扱う次の2つの素子の部品でもあります。Mach–Zehnder interferometer(MZI)には2個、リング共振器には光の出し入れのために1個使われます。
+**方向性結合器**(directional coupler)は、近接した2本の導波路の間で、<Term id="ja-evanescent" n={1}>エバネッセント結合</Term>によって光のパワーを移す光デバイスです。光集積回路(PIC)では光の分岐・合波・タップの基本素子であり、[Mach–Zehnder干渉計](/blog/mach-zehnder-interferometers/)や[リング共振器](/blog/ring-resonators/)の中で分岐比を決める部品でもあります。
 
-本記事では、1本の導波路のエバネッセント場から結合モード理論までを順に組み立て、その予測を[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)のFDTDシミュレーションと一つずつ照合します。
+### 概要
 
-### 最初に:本記事のモデル
+#### 方向性結合器は何をするか
 
-本記事のシミュレーションはすべて**2次元**で、シリコン細線導波路を**等価屈折率法**で近似しています[^eim]。コアの屈折率は $n_\text{core}=2.7$(厚さ220 nmのシリコン層の等価屈折率で、バルクシリコンの約3.45ではありません)、クラッドはシリカ相当の $n_\text{clad}=1.44$、導波路幅は500 nm、材料分散は無視しています。等価屈折率法は近似であり、弱導波構造に比べて高屈折率差のシリコン細線では精度が落ちることが知られています。波長帯は1.30–1.40 µm(Oバンド)、設計波長は $\lambda_0=1.35$ µmです。偏波はMeepの2次元TE($H_z$ が面外、$\mathbf{E}$ が面内)で、すべての光源とモニタで明示的に指定しています。
+方向性結合器の一方の導波路に入った光は、2つの出力から出ていきます。同じ導波路側の**スルー**ポートと、隣の導波路側の**クロス**ポートです。クロス側へ移る割合、つまり**分岐比**は形状で決まります。50:50カプラはパワーを等分し、1:99カプラはモニタ用にわずかな光を取り出し、完全移行カプラは光をすべて隣の導波路へ移します。
 
-したがって、以下の数値はこのモデル固有のもので、実際に作製する3次元デバイスの予測値ではありません。ただし、物理と手法はそのまま実デバイスに通用します。
+そのため方向性結合器は、PICで最もよく使われる部品の一つです。Mach–Zehnder干渉計では光を分けて再び合わせるために2個、リング共振器ではリングに光を出し入れするために1個使われます。
+
+#### 基本構造
+
+2本の導波路がS字ベンドで近づき、端面間の**ギャップ** $g$ を保ったまま**結合長** $L$ だけ平行に走り、再び離れます(図1)。設計者が選ぶのは、ギャップ、結合長、導波路の断面の3つです。以下の理論では、これらの選択が分岐比、その波長依存性、作製誤差への感度をどう決めるかを説明します。
 
 <Figure src={fig1} alt="S字ベンドで近づいた2本の導波路が、ギャップ200 nmで13.71マイクロメートル平行に走り、再び離れる上面図。" caption="ツールキットのdesign pointに保存された50:50カプラの形状。導波路幅500 nm、ギャップ200 nm、直線結合部13.71 µm(網掛け)、長さ6 µmのraised-cosine型S字ベンドでポート間隔2 µmまで広がる。data/design_points/coupler.yaml のパラメータから描画。" number={1} size="wide" />
 
-### 1. エバネッセント場:結合はどこから来るか
+<Glossary title="用語">
+<Def id="ja-evanescent" n={1} term="エバネッセント場とエバネッセント結合">
+導波モードの場はコアの中だけにあるわけではなく、一部はクラッドへしみ出し、距離とともに指数関数的に減衰します。この減衰するすそ野がエバネッセント場です。そのすそ野の中に別の導波路があると、場がそのモードを励振してパワーがやりとりされます。これがエバネッセント結合です。
+</Def>
+</Glossary>
 
-導波モードは全反射で閉じ込められていますが、その場はコアの端でぷつりと途切れるわけではありません。コアの外では指数関数的に減衰します。
+### 理論
+
+#### エバネッセント場:近い導波路が結合する理由
+
+導波路は全反射で光を閉じ込めますが、導波モードの場はコアの端でぷつりと途切れるわけではありません。コアの外では指数関数的に減衰します。
 
 $$
 H_z(y) \propto e^{-\gamma\,|y-y_\text{edge}|}, \qquad \gamma = k_0\sqrt{n_\text{eff}^2-n_\text{clad}^2},\qquad k_0=\frac{2\pi}{\lambda}
 $$
 
-$n_\text{eff}$ はモードの実効屈折率、$\gamma$(単位 µm⁻¹)はエバネッセント場の減衰定数です。このモデルの幅500 nmの導波路1本についてモードを解くと、波長1.35 µmで $n_\text{eff}=2.418$ となります。したがって $\gamma=9.04\ \mu\text{m}^{-1}$ で、コアの外では約 $1/\gamma\approx111$ nm ごとに場が $1/e$ に減衰します。
+<Symbols title="記号">
 
-減衰長の数倍以内に2本目の導波路があると、導波路1のモードのすそ野が導波路2のコアに重なり、そのモードを励振します。逆向きも同様です(図2左)。これが**エバネッセント結合**です。集積光学用の矩形誘電体導波路を解析したMarcatiliの1969年の論文が、すでにこの形で結合した2本の平行導波路を扱い、結合が「導波路間隔と場のしみ出し深さの比」に対して指数関数的に減少することを示しています[^marcatili]。重なりの大きさは隣のコア位置でのすそ野の振幅に比例するので、結合の強さは端面間ギャップ $g$ に対しておおよそ $e^{-\gamma g}$ で弱まるはずです。これを5節で検証します。
+- $H_z$ — 2次元TEモードの場の成分(チップ面に垂直)、任意単位
+- $y$ — 導波路を横切る方向の位置、$y_\text{edge}$ — コア端の位置(µm)
+- $\gamma$ — エバネッセント場の減衰定数(µm⁻¹)。場は $1/\gamma$ の距離で $1/e$ に減衰する
+- $n_\text{eff}$ — 導波モードの<Term id="ja-neff" n={2}>実効屈折率</Term>(無次元)
+- $n_\text{clad}$ — クラッドの屈折率(無次元)
+- $k_0$ — 真空中の波数(µm⁻¹)、$\lambda$ — 真空中の波長(µm)
 
-### 2. 結合モード理論
+</Symbols>
 
-結合モード理論(CMT)は、Millerが結合導波路について定式化し[^miller]、Yarivが導波光学向けに展開した理論です[^yariv]。結合部の場を孤立した2本の導波路のモードの重ね合わせで表し、その振幅 $a_1(z)$、$a_2(z)$ が伝搬方向 $z$ に沿ってゆっくり変化すると考えます。**同一**(位相整合)、**無損失**、**弱結合**の2本の導波路では、振幅は次の式に従います(よく使われる $-j\kappa$ の表記で書いています。Yarivの論文は等価な別の形を使っています)。
+後でシミュレーションする幅500 nmの導波路では、モードを解くと波長1.35 µmで $n_\text{eff}=2.418$ となります。したがって $\gamma=9.04\ \mu\text{m}^{-1}$ で、コアの外では約 $1/\gamma\approx111$ nm ごとに場が $1/e$ に減衰します。
+
+減衰長の数倍以内に2本目の導波路があると、導波路1のモードのすそ野が導波路2のコアに重なり、そのモードを励振します。逆向きも同様です(図2左)。集積光学用の矩形誘電体導波路を解析したMarcatiliの1969年の論文が、すでにこの形で結合した2本の平行導波路を扱い、結合が「導波路間隔と場のしみ出し深さの比」に対して指数関数的に減少することを示しています[^marcatili]。重なりの大きさは隣のコア位置でのすそ野の振幅に比例するので、結合の強さはギャップを $g$ としておおよそ $e^{-\gamma g}$ で弱まります。
+
+<Glossary title="用語">
+<Def id="ja-neff" n={2} term="実効屈折率(n_eff)">
+導波モードは、屈折率 $n_\text{eff}$ の一様な物質の中を進むかのように導波路を伝わります。つまり単位長さあたり $2\pi n_\text{eff}/\lambda$ だけ位相が進みます。値はクラッドとコアの屈折率の間にあり、モードがコアに強く閉じ込められるほど大きくなります。
+</Def>
+</Glossary>
+
+<Callout kind="design" title="設計上の意味">
+
+$\gamma$ は断面と結合をつなぐ量です。閉じ込めの強いモード($n_\text{eff}$ が大きい:コアが広い・厚い、コアの屈折率が高い、波長が短い)ほど $\gamma$ が大きく、すそ野が短いので、同じギャップでも結合は弱くなります。また、後で見るように、結合のギャップに対する敏感さもこの $\gamma$ で決まります。
+
+</Callout>
+
+#### 結合モード理論:パワーは2本の導波路を行き来する
+
+<Term id="ja-cmt" n={3}>結合モード理論</Term>(CMT)は、Millerが結合導波路について定式化し[^miller]、Yarivが導波光学向けに展開した理論です[^yariv]。物理的な描像は単純です。各導波路は自分のモードを運び、それぞれのモードのすそ野が相手の導波路へ少しずつ光を送り込み続けます。CMTでは、結合部の場を孤立した2本の導波路のモードの重ね合わせで表し、その振幅が伝搬方向に沿ってゆっくり変化すると考えます。**同一**(<Term id="ja-phasematch" n={4}>位相整合</Term>)、**無損失**、**弱結合**の2本の導波路では、振幅は次の式に従います(よく使われる $-j\kappa$ の表記で書いています。Yarivの論文は等価な別の形を使っています)。
 
 $$
 \frac{da_1}{dz} = -j\kappa\,a_2, \qquad \frac{da_2}{dz} = -j\kappa\,a_1
 $$
 
-共通の伝搬位相 $e^{-j\beta z}$ はくくり出してあります。$\kappa$ は**結合係数**で、単位長さあたりの結合の速さ(µm⁻¹)を表します。振幅は $|a_i|^2$ が導波路 $i$ のパワーになるよう規格化しています。すべての光を導波路1に入れた場合、$a_1(0)=1$、$a_2(0)=0$ として解は
+<Symbols title="記号">
+
+- $a_1(z)$、$a_2(z)$ — 導波路1、2のモードの複素振幅。$|a_i|^2$ が導波路 $i$ のパワーになるよう規格化
+- $z$ — カプラに沿った位置(µm)
+- $\kappa$ — **結合係数**:単位長さあたりに振幅がやりとりされる速さ(µm⁻¹)
+- $j$ — 虚数単位。共通の伝搬位相 $e^{-j\beta z}$ はくくり出してある
+
+</Symbols>
+
+すべての光を導波路1に入れた場合、$a_1(0)=1$、$a_2(0)=0$ として解は
 
 $$
 a_1(z)=\cos(\kappa z),\qquad a_2(z) = -j\sin(\kappa z)
 $$
 
-となります。ここから3つの結果が得られます。
+<Symbols title="記号">
 
-- **パワーが2本の導波路の間を行き来する。** $P_\text{through}=|a_1|^2=\cos^2(\kappa L)$、$P_\text{cross}=|a_2|^2=\sin^2(\kappa L)$ で、無損失なので和は1です。
-- **結合長。** 完全に乗り移る長さは $L_\pi=\pi/(2\kappa)$、50:50分岐は $L_\pi/2=\pi/(4\kappa)$ です。
-- **90°の位相差が一定。** クロス側の振幅は実数に $-j$ を掛けた形なので、どの長さでもスルー側と直交位相(90°)にあります。$\pm j$ の符号は時間依存の慣習(工学系の $e^{+j\omega t}$ か、Meepの $e^{-i\omega t}$ か)で変わりますが、90°という大きさは変わりません。この位相差が第2回のMZIを動かす鍵になります。
+- $\cos(\kappa z)$ — 距離 $z$ 進んだ後に導波路1に残る振幅
+- $-j\sin(\kappa z)$ — 導波路2へ移った振幅。係数 $-j$ は90°の位相のずれを表す
+
+</Symbols>
+
+となります。ここから3つの結果が得られ、それぞれが設計の規則になります。
+
+- **パワーが2本の導波路の間を行き来する。** 結合長 $L$ の後で $P_\text{through}=|a_1|^2=\cos^2(\kappa L)$、$P_\text{cross}=|a_2|^2=\sin^2(\kappa L)$ で、無損失なので和は1です。分岐比は積 $\kappa L$ だけで決まります。ギャップで $\kappa$ が決まれば、分岐比は長さで決まります。
+- **結合長。** 完全に乗り移る長さは $L_\pi=\pi/(2\kappa)$、50:50分岐は $L_\pi/2=\pi/(4\kappa)$ です。結合が強い(ギャップが狭い)ほどカプラは短く小型になります。
+- **90°の位相差が一定。** クロス側の振幅は実数に $-j$ を掛けた形なので、どの長さでもスルー側と直交位相(90°)にあります。$\pm j$ の符号は時間依存の慣習(工学系の $e^{+j\omega t}$ か、Meepの $e^{-i\omega t}$ か)で変わりますが、90°という大きさは変わりません。この位相差がMach–Zehnder干渉計を動かす鍵になります。
 
 **振幅**と**パワー**は区別してください。$\kappa$ は場の振幅に作用し、パワーの割合はその絶対値の2乗です。「50:50カプラ」とは $|a_1|^2=|a_2|^2=1/2$、つまり振幅がそれぞれ $1/\sqrt2$ という意味です。
 
-これらの式は前提条件の上に成り立っています。非同一の導波路で位相不整合 $\delta=(\beta_1-\beta_2)/2$ があると、乗り移れる最大パワーは $\kappa^2/(\kappa^2+\delta^2)$ に下がり、ビート長は $\pi/(2\sqrt{\kappa^2+\delta^2})$ に短くなります[^yariv]。単純な直交形のCMTは、弱く結合したほぼ同一の導波路では信頼できます。強結合の場合や異種導波路の場合は、孤立モード同士の非直交性が効いてくるため、改良された定式化が必要です[^huang]。
+<Callout kind="note" title="前提">
 
-### 3. スーパーモードによる見方
+これらの式は、同一・無損失・弱結合の導波路を仮定しています。2本の導波路が同一でないと、伝搬定数 $\beta_1$ と $\beta_2$ の差として位相不整合 $\delta=(\beta_1-\beta_2)/2$ が生じます。すると乗り移れる最大パワーは $\kappa^2/(\kappa^2+\delta^2)$ に下がり、それに達する長さは $\pi/(2\sqrt{\kappa^2+\delta^2})$ と短くなります[^yariv]。つまり幅の異なる2本の導波路ではパワーを完全に移せず、完全移行カプラには同一の導波路が必要です。強結合の場合や異種導波路の場合は、孤立モード同士の非直交性が効いてくるため、改良された定式化が必要です[^huang]。
 
-同じ物理は、結合した導波路対そのものの固有モード、つまり**スーパーモード**からも読み取れます(図2右)。導波路対には、屈折率 $n_e$ の偶モードと、$n_o<n_e$ の奇モードがあります。片方の導波路に入れた光は、近似的にこの2つを等量混ぜたものです。
+</Callout>
+
+<Glossary title="用語">
+<Def id="ja-cmt" n={3} term="結合モード理論(CMT)">
+複雑な構造を、少数の既知のモード(ここでは導波路1本ずつのモード)で表し、モード同士がエネルギーをやりとりするためにその振幅がゆっくり変化すると考える近似手法です。Maxwell方程式を少数の常微分方程式に帰着できます。
+</Def>
+<Def id="ja-phasematch" n={4} term="位相整合">
+2つのモードが同じ伝搬定数 $\beta = 2\pi n_\text{eff}/\lambda$ で進むとき、位相整合しているといいます。このときだけ、各点で少しずつ移る光がカプラ全体にわたって足並みをそろえて足し合わされ、パワーを完全に移すことができます。
+</Def>
+</Glossary>
+
+#### スーパーモード:モードソルバでκを求める
+
+同じ物理は、結合した導波路対そのものの固有モード、つまり<Term id="ja-supermode" n={5}>スーパーモード</Term>からも読み取れます(図2右)。導波路対には、屈折率 $n_e$ の偶モードと、$n_o<n_e$ の奇モードがあります。片方の導波路に入れた光は、近似的にこの2つを等量混ぜたものです。
 
 $$
 \text{導波路1} \approx \tfrac{1}{\sqrt2}\left(\psi_e+\psi_o\right), \qquad \text{導波路2} \approx \tfrac{1}{\sqrt2}\left(\psi_e-\psi_o\right)
 $$
 
-2つのスーパーモードは異なる速さで位相を蓄積します。長さ $L$ 進むと相対位相は $\Delta\beta\,L$($\Delta\beta=2\pi(n_e-n_o)/\lambda$)になり、これが $\pi$ に達すると光はすべて導波路2に移ります。よって $L_\pi=\lambda/[2(n_e-n_o)]$ であり、これを $\pi/(2\kappa)$ と等置すると
+<Symbols title="記号">
+
+- $\psi_e$、$\psi_o$ — 偶(対称)・奇(反対称)スーパーモードの場の分布
+- $n_e$、$n_o$ — それぞれの実効屈折率($n_e > n_o$)
+
+</Symbols>
+
+2つのスーパーモードは位相速度が異なるので、少しずつ足並みがずれていきます。長さ $L$ 進むと相対位相は $\Delta\beta\,L$($\Delta\beta=2\pi(n_e-n_o)/\lambda$)になり、これが $\pi$ に達すると和は導波路2の形になり、光が乗り移ったことになります。よって $L_\pi=\lambda/[2(n_e-n_o)]$ であり、これを $\pi/(2\kappa)$ と等置すると
 
 $$
 \kappa = \frac{\pi\,(n_e-n_o)}{\lambda}
 $$
 
-が得られます。この関係は2つのスーパーモードだけで考える描像、つまり対称で弱く結合した導波路対の範囲で成り立ちます。カプラ設計がモード計算の問題に置き換わり、断面について $n_e$ と $n_o$ を求めれば結合長が決まります。シリコンフォトニクスの方向性結合器は、通常このモードソルバによる方法で設計されます[^chrostowski]。
+<Symbols title="記号">
+
+- $\kappa$ — 結合係数(µm⁻¹)
+- $n_e - n_o$ — 偶・奇スーパーモードの屈折率差(無次元)
+- $\lambda$ — 真空中の波長(µm)
+
+</Symbols>
+
+が得られます。この関係は対称で弱く結合した導波路対で成り立ちます。カプラ設計がモード計算の問題に置き換わり、断面について $n_e$ と $n_o$ を求めれば結合長が決まります。シリコンフォトニクスの方向性結合器は、通常このモードソルバによる方法で設計されます[^chrostowski]。ギャップを狭くすると $n_e$ と $n_o$ の差が広がり、$\kappa$ が大きく、カプラが短くなります。
 
 <Figure src={fig2} alt="2つのパネル。左:すそ野がギャップで重なる単独導波路2本のモード分布。右:結合した導波路対の偶・奇スーパーモードとその実効屈折率。" caption="左:各導波路が単独で存在するときのHz分布。エバネッセント場のすそ野が隣のコアまで届いている(網掛けは幅500 nmのコア、ギャップ200 nm)。右:λ = 1.35 µmにおける導波路対の偶・奇スーパーモード。nₑ = 2.4299、nₒ = 2.4093 から κ = π(nₑ − nₒ)/λ = 0.0480 µm⁻¹。コア境界の折れ曲がりは物理的なもので、この偏波ではHzは連続だが微分が誘電率の比だけ跳ぶ。1次元差分モードソルバで計算(スクリプトは「コードとデータ」を参照)。" number={2} size="wide" />
 
-### 4. FDTDシミュレーションで何を測っているか
+<Glossary title="用語">
+<Def id="ja-supermode" n={5} term="スーパーモード">
+導波路1本ずつではなく、結合した2本の導波路の構造全体がもつモードです。対称な導波路対には、2つのコアの場が同位相の偶スーパーモードと、逆位相の奇スーパーモードがあります。各スーパーモードは形を保ったまま伝わり、結合はそれらのうなりとして現れます。
+</Def>
+</Glossary>
 
-ツールキットでは、カプラ全体(図1)をMeep[^meep]で計算し、各ポートの場を導波モードに射影します。得られる複素モード係数から、振幅と位相の両方を含む本物のSパラメータが求まります。[`coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/coupler.py) での抽出の中心部分は次のとおりです。入射側モニタの前進波振幅で、出力側のモード係数を割っています。
+#### κからカプラ行列へ
+
+回路では、カプラ全体を2つの入力振幅を2つの出力振幅へ写す1つのブロックとして扱います。長さ $L$ の無損失・対称なカプラでは、CMTの解から
+
+$$
+\mathbf{C} = \begin{pmatrix} \cos\kappa L & -j\sin\kappa L \\ -j\sin\kappa L & \cos\kappa L \end{pmatrix}
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{C}$ — カプラの伝達行列:出力振幅 $= \mathbf{C} \times$ 入力振幅
+- $\cos\kappa L$ — 場の**自己結合**(よく $t$ と書く)
+- $\sin\kappa L$ — 場の**交差結合**(無次元の振幅)
+- $\sin^2\kappa L$ — パワーの交差結合 $K$、つまり分岐比
+
+</Symbols>
+
+となります。干渉計や共振器を扱う記事では、この行列を $t=\cos\kappa L$ と無次元の交差結合で書くのが普通で、そこでは交差結合も $\kappa$ と書かれ、$t^2+\kappa^2=1$ となります。本記事の $\kappa$ は常に単位長さあたりの結合(µm⁻¹)です。実際のカプラでは、$L$ は直線部にS字ベンドでの余分な結合(後で測るオフセット $L_0$)を足したものになります。
+
+#### 波長依存性と作製トレランス
+
+残る2つの設計上の問題も、同じエバネッセント場から説明できます。
+
+- **帯域。** 波長が長いとモードの閉じ込めが弱まって $\gamma$ が小さくなり、すそ野が隣のコアまで深く届いて $\kappa$ が大きくなります。分岐比は $\kappa L$ で決まるので、ある波長で50:50に設計したカプラは、数十nm離れた波長では偏ります。この帯域の狭さは従来型方向性結合器のよく知られた弱点で、分散設計はまさにこれを平坦化するために開発されました。たとえばHalirらは、導波路間にサブ波長格子構造を入れることでシリコンカプラの帯域が約5倍に広がることを3次元FDTDシミュレーションで示しています[^halir]。
+- **ギャップのトレランス。** $\kappa\propto e^{-\gamma g}$ なので、ギャップの誤差は結合を次のように変えます。
+
+$$
+\frac{d\kappa}{\kappa} = -\gamma\,dg
+$$
+
+<Symbols title="記号">
+
+- $d\kappa/\kappa$ — 結合係数の相対変化
+- $dg$ — ギャップの誤差(µm)
+- $\gamma$ — エバネッセント場の減衰定数(µm⁻¹)
+
+</Symbols>
+
+$\gamma = 9.04\ \mu\text{m}^{-1}$ では、ギャップが10 nmずれると $\kappa$ は約9 %変わります。50:50点では $dP_\text{cross}/d(\kappa L)=\sin 2\kappa L = 1$ なので、分岐比はおよそ±7ポイント動きます(筆者の見積もりで、トレランス解析のシミュレーション結果ではありません)。短く狭いカプラは小型になりますが、相対的な感度は下がりません。
+
+#### 設計の早見表:何を変えると何が変わるか
+
+<Callout kind="design" title="何を変えると何が変わるか">
+
+| 変えるもの | 起こること | 理由 |
+|---|---|---|
+| ギャップ $g$ ↑ | $\kappa$ が指数関数的に下がり、同じ分岐比に長いカプラが必要 | $\kappa\propto e^{-\gamma g}$ |
+| 結合長 $L$ ↑ | 分岐比が $\sin^2(\kappa L)$ に沿って変わる。$\kappa L=\pi/4$ で50:50、$\pi/2$ で完全移行 | CMTの解 |
+| 波長 $\lambda$ ↑ | $\gamma$ ↓、$\kappa$ ↑ で分岐比がずれる(狭帯域) | $\gamma = k_0\sqrt{n_\text{eff}^2-n_\text{clad}^2}$ |
+| 閉じ込め ↑(コアを広く・厚く) | 同じギャップで $\gamma$ ↑、$\kappa$ ↓ | エバネッセント場のすそ野が短くなる |
+| 非対称な導波路($\delta \neq 0$) | 完全移行できなくなる。最大 $\kappa^2/(\kappa^2+\delta^2)$ | 位相不整合 |
+| S字ベンドの形状 | 実効的な長さ $L_0$ が加わるので、直線部からその分を差し引く | 導波路が近づく途中でも結合する |
+| ギャップの誤差10 nm | $\kappa$ が約9 %、50:50点で分岐比が約±7ポイント変わる | $d\kappa/\kappa = -\gamma\,dg$ |
+
+ここから実用的な設計手順が導けます。断面を選び、確実に作製できるギャップを選び、スーパーモードから $\kappa$ を求め、目標の分岐比に合わせて長さを決め、全体のシミュレーション1回でS字ベンドの分を補正します。
+
+</Callout>
+
+### シミュレーション
+
+#### 本記事のモデル
+
+本記事のシミュレーションはすべて**2次元**で、シリコン細線導波路を<Term id="ja-eim" n={6}>等価屈折率法</Term>で近似しています[^eim]。コアの屈折率は $n_\text{core}=2.7$(厚さ220 nmのシリコン層の等価屈折率で、バルクシリコンの約3.45ではありません)、クラッドはシリカ相当の $n_\text{clad}=1.44$、導波路幅は500 nm、材料分散は無視しています。等価屈折率法は近似であり、弱導波構造に比べて高屈折率差のシリコン細線では精度が落ちることが知られています。波長帯は1.30–1.40 µm(Oバンド)、設計波長は $\lambda_0=1.35$ µmです。偏波はMeepの2次元TE($H_z$ が面外、$\mathbf{E}$ が面内)で、すべての光源とモニタで明示的に指定しています。
+
+したがって、以下の数値はこのモデル固有のもので、実際に作製する3次元デバイスの予測値ではありません。ただし、物理と手法はそのまま実デバイスに通用します。計算はすべてMeep[^meep]による<Term id="ja-fdtd" n={7}>時間領域差分(FDTD)法</Term>で、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)を使っています。
+
+<Glossary title="用語">
+<Def id="ja-eim" n={6} term="等価屈折率法">
+3次元の導波路を2次元モデルに縮約する方法です。まず縦方向の構造(ここでは厚さ220 nmのシリコン層)をそのスラブモードの実効屈折率で置き換え、その値を2次元シミュレーションのコアの屈折率として使います。高速ですが近似です。
+</Def>
+<Def id="ja-fdtd" n={7} term="FDTD(時間領域差分法)">
+格子上でMaxwell方程式を直接解き、電場と磁場を時間方向に少しずつ進めていくシミュレーション手法です。短いパルスで1回計算すれば、波長帯全体の応答が得られます。
+</Def>
+</Glossary>
+
+#### FDTDシミュレーションで何を測っているか
+
+ツールキットでは、カプラ全体(図1)を計算し、各ポートの場を導波モードに射影します。得られる複素モード係数から、振幅と位相の両方を含む本物の<Term id="ja-sparam" n={8}>Sパラメータ</Term>が求まります。[`coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/coupler.py) での抽出の中心部分は次のとおりです。入射側モニタの前進波振幅で、出力側のモード係数を割っています。
 
 ```python
 # 各ポートの場をTE導波モード(band 1)に射影する
@@ -252,17 +588,33 @@ S_cross   = a_bot[:, 0] / incident
 T_through, T_cross = abs(S_through)**2, abs(S_cross)**2   # パワーの割合
 ```
 
-(モジュールのコードを少し簡略化しています。)各入力ポートは別々のランで励振します。また、使う前にすべての計算点で、エネルギー保存、上下対称性、受動性を確認しています。次節の長さスイープでは、すべての点で波長1.35 µmにおけるスルー + クロス + 反射の和が0.997–0.999に収まります。足りない約0.2 %は主にS字ベンドからの放射です。反射はごくわずかで、50:50設計では帯域全体で0.04 %未満です。
+(モジュールのコードを少し簡略化しています。)各入力ポートは別々のランで励振します。また、使う前にすべての計算点で、エネルギー保存、上下対称性、受動性を確認しています。次の長さスイープでは、すべての点で波長1.35 µmにおけるスルー + クロス + 反射の和が0.997–0.999に収まります。足りない約0.2 %は主にS字ベンドからの放射です。反射はごくわずかで、50:50設計では帯域全体で0.04 %未満です。
 
 <Figure src={fig3} alt="Hz場の実部の計算結果。左上の導波路から入った光が、右端では両方の出力導波路に現れている。" caption="FDTDによるRe(Hz)。左上ポートから入射(λ = 1.35 µm、ノートブックのベースライン計算、Lc = 13 µm)。結合部に沿って下側の導波路の場が育ち、両出力がほぼ半分ずつパワーを運ぶ。灰色の帯は完全整合層(PML)。notebooks/06_directional_coupler.ipynb、6節より。" number={3} size="wide" />
 
-### 5. 結合長:ビート曲線
+<Glossary title="用語">
+<Def id="ja-sparam" n={8} term="Sパラメータ">
+ポート $j$ に単位振幅を入れたときのポート $i$ の出力振幅を表す複素数 $S_{ij}$ です。絶対値の2乗が透過するパワーの割合、偏角が位相のずれを表します。
+</Def>
+</Glossary>
+
+#### 結合長:ビート曲線
 
 ギャップ200 nmで直線結合長 $L_c$ を0.25 µmから26 µmまで掃引すると、CMTのビート曲線が現れます(図4)。3パラメータのフィット
 
 $$
 P_\text{cross}(L_c) = \eta\,\sin^2\!\big[\kappa\,(L_c + L_0)\big]
 $$
+
+<Symbols title="記号">
+
+- $P_\text{cross}$ — クロスポートのパワーの割合
+- $L_c$ — 直線結合部の長さ(µm)
+- $L_0$ — S字ベンドが寄与する余分な実効結合長(µm)
+- $\kappa$ — 結合係数(µm⁻¹)
+- $\eta$ — 移せるパワーの最大割合。放射損失のため1をわずかに下回る
+
+</Symbols>
 
 は、FDTDの17点すべてにrms残差 $2\times10^{-4}$ で一致します。フィット値は $\kappa = 0.04862\ \mu\text{m}^{-1}$、$L_0 = 2.46$ µm、$\eta = 0.998$ です。
 
@@ -274,26 +626,22 @@ $$
 
 <Figure src={fig4} alt="結合長0から26マイクロメートルに対するクロス・スルー出力パワー。FDTDの点がsin²とcos²の曲線に乗り、13.7マイクロメートル付近で50%で交差する。" caption="λ = 1.35 µmにおけるスルー(四角)とクロス(丸)のパワーと直線結合長Lcの関係(ギャップ200 nm)。灰色の曲線はCMTフィット η sin²[κ(Lc + L0)] とその補数。S字ベンドでも結合するため、曲線のクロスパワーがゼロになるのは Lc = 0 ではなく Lc = −L0 = −2.46 µm。菱形は保存された50:50設計。データ:notebooks/06_directional_coupler.ipynb 10節の17点スイープ。" number={4} />
 
-### 6. ギャップ依存性:指数関数的な感度
+#### ギャップ依存性:指数関数的な感度
 
 波長を固定すると、$\kappa$ はほぼギャップだけで決まります。ツールキットの5 × 7スイープ(ギャップ0.15–0.35 µm、長さ2–26 µm)から、ギャップごとに1つの $\kappa$ をフィットで求めました(図5)。
 
-- **減衰は指数関数的。** $\ln\kappa$ の $g$ に対する傾きは $-9.02\ \mu\text{m}^{-1}$ で、1節の孤立モードのすそ野から求めた $\gamma=9.04\ \mu\text{m}^{-1}$ と一致します。エバネッセント結合の描像が定量的に裏付けられたことになります。厳密には、$\kappa\propto e^{-\gamma g}$ はMarcatiliの解析と同様、弱結合(ギャップが減衰長の数倍)での漸近的な結果です[^marcatili]。
+- **減衰は指数関数的。** $\ln\kappa$ の $g$ に対する傾きは $-9.02\ \mu\text{m}^{-1}$ で、孤立モードのすそ野から求めた $\gamma=9.04\ \mu\text{m}^{-1}$ と一致します。エバネッセント結合の描像が定量的に裏付けられ、理論の節で見積もったギャップのトレランスも確かめられたことになります。厳密には、$\kappa\propto e^{-\gamma g}$ はMarcatiliの解析と同様、弱結合(ギャップが減衰長の数倍)での漸近的な結果です[^marcatili]。
 - **スーパーモード理論はFDTDの値を再現する。** 一致は1–5 %以内です。差が最も大きいのはギャップが最も広い点で、スイープした長さの範囲ではクロスパワーが13 %未満にとどまり、フィットの拘束が弱いためです。
-
-同じ指数関数は、作製上の注意点も示しています。$d\kappa/\kappa = -\gamma\,dg$ なので、ギャップが10 nmずれると $\kappa$ は約9 %変わります。公称50:50のカプラでは、分岐比がおよそ±7ポイント動きます(50:50点で $dP/d(\kappa L)=\sin 2\kappa L = 1$ を用いた筆者の見積もりで、トレランス解析のシミュレーション結果ではありません)。短く狭いカプラは小型になりますが、相対的な感度は下がりません。
 
 <Figure src={fig5} alt="ギャップ0.15から0.35マイクロメートルに対する結合係数の片対数プロット。FDTDの点が直線に乗り、スーパーモード理論およびエバネッセント減衰定数の指数関数と一致する。" caption="λ = 1.35 µmにおける結合係数κとギャップの関係(左軸)、および対応する完全移行長 Lπ = π/2κ(右軸)。点:各ギャップの長さスイープへのCMTフィットから得たκ。実線:スーパーモード理論 π(nₑ − nₒ)/λ。破線:孤立モードの γ = 9.04 µm⁻¹ を用いた e^(−γg)。データ:notebooks/06b_directional_coupler_gap_sweep.ipynb。" number={5} />
 
-### 7. 波長依存性:単純なカプラが狭帯域である理由
+#### 波長依存性:単純なカプラが狭帯域である理由
 
-図6は50:50設計を100 nmの帯域で見たものです。クロスパワーは1300 nmの0.385から1400 nmの0.632まで増え、合計はほぼ1のままです。原因はやはりエバネッセント場です。波長が長いとモードの閉じ込めが弱まって $\gamma$ が小さくなり、すそ野が隣のコアまで深く届いて $\kappa$ が大きくなります。分岐比は $\kappa L$ で決まるので、ある波長で50:50に設計したカプラは、数十nm離れた波長では偏ります。
-
-この帯域の狭さは、従来型方向性結合器のよく知られた弱点です。分散設計は、まさにこれを平坦化するために開発されました。たとえばHalirらは、導波路間にサブ波長格子構造を入れることでシリコンカプラの帯域が約5倍に広がることを3次元FDTDシミュレーションで示しています[^halir]。このシリーズでは第2回で再び問題になります。これらのカプラで組んだMZIは、波長によって干渉縞のコントラストが変わります。
+図6は50:50設計を100 nmの帯域で見たものです。クロスパワーは1300 nmの0.385から1400 nmの0.632まで増え、合計はほぼ1のままです。これは理論の節で予測した、波長とともに $\kappa$ が大きくなる効果です。そのため、このようなカプラで組んだMZIは、波長によって干渉縞のコントラストが変わります。
 
 <Figure src={fig6} alt="50:50設計の1300から1400ナノメートルにおけるスルー・クロス出力。2本の線は1350ナノメートルで交差してその両側で離れ、和は1のまま。" caption="保存された50:50カプラ(Lc = 13.71 µm、ギャップ200 nm)のスペクトル。分岐が釣り合うのは設計波長1.35 µm(点線)付近だけ。破線はスルー + クロス + 反射の和で、0.998以上を保つ。データ:data/sparams/coupler/selected(notebooks/06_directional_coupler.ipynb 11節)。" number={6} />
 
-### 8. まとめ
+#### 理論とシミュレーションの比較
 
 | 量 | 単純な理論 | 本記事の2D FDTDモデル(λ = 1.35 µm、g = 200 nm) |
 |---|---|---|
@@ -303,7 +651,7 @@ $$
 | スルー/クロスの位相差 | 90° | 90.01°–90.06° |
 | ギャップ依存性 | $\propto e^{-\gamma g}$、$\gamma = 9.04\ \mu\text{m}^{-1}$ | 傾き 9.02 µm⁻¹ |
 
-対称で弱結合、ほぼ無損失のこのカプラについて、結合モード理論は本質を正しく捉えています。FDTDシミュレーションは、理想式が無視している部分、つまりS字ベンドでの結合、わずかな放射損失、$\kappa$ の波長依存性を補ってくれます。**[第2回](/blog/mach-zehnder-interferometers/)**では、この50:50カプラ2個で長さの異なる2本のアームを挟み、90°の位相差が干渉の鍵になる様子を見ていきます。
+対称で弱結合、ほぼ無損失のこのカプラについて、結合モード理論は本質を正しく捉えています。FDTDシミュレーションは、理想式が無視している部分、つまりS字ベンドでの結合、わずかな放射損失、$\kappa$ の波長依存性を補ってくれます。このようなカプラ2個で位相差をスイッチに変える仕組みは、[Mach–Zehnder干渉計](/blog/mach-zehnder-interferometers/)の記事で説明しています。
 
 ### コードとデータ
 

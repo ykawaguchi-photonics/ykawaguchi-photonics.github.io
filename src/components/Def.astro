@@ -1,0 +1,110 @@
+---
+// One entry in a <Glossary> box. Renders id="term-{id}", "※{n} Term", then
+// the explanation (children: markdown, inline/display math, short paragraphs).
+// MDX: <Def id="en-finesse" n={1} term="Finesse">...</Def>
+// back={false} hides the "↩" link to the <Term> marker (use it when the term
+// is not marked with <Term> in the text).
+export interface Props {
+  id: string;
+  n: number;
+  term: string;
+  back?: boolean;
+}
+const { id, n, term, back = true } = Astro.props;
+const ja = id.startsWith("ja-");
+const backLabel = ja ? `本文の「${term}」に戻る` : `Back to “${term}” in the text`;
+---
+
+<div class="def" id={`term-${id}`}>
+  <dt class="def-term">
+    <span class="def-mark">※{n}</span>
+    <span class="def-name">{term}</span>
+    {
+      back && (
+        <a class="def-back" href={`#ref-${id}`} aria-label={backLabel} title={backLabel}>
+          ↩
+        </a>
+      )
+    }
+  </dt>
+  <dd class="def-body" id={`term-${id}-body`}>
+    <slot />
+  </dd>
+</div>
+
+<style>
+  .def {
+    scroll-margin-top: 6rem;
+    border-radius: 4px;
+    transition: background-color var(--transition);
+  }
+  .def + .def {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--accent-soft);
+  }
+  .def:target {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 var(--space-2) var(--accent-soft);
+  }
+  .def-term {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5em;
+    margin: 0 0 0.3em;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 650;
+    line-height: 1.4;
+    color: var(--text);
+  }
+  .def-mark {
+    color: var(--accent);
+    font-size: 0.85em;
+    font-variant-numeric: tabular-nums;
+    flex: none;
+  }
+  .def-back {
+    margin-left: auto;
+    flex: none;
+    font-weight: 400;
+    color: var(--text-faint);
+    text-decoration: none;
+    padding: 0 0.25em;
+  }
+  .def-back:hover {
+    color: var(--accent);
+  }
+  .def-body {
+    margin: 0;
+    color: var(--text);
+  }
+  .def-body :global(p),
+  .def-body :global(ul),
+  .def-body :global(ol),
+  .def-body :global(.katex-display),
+  .def-body :global(table) {
+    margin: 0 0 0.6em;
+  }
+  .def-body :global(ul),
+  .def-body :global(ol) {
+    padding-left: 1.2em;
+  }
+  .def-body :global(li + li) {
+    margin-top: 0.2em;
+  }
+  .def-body > :global(:first-child) {
+    margin-top: 0;
+  }
+  .def-body > :global(:last-child) {
+    margin-bottom: 0;
+  }
+  @media print {
+    .def-back {
+      display: none;
+    }
+    .def-mark {
+      color: inherit;
+    }
+  }
+</style>

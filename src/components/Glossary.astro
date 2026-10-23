@@ -1,0 +1,61 @@
+---
+// Term-explanation box. Always the same (accent) colour, so readers associate
+// it with the ※ marks in the text. Place right after the paragraph where the
+// terms first appear.
+// MDX:
+//   <Glossary>               (Japanese half: <Glossary title="用語">)
+//   <Def id="en-finesse" n={1} term="Finesse">
+//   Explanation with $math$ ...
+//   </Def>
+//   </Glossary>
+export interface Props {
+  title?: string;
+}
+const { title = "Terms" } = Astro.props;
+---
+
+<aside class="glossary" aria-label={title}>
+  <p class="glossary-title" aria-hidden="true">{title}</p>
+  <dl class="glossary-list">
+    <slot />
+  </dl>
+</aside>
+
+<style>
+  .glossary {
+    margin: 1.75em 0;
+    padding: var(--space-4) var(--space-5) var(--space-5);
+    background: var(--accent-tint);
+    border: 1px solid var(--accent-line);
+    border-radius: var(--radius);
+    font-size: 0.9375em;
+    line-height: 1.65;
+  }
+  .glossary-title {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .glossary-list {
+    margin: 0;
+  }
+  @media (max-width: 480px) {
+    .glossary {
+      padding: var(--space-3) var(--space-4) var(--space-4);
+    }
+  }
+  @media print {
+    .glossary {
+      background: none;
+      border-color: currentColor;
+      break-inside: avoid;
+    }
+    .glossary-title {
+      color: inherit;
+    }
+  }
+</style>

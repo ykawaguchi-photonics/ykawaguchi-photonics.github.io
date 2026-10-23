@@ -1,57 +1,152 @@
 ---
-title: "From Waveguide Coupling to Interference and Resonance: A Physics-Based Introduction to PIC Circuits"
-description: "How directional couplers, Mach–Zehnder interferometers and ring resonators follow from one coupler matrix, how coupling, single-pass interference and multi-pass resonance differ in spectrum, sensitivity and tolerance, and how simulated building blocks are composed into circuits. The closing part of a four-part series, in English and Japanese."
+title: "Coupling, Interference, and Resonance"
+description: "Directional couplers, MZIs and ring resonators are one coupler matrix used three ways. How that sets their spectra, sensitivity and how circuits are built."
 date: 2026-10-20
+updated: 2026-10-22
 category: technical-notes
-tags: [silicon photonics, photonic integrated circuits, directional coupler, Mach-Zehnder interferometer, ring resonator, circuit simulation, tutorial series]
+tags: [silicon photonics, photonic integrated circuits, directional coupler, Mach-Zehnder interferometer, ring resonator, circuit simulation]
 areas: [silicon-photonics]
 draft: false
 ---
 
 import Figure from "@/components/Figure.astro";
+import Term from "@/components/Term.astro";
+import Glossary from "@/components/Glossary.astro";
+import Def from "@/components/Def.astro";
+import Symbols from "@/components/Symbols.astro";
+import Callout from "@/components/Callout.astro";
 import fig1 from "./fig1_building_blocks.png";
 import fig2 from "./fig2_once_vs_many.png";
 import fig3 from "./fig3_lattice.png";
 
 **Language:** [English](#english) · [日本語](#日本語)
 
-*Part 4 of a four-part series on the physics behind photonic integrated circuits: [directional couplers](/blog/directional-couplers-cmt-fdtd/) → [Mach–Zehnder interferometers](/blog/mach-zehnder-interferometers/) → [ring resonators](/blog/ring-resonators/) → how they fit together.*
-
 ## English
 
-The first three parts each looked closely at one device. This part steps back. The three devices are not separate topics but three ways of using one element, the 2×2 coupler. In each, the output is decided by the same thing, how optical amplitudes with different phases add up. What differs is **how many contributions** add, and **whether they feed back**. That difference explains their spectra, their sensitivity and their tolerance, and it is the basis of how photonic circuits are designed.
+**Coupling**, **interference** and **resonance** are the three ways in which the basic devices of a photonic integrated circuit (PIC) combine light. A [directional coupler](/blog/directional-couplers-cmt-fdtd/) exchanges power continuously between two waveguides, a [Mach–Zehnder interferometer](/blog/mach-zehnder-interferometers/) adds two optical paths once, and a [ring resonator](/blog/ring-resonators/) adds many round trips through feedback. All three are built from the same 2×2 coupler, and the number of contributions that add up decides their spectral shape, their sensitivity and their fabrication tolerance.
 
-The numbers quoted here come from the 2D FDTD simulations of the earlier parts (effective-index model, O-band), built with my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit).
+### Overview
 
-### 1. One matrix, three architectures
+#### Why compare the three devices
 
-Every device in this series is built from the lossless coupler matrix of Part 1,
+In each of these devices, the output is decided by the same thing: how optical amplitudes with different phases add up. What differs is **how many contributions** add, and **whether they feed back**. Understanding that difference is what lets a designer choose the right device for a job, predict how it will react to a change of wavelength, temperature or geometry, and combine devices into circuits.
+
+The Theory section derives all three devices from one coupler matrix and compares them through a single number, the finesse. The Simulation section shows how separately simulated devices are combined into circuits. The numbers come from 2D FDTD simulations (effective-index model of a silicon strip waveguide, O-band) made with my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit); each device is treated in detail in its own article.
+
+#### Basic terms
+
+A few quantities appear throughout. They describe any periodic spectrum, whether it comes from an interferometer or a resonator: where the peaks or dips are, how far apart they are, and how sharp they are. They are marked ※ in the text and explained in the boxes.
+
+- The <Term id="en-phase" n={1}>phase</Term> that light accumulates in a waveguide, which depends on its <Term id="en-neff" n={2}>effective index</Term>.
+- The spacing of the periodic features, the <Term id="en-fsr" n={3}>free spectral range</Term> (FSR), which depends on the <Term id="en-ng" n={4}>group index</Term>.
+- The sharpness of the features, measured by the <Term id="en-finesse" n={5}>finesse</Term> and, for resonators, the <Term id="en-q" n={6}>Q factor</Term>.
+
+<Glossary>
+<Def id="en-phase" n={1} term="Phase and interference">
+Light is a wave, and its field oscillates as $\cos(\omega t - \phi)$. The phase $\phi$ says where in its cycle the wave is. When two waves meet, their **amplitudes** add: in phase they reinforce, half a cycle ($\pi$) out of phase they cancel. That is interference. Optical power is the squared magnitude of the summed amplitude.
+</Def>
+<Def id="en-neff" n={2} term="Effective index (n_eff)">
+A guided mode travels along a waveguide as if it were in a uniform material of index $n_\text{eff}$: its phase advances by $2\pi n_\text{eff}/\lambda$ per unit length. It lies between the cladding and core indices.
+</Def>
+<Def id="en-fsr" n={3} term="Free spectral range (FSR)">
+The spacing, in wavelength or frequency, between neighbouring repetitions of a periodic spectrum: adjacent fringes of an interferometer or adjacent resonances of a ring. For a path length $L$, $\mathrm{FSR} = \lambda^2/(n_g L)$.
+</Def>
+<Def id="en-ng" n={4} term="Group index (n_g)">
+The index that sets the speed of a light pulse (group velocity $c/n_g$) and how fast the phase changes with wavelength. Because $n_\text{eff}$ depends on wavelength, $n_g = n_\text{eff} - \lambda\,dn_\text{eff}/d\lambda$ differs from $n_\text{eff}$, often by 20 % or more in silicon wires. Every FSR and linewidth is set by $n_g$, not $n_\text{eff}$.
+</Def>
+<Def id="en-finesse" n={5} term="Finesse">
+The ratio of the spacing of a periodic spectrum to the width of its features, $F = \mathrm{FSR}/\Delta\lambda$. It measures how many contributions interfere: an interferometer in which two paths meet once has $F=2$, while a ring in which light circulates many times can have $F$ of tens to thousands.
+</Def>
+<Def id="en-q" n={6} term="Q factor">
+The quality factor of a resonator, $Q = \lambda/\Delta\lambda$: the resonance wavelength divided by the resonance width. It tells how long light is stored (about $Q/2\pi$ optical cycles) and how sharp, selective and sensitive the resonance is. Finesse and Q are related by $F = Q\cdot\mathrm{FSR}/\lambda$.
+</Def>
+</Glossary>
+
+<Figure src={fig1} alt="Three signal-flow diagrams. Coupling: a single coupler block with two inputs and two outputs. Interference: two coupler blocks joined by two phase blocks. Resonance: one coupler block whose second output loops back through a phase-and-loss block into its second input." caption="The three architectures as signal-flow diagrams, all built from the same 2×2 coupler C. Coupling: one block, inside which two supermodes beat. Interference: two couplers and two paths, passed once. Resonance: one coupler whose output is fed back through the ring, so light passes the loop again and again." number={1} size="wide" />
+
+### Theory
+
+#### One matrix, three architectures
+
+Every device here is built from the lossless coupler matrix
 
 $$
 \mathbf{C} = \begin{pmatrix} t & -j\kappa \\ -j\kappa & t \end{pmatrix}, \qquad t^2 + \kappa^2 = 1,
 $$
 
-plus waveguide sections that only add phase (and loss).
+<Symbols>
 
-<Figure src={fig1} alt="Three signal-flow diagrams. Coupling: a single coupler block with two inputs and two outputs. Interference: two coupler blocks joined by two phase blocks. Resonance: one coupler block whose second output loops back through a phase-and-loss block into its second input." caption="The three architectures as signal-flow diagrams, all built from the same 2×2 coupler C. Coupling: one block, inside which two supermodes beat. Interference: two couplers and two paths, passed once. Resonance: one coupler whose output is fed back through the ring, so light passes the loop again and again." number={1} size="wide" />
+- $\mathbf{C}$ — transfer matrix of a 2×2 coupler: output amplitudes $= \mathbf{C} \times$ input amplitudes
+- $t$ — dimensionless **field** through-coupling (amplitude that stays in the same waveguide)
+- $\kappa$ — dimensionless **field** cross-coupling (amplitude that crosses over); $\kappa^2 = K$ is the power splitting ratio
+- $-j$ — 90° phase of the crossed light; $t^2+\kappa^2=1$ expresses energy conservation
 
-- **Coupling** (Part 1) is already interference in disguise. Inside the coupler, the even and odd supermodes travel with different phase velocities, and their beating over the coupler length sets $t$ and $\kappa$. Its spectral response is slow, because nothing in it has a long path difference; it changes only through the wavelength dependence of $\kappa$ (the 50:50 coupler's cross:through split drifted from 39:61 to 63:37 across 100 nm).
-- **Interference** (Part 2) is a feed-forward product, $\mathbf{C}\,\mathbf{A}\,\mathbf{C}$. Two contributions with a phase difference $\Delta\phi$ add once, giving $\cos^2(\Delta\phi/2)$ for ideal couplers.
-- **Resonance** (Part 3) adds feedback. Following the field around the ring gives a geometric series:
+</Symbols>
+
+plus waveguide sections that only add phase (and loss). The [directional coupler article](/blog/directional-couplers-cmt-fdtd/) shows how $t$ and $\kappa$ follow from the coupling coefficient per unit length, the gap and the coupler length.
+
+- **Coupling** (directional coupler) is already interference in disguise. Inside the coupler, the even and odd <Term id="en-supermode" n={7}>supermodes</Term> travel with different phase velocities, and their beating over the coupler length sets $t$ and $\kappa$. Its spectral response is slow, because nothing in it has a long path difference; it changes only through the wavelength dependence of the coupling (a simulated 50:50 coupler's cross:through split drifted from 39:61 to 63:37 across 100 nm).
+- **Interference** (Mach–Zehnder interferometer) is a feed-forward product, $\mathbf{C}\,\mathbf{A}\,\mathbf{C}$, where $\mathbf{A}$ holds the two arm phases. Two contributions with a phase difference $\Delta\phi$ add once, giving $\cos^2(\Delta\phi/2)$ for ideal couplers.
+- **Resonance** (ring resonator) adds feedback. Following the field around the ring gives a geometric series:
 
 $$
 \frac{b_\text{out}}{a_\text{in}} = t - \kappa^2 a e^{j\phi}\sum_{n=0}^{\infty}\left(t a e^{j\phi}\right)^n = \frac{t - a e^{j\phi}}{1 - t a e^{j\phi}} .
 $$
 
-Each term is one more round trip, weighted by $t\,a$. The denominator, the sum of all those round trips, is what makes the response sharp. It is also what makes a ring fundamentally different from an MZI in the signal-processing sense. A feed-forward structure such as the MZI or a lattice of MZIs produces a response shaped by **zeros**: a finite sum of delayed copies, a moving-average (MA, all-zero) filter, the optical counterpart of an FIR digital filter.[^madsen] [^jinguji] Feedback in a ring produces **poles**, an autoregressive (AR) response; practical ring filters usually have zeros as well (ARMA). Optical filter design uses exactly this language.[^madsen]
+<Symbols>
 
-### 2. Once versus many times
+- $a_\text{in}$, $b_\text{out}$ — input and output field amplitudes in the bus waveguide
+- $a$ — single-pass field transmission of the ring (1 for no loss)
+- $\phi$ — round-trip phase of the ring (rad)
+- $n$ — number of extra round trips; each term is one more trip, weighted by $ta\,e^{j\phi}$
 
-Fig. 2 puts the MZI of Part 2 and a racetrack of Part 3 on the same axis, detuning in units of each device's own free spectral range (FSR). Both have the same kind of periodicity, $\mathrm{FSR} = \lambda^2/(n_g L)$, where $L$ is the path difference ($\Delta L = 12.5$ µm, FSR ≈ 49 nm) or the round-trip length ($L = 37.4$ µm, FSR ≈ 15.5 nm). Their shapes are completely different. The MZI's dip fills half the period, because two contributions interfering once give a sinusoid. The ring's dip occupies only a few percent, because many contributions must stay in phase.
+</Symbols>
 
-The ratio of period to width is the **finesse**. It is 2 for the MZI by construction, and for the ring it is $F = \pi\sqrt{at}/(1-at)$. The fitted $t$ and $a$ of Part 3 give 30, and the FDTD dip gives 28.
+The denominator, the sum of all those round trips, is what makes the response sharp. It is also what makes a ring fundamentally different from an MZI in the signal-processing sense. A feed-forward structure such as the MZI or a lattice of MZIs produces a response shaped by **zeros**: a finite sum of delayed copies, a moving-average (MA, all-zero) filter, the optical counterpart of an <Term id="en-fir" n={8}>FIR digital filter</Term>.[^madsen] [^jinguji] Feedback in a ring produces **poles**, an autoregressive (AR) response; practical ring filters usually have zeros as well (ARMA). Optical filter design uses exactly this language.[^madsen]
 
-<Figure src={fig2} alt="Transmitted power versus detuning normalized to the free spectral range from minus 0.5 to 0.5. The MZI cross port follows a broad sine-squared dip filling the whole period; the ring through port is flat near 1 except for a narrow dip at zero detuning reaching about 0.45." caption="Interfering once versus many times. FDTD spectra of the MZI cross port (ΔL = 12.5 µm, Part 2) and the racetrack through port (Lc = 3 µm, Part 3), each plotted against detuning divided by its own FSR. Gray: ideal sin² and the all-pass formula with the fitted t and a. Finesse: 2 for the MZI, about 28 for this ring. From the saved data of notebooks/07_mzi.ipynb and notebooks/05_racetrack_resonator.ipynb." number={2} />
+<Glossary>
+<Def id="en-supermode" n={7} term="Supermode">
+A mode of two coupled waveguides taken together. A symmetric pair has an even and an odd supermode with slightly different effective indices; light launched into one waveguide is a mix of the two, and their beating moves the light from one waveguide to the other.
+</Def>
+<Def id="en-fir" n={8} term="FIR filter, zeros and poles">
+A finite-impulse-response (FIR) filter forms its output from a finite number of delayed copies of the input; its response is shaped by zeros, frequencies at which those copies cancel. A filter with feedback has poles, frequencies at which the response builds up, which give sharp peaks or dips.
+</Def>
+</Glossary>
+
+#### Once versus many times: the finesse
+
+Fig. 2 puts a simulated MZI and a simulated racetrack ring on the same axis, detuning in units of each device's own FSR. Both have the same kind of periodicity,
+
+$$
+\mathrm{FSR} = \frac{\lambda^2}{n_g L},
+$$
+
+<Symbols>
+
+- $\mathrm{FSR}$ — spacing between neighbouring fringes or resonances (nm)
+- $\lambda$ — wavelength (µm); $n_g$ — group index of the waveguide
+- $L$ — the arm-length difference of the MZI ($\Delta L = 12.5$ µm, FSR ≈ 49 nm) or the round-trip length of the ring ($L = 37.4$ µm, FSR ≈ 15.5 nm)
+
+</Symbols>
+
+but their shapes are completely different. The MZI's dip fills half the period, because two contributions interfering once give a sinusoid. The ring's dip occupies only a few percent, because many contributions must stay in phase.
+
+The ratio of period to width is the finesse. It is 2 for the MZI by construction, and for an all-pass ring it is
+
+$$
+F = \frac{\pi\sqrt{at}}{1-at}.
+$$
+
+<Symbols>
+
+- $F$ — finesse of the ring
+- $at$ — fraction of the field amplitude that survives one round trip and stays in the ring; $F$ grows rapidly as $at \to 1$, i.e. as both the coupling and the loss per round trip become small
+
+</Symbols>
+
+The fitted $t$ and $a$ of the simulated ring give 30, and the FDTD dip gives 28.
+
+<Figure src={fig2} alt="Transmitted power versus detuning normalized to the free spectral range from minus 0.5 to 0.5. The MZI cross port follows a broad sine-squared dip filling the whole period; the ring through port is flat near 1 except for a narrow dip at zero detuning reaching about 0.45." caption="Interfering once versus many times. FDTD spectra of an MZI cross port (ΔL = 12.5 µm) and a racetrack ring through port (Lc = 3 µm), each plotted against detuning divided by its own FSR. Gray: ideal sin² and the all-pass formula with the fitted t and a. Finesse: 2 for the MZI, about 28 for this ring. From the saved data of notebooks/07_mzi.ipynb and notebooks/05_racetrack_resonator.ipynb." number={2} />
 
 This one number explains most of the practical differences:
 
@@ -60,40 +155,82 @@ This one number explains most of the practical differences:
 | Contributions that add | 2 supermodes, continuously | 2 paths, once | many round trips (feedback) |
 | Spectral shape | slow drift of the split ratio | sinusoid, finesse 2 | narrow dips, finesse $\approx 28$ here, much higher in low-loss rings |
 | Phase change needed to switch | — | $\pi$ | about one linewidth, $2\pi/F \approx 0.2$ rad here |
-| Size in this series | 13.7 µm coupling section | 12.5 µm extra arm (filter) or 331 µm phase shifter (switch) | 37 µm round trip |
+| Size in the simulated examples | 13.7 µm coupling section | 12.5 µm extra arm (filter) or 331 µm phase shifter (switch) | 37 µm round trip |
 | Typical use | splitting, combining, tapping | switches, broadband modulators, filters, meshes | narrowband filters, compact modulators, sensors |
 
-**Sensitivity is the flip side of finesse.** A ring needs a phase change only of order its linewidth to go from on to off resonance, roughly $F/2 \approx 14$ times less than the $\pi$ an MZI needs. That is why a ring modulator about 12 µm across can use the same plasma-dispersion effect that needs phase shifters millimetres long in an MZI (Parts 2 and 3). It is also why rings are so sensitive to fabrication and temperature. In this model, a 1 nm change of waveguide width shifts the resonance by about 0.45 nm through $\delta\lambda = \lambda\,\delta n_\text{eff}/n_g$, comparable to the whole 0.5 nm linewidth. Rings are therefore usually tuned or locked in operation.
+#### Sensitivity and tolerance
 
-**Tolerance has a different signature in each device.** For the coupler, $\kappa \propto e^{-\gamma g}$, so a 10 nm gap error changes the coupling by about 9 % (Part 1). For the MZI, imperfect couplers do not move the fringes, but they limit the bar-port extinction to $1/(1-2K)^2$ while the cross port still nulls (Part 2). For the ring, the coupling error moves the device along the under- to over-coupled curve and changes the extinction, while index and width errors move the resonance itself (Part 3).
+**Sensitivity is the flip side of finesse.** A ring needs a phase change only of order its linewidth to go from on to off resonance, roughly $F/2 \approx 14$ times less than the $\pi$ an MZI needs. That is why a ring modulator about 12 µm across can use the same plasma-dispersion effect that needs phase shifters millimetres long in an MZI. It is also why rings are so sensitive to fabrication and temperature. A change of effective index $\delta n_\text{eff}$ shifts a resonance by
 
-### 3. From building blocks to circuits
+$$
+\delta\lambda = \frac{\lambda\,\delta n_\text{eff}}{n_g},
+$$
 
-Because every element is a small S-matrix (complex, wavelength-dependent, ideally unitary), a circuit is just their composition. This is how photonic circuits are designed in practice. Each component is characterized once by electromagnetic simulation or measurement and turned into a **compact model**. A **circuit simulator** then connects the compact models and evaluates the whole circuit in milliseconds, which leaves room for sweeps, optimization and variability analysis.[^bogaerts2018]
+<Symbols>
 
-The series gives two checks that this works for the toolkit's own data. In Part 2, an MZI composed from the separately simulated coupler and an analytic arm phase reproduced the full-device FDTD spectrum to an rms difference of 0.013 in power. In the toolkit's circuit notebook, a composition of the same kind, with a small fitted correction to the arm phase, matched a full-device MZI simulation to a mean error of 0.008. Both work only because the compact models carry the **phase**, not just the power. The 90° coupler phase and the arm phase are what make the circuit interfere at all.
+- $\delta\lambda$ — shift of the resonance wavelength (nm)
+- $\delta n_\text{eff}$ — change of effective index (from width, temperature, carriers…)
+- $n_g$ — group index
+
+</Symbols>
+
+and in the simulated waveguide a 1 nm change of width shifts the resonance by about 0.45 nm, comparable to the whole 0.5 nm linewidth. Rings are therefore usually tuned or locked in operation.
+
+**Tolerance has a different signature in each device.** For the coupler, the coupling coefficient per unit length falls as $e^{-\gamma g}$ with the gap $g$ ($\gamma$ is the evanescent decay constant), so a 10 nm gap error changes the coupling by about 9 %. For the MZI, imperfect couplers do not move the fringes, but they limit the bar-port extinction to $1/(1-2K)^2$, with $K=\kappa^2$ the power cross-coupling, while the cross port still nulls. For the ring, the coupling error moves the device along the under- to over-coupled curve and changes the extinction, while index and width errors move the resonance itself.
+
+#### Design guide: what you tune and what it controls
+
+<Callout kind="design" title="What you tune and what it controls">
+
+| Design parameter | Directional coupler | MZI | Ring resonator |
+|---|---|---|---|
+| gap $g$ | sets the coupling exponentially; with the length, the split ratio | sets the coupler balance, hence the extinction | sets $\kappa$: linewidth and coupling regime (critical coupling at $t=a$) |
+| length | coupling length: split ratio $\sin^2$ | arm difference $\Delta L$: FSR; phase-shifter length: $V_\pi$ | round-trip length $L$: FSR |
+| $n_\text{eff}$ (width, temperature, carriers) | small effect | arm phase: switching | resonance position: tuning, modulation |
+| $n_g$ (cross-section dispersion) | — | FSR | FSR, linewidth |
+| propagation loss | small effect | null depth if the arms differ | $a$: intrinsic $Q$, required coupling for critical coupling |
+| wavelength | split ratio drifts | fringes, extinction varies with coupler $K$ | resonances every FSR |
+
+</Callout>
+
+### Simulation
+
+#### From building blocks to circuits
+
+Because every element is a small <Term id="en-smatrix" n={9}>S-matrix</Term> (complex, wavelength-dependent, ideally unitary), a circuit is just their composition. This is how photonic circuits are designed in practice. Each component is characterized once by electromagnetic simulation (FDTD, eigenmode expansion or a mode solver) or measurement and turned into a <Term id="en-compact" n={10}>compact model</Term>. A circuit simulator then connects the compact models and evaluates the whole circuit in milliseconds, which leaves room for sweeps, optimization and variability analysis.[^bogaerts2018]
+
+Two checks show that this works for the toolkit's own data. An MZI composed from a separately simulated coupler and an analytic arm phase reproduced the full-device FDTD spectrum to an rms difference of 0.013 in power. In the toolkit's circuit notebook, a composition of the same kind, with a small fitted correction to the arm phase, matched a full-device MZI simulation to a mean error of 0.008. Both work only because the compact models carry the **phase**, not just the power. The 90° coupler phase and the arm phase are what make the circuit interfere at all.
+
+<Glossary>
+<Def id="en-smatrix" n={9} term="S-matrix and unitarity">
+The scattering matrix lists, for every pair of ports, the complex amplitude that arrives at one port for a unit input at another. A lossless component has a unitary S-matrix: total output power always equals input power.
+</Def>
+<Def id="en-compact" n={10} term="Compact model">
+A small, fast model of a component, usually its S-matrix versus wavelength, extracted once from electromagnetic simulation or measurement. Circuit simulators connect compact models instead of simulating fields.
+</Def>
+</Glossary>
 
 Composition also creates new functions:
 
 - **Lattice filters.** Cascading couplers and delay lines turns the MZI's sinusoid into a designed filter. Jinguji and Kawachi showed how to synthesize the coupling ratios of such a lattice for a target response, exactly as an FIR digital filter is designed.[^jinguji] Fig. 3 shows the ideal response of the maximally flat ("halfband") design the toolkit synthesizes. With 4 couplers the passband within 1 dB grows from 30 % to 36 % of the FSR, and with 6 couplers to 39 %, while the crossover stays fixed at half the period. For $N=4$ the synthesis gives power coupling ratios 0.93, 0, 0.75 and 0.50.
 - **Higher-order ring filters.** Coupling several rings in series gives flatter passbands and sharper roll-off than one ring; Little et al. analysed these with coupled-mode theory in time.[^little]
-- **Meshes.** Any $N\times N$ unitary transformation can be factored into a mesh of 2×2 beam splitters and phase shifters;[^reck] a rectangular arrangement does this in half the physical footprint and is more robust to loss.[^clements] In integrated form the 2×2 elements are tunable MZIs, and the mesh becomes a programmable photonic circuit, configured in software for routing, filtering or linear optical computation.[^bogaerts2020] Imperfect splitters, the MZI's main limitation from Part 2, are then compensated by the mesh itself.
+- **Meshes.** Any $N\times N$ unitary transformation can be factored into a mesh of 2×2 beam splitters and phase shifters;[^reck] a rectangular arrangement does this in half the physical footprint and is more robust to loss.[^clements] In integrated form the 2×2 elements are tunable MZIs, and the mesh becomes a programmable photonic circuit, configured in software for routing, filtering or linear optical computation.[^bogaerts2020] Imperfect splitters, the MZI's main limitation, are then compensated by the mesh itself.
 
 <Figure src={fig3} alt="Bar-port power versus delay-line phase over one period for lattice filters with 2, 4 and 6 couplers: all cross 0.5 at the same phases, and the curves with more couplers have flatter tops and steeper edges." caption="Ideal (lossless) bar-port response of maximally flat lattice filters made of N couplers and identical delay lines, versus the delay-line phase over one FSR. N = 2 is the plain MZI. The flat top widens with N while the 0.5 crossover stays fixed. Closed-form target response of the synthesis in circuits/wdm_sax.ipynb." number={3} />
 
-### 4. A design workflow, and what the series taught about it
+#### A design workflow, and what the simulations taught about it
 
-| Step | What is computed | Lesson from this series |
+| Step | What is computed | Lesson from the simulations |
 |---|---|---|
-| 1. Cross-section | mode index $n_\text{eff}$, group index $n_g$, decay constant $\gamma$ | $n_g$, not $n_\text{eff}$, sets every FSR and linewidth (Parts 2, 3) |
-| 2. Component simulation | S-parameters vs wavelength (FDTD) | check against an independent model, such as supermodes for κ (Part 1) or the absorption bound for ring loss (Part 3) |
-| 3. Compact model | complex S-matrix, fitted or tabulated | keep the **phase**: it decides the MZI response and the ring's coupling regime (Parts 2, 3) |
-| 4. Circuit simulation | composed S-matrix, sweeps, tolerance | validate the composition against one full-device simulation (Part 2) |
+| 1. Cross-section | mode index $n_\text{eff}$, group index $n_g$, decay constant $\gamma$ | $n_g$, not $n_\text{eff}$, sets every FSR and linewidth |
+| 2. Component simulation | S-parameters vs wavelength (FDTD) | check against an independent model, such as supermodes for the coupling or the absorption bound for ring loss |
+| 3. Compact model | complex S-matrix, fitted or tabulated | keep the **phase**: it decides the MZI response and the ring's coupling regime |
+| 4. Circuit simulation | composed S-matrix, sweeps, tolerance | validate the composition against one full-device simulation |
 | 5. Layout | mask geometry consistent with the simulated one | the geometry that is drawn must be the geometry that was simulated |
 
-A recurring theme is that a good fit is not yet a correct model. The ring's power spectrum could not tell under- from over-coupling, and only the phase or the physics of the parameters could. An MZI fringe fit with the wrong reference wavelength moved the group index by a few percent. A plausible single-resonance fit returned a wrong effective index. Each time, the fix was an independent physical check.
+A recurring theme is that a good fit is not yet a correct model. A ring's power spectrum could not tell under- from over-coupling, and only the phase or the physics of the parameters could. An MZI fringe fit with the wrong reference wavelength moved the group index by a few percent. A plausible single-resonance fit returned a wrong effective index. Each time, the fix was an independent physical check.
 
-### 5. Summary
+#### Summary
 
 Coupling, interference and resonance are three regimes of the same physics: optical amplitudes adding with their phases. A coupler exchanges power continuously, an MZI adds two paths once, and a ring adds infinitely many round trips through feedback. The number of contributions sets the finesse, which in turn sets the spectral selectivity, the switching sensitivity and the fabrication sensitivity. Because every block is a small, phase-carrying S-matrix, circuits are designed by composing them: lattices of MZIs, chains of rings and programmable meshes.
 
@@ -107,39 +244,130 @@ Coupling, interference and resonance are three regimes of the same physics: opti
 
 ## 日本語
 
-第1回から第3回までは、それぞれ1つの素子を詳しく見てきました。最終回では一歩引いて全体を眺めます。3つの素子は別々の話題ではなく、1つの要素、つまり2×2カプラの3通りの使い方です。どの素子でも、出力を決めているのは同じこと、位相の異なる光の振幅がどう足し合わされるかです。違うのは、**いくつの寄与**が足し合わされるか、そして**フィードバックがあるか**です。この違いが、スペクトル、感度、作製トレランスの違いを説明し、フォトニック回路の設計の土台にもなっています。
+**結合**、**干渉**、**共鳴**は、光集積回路(PIC)の基本素子が光を組み合わせる3つの方法です。[方向性結合器](/blog/directional-couplers-cmt-fdtd/)は2本の導波路の間で連続的にパワーを交換し、[Mach–Zehnder干渉計](/blog/mach-zehnder-interferometers/)は2つの光路を一度だけ足し合わせ、[リング共振器](/blog/ring-resonators/)はフィードバックによって多数の周回を足し合わせます。3つとも同じ2×2カプラからできており、足し合わされる寄与の数が、スペクトルの形、感度、作製トレランスを決めます。
 
-本記事の数値は、これまでの回の2次元FDTDシミュレーション(等価屈折率モデル、Oバンド)によるもので、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)で計算しています。
+### 概要
 
-### 1. 1つの行列から3つの構成へ
+#### なぜ3つの素子を比べるのか
 
-このシリーズの素子はどれも、第1回の無損失カプラ行列
+これらの素子では、どれも出力を決めているのは同じこと、位相の異なる光の振幅がどう足し合わされるかです。違うのは、**いくつの寄与**が足し合わされるか、そして**フィードバックがあるか**です。この違いを理解すると、目的に合った素子を選び、波長・温度・形状の変化に対する応答を予測し、素子を組み合わせて回路を作れるようになります。
+
+理論の節では、3つの素子を1つのカプラ行列から導き、フィネスという1つの数で比較します。シミュレーションの節では、別々にシミュレーションした素子を回路へ組み合わせる方法を示します。数値は2次元FDTDシミュレーション(シリコン細線導波路の等価屈折率モデル、Oバンド)によるもので、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)で計算しています。各素子はそれぞれの記事で詳しく扱っています。
+
+#### 基本的な用語
+
+いくつかの量が全体を通じて現れます。干渉計でも共振器でも、周期的なスペクトルを記述する量です。山や谷がどこにあるか、どれだけ離れているか、どれだけ鋭いか、を表します。本文では※を付け、枠の中で説明します。
+
+- 光が導波路で得る<Term id="ja-phase" n={1}>位相</Term>。導波路の<Term id="ja-neff" n={2}>実効屈折率</Term>で決まります。
+- 周期的な特徴の間隔である<Term id="ja-fsr" n={3}>自由スペクトル領域</Term>(FSR)。<Term id="ja-ng" n={4}>群屈折率</Term>で決まります。
+- 特徴の鋭さ。<Term id="ja-finesse" n={5}>フィネス</Term>と、共振器では<Term id="ja-q" n={6}>Q値</Term>で表します。
+
+<Glossary title="用語">
+<Def id="ja-phase" n={1} term="位相と干渉">
+光は波で、その場は $\cos(\omega t - \phi)$ のように振動します。位相 $\phi$ は、波が周期のどの位置にあるかを表します。2つの波が出会うと**振幅**が足し合わされ、同位相なら強め合い、半周期($\pi$)ずれていれば打ち消し合います。これが干渉です。光のパワーは、足し合わせた振幅の絶対値の2乗です。
+</Def>
+<Def id="ja-neff" n={2} term="実効屈折率(n_eff)">
+導波モードは、屈折率 $n_\text{eff}$ の一様な物質の中を進むかのように導波路を伝わります。つまり単位長さあたり $2\pi n_\text{eff}/\lambda$ だけ位相が進みます。値はクラッドとコアの屈折率の間にあります。
+</Def>
+<Def id="ja-fsr" n={3} term="自由スペクトル領域(FSR)">
+周期的なスペクトルが繰り返す間隔を、波長または周波数で表したものです。干渉計では隣り合う干渉縞、リングでは隣り合う共鳴の間隔です。光路長 $L$ に対して $\mathrm{FSR} = \lambda^2/(n_g L)$ です。
+</Def>
+<Def id="ja-ng" n={4} term="群屈折率(n_g)">
+光パルスが進む速さ(群速度 $c/n_g$)と、波長に対して位相が変わる速さを決める屈折率です。$n_\text{eff}$ が波長に依存するため、$n_g = n_\text{eff} - \lambda\,dn_\text{eff}/d\lambda$ は $n_\text{eff}$ と異なり、シリコン細線では20 %以上違うこともよくあります。FSRと線幅はすべて $n_\text{eff}$ ではなく $n_g$ で決まります。
+</Def>
+<Def id="ja-finesse" n={5} term="フィネス">
+周期的なスペクトルの間隔と、その特徴(山や谷)の幅の比 $F = \mathrm{FSR}/\Delta\lambda$ です。いくつの寄与が干渉しているかを表します。2つの経路が一度だけ出会う干渉計では $F=2$、光が何度も周回するリングでは数十から数千になります。
+</Def>
+<Def id="ja-q" n={6} term="Q値">
+共振器の品質係数で、共鳴波長を共鳴の幅で割った $Q = \lambda/\Delta\lambda$ です。光がどれだけ長く蓄えられるか(およそ $Q/2\pi$ 回の振動)と、共鳴がどれだけ鋭く、選択的で、敏感かを表します。フィネスとQ値は $F = Q\cdot\mathrm{FSR}/\lambda$ で結ばれます。
+</Def>
+</Glossary>
+
+<Figure src={fig1} alt="3つの信号流れ図。結合:2入力2出力の1つのカプラブロック。干渉:2つのカプラブロックを2つの位相ブロックでつないだもの。共鳴:カプラブロックの2つ目の出力が、位相と損失のブロックを通って2つ目の入力に戻るもの。" caption="同じ2×2カプラCから作られる3つの構成を信号流れ図で示したもの。結合:1つのブロックの中で2つのスーパーモードがうなりを生じる。干渉:2つのカプラと2つの経路を一度だけ通る。共鳴:カプラの出力がリングを通って戻されるので、光は何度もループを通過する。" number={1} size="wide" />
+
+### 理論
+
+#### 1つの行列から3つの構成へ
+
+ここで扱う素子はどれも、無損失カプラ行列
 
 $$
 \mathbf{C} = \begin{pmatrix} t & -j\kappa \\ -j\kappa & t \end{pmatrix}, \qquad t^2 + \kappa^2 = 1
 $$
 
-と、位相(と損失)だけを与える導波路区間からできています。
+<Symbols title="記号">
 
-<Figure src={fig1} alt="3つの信号流れ図。結合:2入力2出力の1つのカプラブロック。干渉:2つのカプラブロックを2つの位相ブロックでつないだもの。共鳴:カプラブロックの2つ目の出力が、位相と損失のブロックを通って2つ目の入力に戻るもの。" caption="同じ2×2カプラCから作られる3つの構成を信号流れ図で示したもの。結合:1つのブロックの中で2つのスーパーモードがうなりを生じる。干渉:2つのカプラと2つの経路を一度だけ通る。共鳴:カプラの出力がリングを通って戻されるので、光は何度もループを通過する。" number={1} size="wide" />
+- $\mathbf{C}$ — 2×2カプラの伝達行列:出力振幅 $= \mathbf{C} \times$ 入力振幅
+- $t$ — 無次元の**場の**自己結合(同じ導波路に残る振幅)
+- $\kappa$ — 無次元の**場の**交差結合(隣へ移る振幅)。$\kappa^2 = K$ がパワーの分岐比
+- $-j$ — 移った光の90°の位相。$t^2+\kappa^2=1$ はエネルギー保存を表す
 
-- **結合**(第1回)は、実は姿を変えた干渉です。カプラの中では偶・奇のスーパーモードが異なる位相速度で進み、結合長にわたるそのうなりが $t$ と $\kappa$ を決めます。長い光路差がないので、スペクトルの応答はゆるやかで、$\kappa$ の波長依存性を通じてのみ変化します(50:50カプラのクロス:スルーの比は100 nmの範囲で39:61から63:37まで変化しました)。
-- **干渉**(第2回)はフィードフォワードの積 $\mathbf{C}\,\mathbf{A}\,\mathbf{C}$ です。位相差 $\Delta\phi$ をもつ2つの寄与が一度だけ足し合わされ、理想的なカプラでは $\cos^2(\Delta\phi/2)$ になります。
-- **共鳴**(第3回)ではフィードバックが加わります。リングを回る場を追いかけると、等比級数が現れます。
+</Symbols>
+
+と、位相(と損失)だけを与える導波路区間からできています。$t$ と $\kappa$ が単位長さあたりの結合係数、ギャップ、カプラ長からどう決まるかは[方向性結合器の記事](/blog/directional-couplers-cmt-fdtd/)で示しています。
+
+- **結合**(方向性結合器)は、実は姿を変えた干渉です。カプラの中では偶・奇の<Term id="ja-supermode" n={7}>スーパーモード</Term>が異なる位相速度で進み、結合長にわたるそのうなりが $t$ と $\kappa$ を決めます。長い光路差がないので、スペクトルの応答はゆるやかで、結合の波長依存性を通じてのみ変化します(シミュレーションした50:50カプラのクロス:スルーの比は100 nmの範囲で39:61から63:37まで変化しました)。
+- **干渉**(Mach–Zehnder干渉計)はフィードフォワードの積 $\mathbf{C}\,\mathbf{A}\,\mathbf{C}$ です($\mathbf{A}$ は2本のアームの位相)。位相差 $\Delta\phi$ をもつ2つの寄与が一度だけ足し合わされ、理想的なカプラでは $\cos^2(\Delta\phi/2)$ になります。
+- **共鳴**(リング共振器)ではフィードバックが加わります。リングを回る場を追いかけると、等比級数が現れます。
 
 $$
 \frac{b_\text{out}}{a_\text{in}} = t - \kappa^2 a e^{j\phi}\sum_{n=0}^{\infty}\left(t a e^{j\phi}\right)^n = \frac{t - a e^{j\phi}}{1 - t a e^{j\phi}}
 $$
 
-各項がさらに1周分を表し、$t\,a$ で重み付けされています。すべての周回の和である分母が、応答を鋭くしているものです。そしてこれが、信号処理の意味でリングをMZIと根本的に違うものにしています。MZIやMZIのラティスのようなフィードフォワード構造は、遅延したコピーの有限和、つまり移動平均(MA、全零点)型の応答を与えます。これはFIRデジタルフィルタの光版で、**零点**で形作られます[^madsen] [^jinguji]。リングのフィードバックは**極**を生み、自己回帰(AR)型の応答になります。実際のリングフィルタは零点ももつのが普通です(ARMA)。光フィルタの設計では、まさにこの言葉が使われます[^madsen]。
+<Symbols title="記号">
 
-### 2. 一度か、何度もか
+- $a_\text{in}$、$b_\text{out}$ — バス導波路の入力と出力の場の振幅
+- $a$ — リング1周の場の透過率(損失がなければ1)
+- $\phi$ — リング1周の位相(rad)
+- $n$ — 余分に回る周回数。各項がさらに1周分で、$ta\,e^{j\phi}$ で重み付けされる
 
-図2は、第2回のMZIと第3回のレーストラックを、それぞれ自分の自由スペクトル領域(FSR)を単位とした離調という共通の軸に並べたものです。どちらも同じ種類の周期性 $\mathrm{FSR} = \lambda^2/(n_g L)$ をもち、$L$ は光路差($\Delta L = 12.5$ µm、FSR約49 nm)または1周の長さ($L = 37.4$ µm、FSR約15.5 nm)です。それなのに形はまったく違います。MZIの谷は周期の半分を占めます。2つの寄与が一度だけ干渉すると正弦波になるからです。リングの谷は数%しか占めません。多くの寄与が位相をそろえ続ける必要があるからです。
+</Symbols>
 
-周期と幅の比を**フィネス**と呼びます。MZIでは構造上2で、リングでは $F = \pi\sqrt{at}/(1-at)$ です。第3回でフィットした $t$ と $a$ からは30、FDTDの谷からは28が得られます。
+すべての周回の和である分母が、応答を鋭くしているものです。そしてこれが、信号処理の意味でリングをMZIと根本的に違うものにしています。MZIやMZIのラティスのようなフィードフォワード構造は、遅延したコピーの有限和、つまり移動平均(MA、全零点)型の応答を与えます。これは<Term id="ja-fir" n={8}>FIRデジタルフィルタ</Term>の光版で、**零点**で形作られます[^madsen] [^jinguji]。リングのフィードバックは**極**を生み、自己回帰(AR)型の応答になります。実際のリングフィルタは零点ももつのが普通です(ARMA)。光フィルタの設計では、まさにこの言葉が使われます[^madsen]。
 
-<Figure src={fig2} alt="FSRで規格化した離調−0.5から0.5に対する透過パワー。MZIのクロス側は周期全体を占める幅広いsin²型の谷をもつ。リングのスルー側は1付近で平坦で、離調ゼロに約0.45まで下がる鋭い谷がある。" caption="一度の干渉と何度もの干渉。MZIのクロス側(ΔL = 12.5 µm、第2回)とレーストラックのスルー側(Lc = 3 µm、第3回)のFDTDスペクトルを、それぞれ自分のFSRで割った離調に対して描いたもの。灰色:理想的なsin²と、フィットしたt、aによるオールパス式。フィネスはMZIで2、このリングで約28。notebooks/07_mzi.ipynb と notebooks/05_racetrack_resonator.ipynb の保存データより。" number={2} />
+<Glossary title="用語">
+<Def id="ja-supermode" n={7} term="スーパーモード">
+結合した2本の導波路を一体として見たときのモードです。対称な導波路対には、実効屈折率がわずかに異なる偶・奇のスーパーモードがあります。片方の導波路に入れた光は両者の混合で、そのうなりによって光が一方の導波路からもう一方へ移ります。
+</Def>
+<Def id="ja-fir" n={8} term="FIRフィルタ、零点と極">
+有限インパルス応答(FIR)フィルタは、入力を遅延させた有限個のコピーから出力を作ります。その応答は、コピーが打ち消し合う周波数である零点で形作られます。フィードバックのあるフィルタは、応答が増大する周波数である極をもち、鋭い山や谷を作ります。
+</Def>
+</Glossary>
+
+#### 一度か、何度もか:フィネス
+
+図2は、シミュレーションしたMZIとレーストラック型リングを、それぞれ自分のFSRを単位とした離調という共通の軸に並べたものです。どちらも同じ種類の周期性
+
+$$
+\mathrm{FSR} = \frac{\lambda^2}{n_g L}
+$$
+
+<Symbols title="記号">
+
+- $\mathrm{FSR}$ — 隣り合う干渉縞または共鳴の間隔(nm)
+- $\lambda$ — 波長(µm)、$n_g$ — 導波路の群屈折率
+- $L$ — MZIのアーム長差($\Delta L = 12.5$ µm、FSR約49 nm)またはリング1周の長さ($L = 37.4$ µm、FSR約15.5 nm)
+
+</Symbols>
+
+をもちますが、形はまったく違います。MZIの谷は周期の半分を占めます。2つの寄与が一度だけ干渉すると正弦波になるからです。リングの谷は数%しか占めません。多くの寄与が位相をそろえ続ける必要があるからです。
+
+周期と幅の比がフィネスです。MZIでは構造上2で、オールパス型リングでは
+
+$$
+F = \frac{\pi\sqrt{at}}{1-at}
+$$
+
+<Symbols title="記号">
+
+- $F$ — リングのフィネス
+- $at$ — 1周した後にリング内に残る場の振幅の割合。$at \to 1$、つまり1周あたりの結合と損失がともに小さくなるほど $F$ は急激に大きくなる
+
+</Symbols>
+
+です。シミュレーションしたリングのフィットした $t$ と $a$ からは30、FDTDの谷からは28が得られます。
+
+<Figure src={fig2} alt="FSRで規格化した離調−0.5から0.5に対する透過パワー。MZIのクロス側は周期全体を占める幅広いsin²型の谷をもつ。リングのスルー側は1付近で平坦で、離調ゼロに約0.45まで下がる鋭い谷がある。" caption="一度の干渉と何度もの干渉。MZIのクロス側(ΔL = 12.5 µm)とレーストラック型リングのスルー側(Lc = 3 µm)のFDTDスペクトルを、それぞれ自分のFSRで割った離調に対して描いたもの。灰色:理想的なsin²と、フィットしたt、aによるオールパス式。フィネスはMZIで2、このリングで約28。notebooks/07_mzi.ipynb と notebooks/05_racetrack_resonator.ipynb の保存データより。" number={2} />
 
 実用上の違いのほとんどは、この1つの数で説明できます。
 
@@ -148,40 +376,82 @@ $$
 | 足し合わされる寄与 | 2つのスーパーモード(連続的に) | 2つの経路(一度) | 多数の周回(フィードバック) |
 | スペクトルの形 | 分岐比のゆるやかな変化 | 正弦波、フィネス2 | 鋭い谷、ここではフィネス約28、低損失リングではさらに高い |
 | 切り替えに必要な位相変化 | — | $\pi$ | 線幅程度、ここでは $2\pi/F \approx 0.2$ rad |
-| このシリーズでの大きさ | 結合部13.7 µm | 余分なアーム12.5 µm(フィルタ)または位相シフタ331 µm(スイッチ) | 1周37 µm |
+| シミュレーション例での大きさ | 結合部13.7 µm | 余分なアーム12.5 µm(フィルタ)または位相シフタ331 µm(スイッチ) | 1周37 µm |
 | 代表的な用途 | 分岐、合波、タップ | スイッチ、広帯域変調器、フィルタ、メッシュ | 狭帯域フィルタ、小型変調器、センサ |
 
-**感度はフィネスの裏返しです。** リングが共鳴からはずれるには線幅程度の位相変化で足り、MZIに必要な $\pi$ のおよそ $F/2 \approx 14$ 分の1です。そのため、MZIでは長さ数mmの位相シフタを必要とするプラズマ分散効果でも、直径約12 µmのリング変調器で利用できます(第2・3回)。同じ理由で、リングは作製や温度にとても敏感です。このモデルでは、導波路幅が1 nm変わると $\delta\lambda = \lambda\,\delta n_\text{eff}/n_g$ を通じて共鳴が約0.45 nmずれ、これは線幅全体の0.5 nmに匹敵します。そのためリングは、動作中にチューニングやロックをかけるのが普通です。
+#### 感度とトレランス
 
-**トレランスの現れ方は素子ごとに違います。** カプラでは $\kappa \propto e^{-\gamma g}$ なので、ギャップが10 nmずれると結合が約9 %変わります(第1回)。MZIでは、不完全なカプラは干渉縞を動かしませんが、クロス側が完全にゼロになる一方で、バー側の消光比を $1/(1-2K)^2$ に制限します(第2回)。リングでは、結合の誤差は素子をアンダー/オーバーカップリングの曲線に沿って動かして消光比を変え、屈折率や幅の誤差は共鳴そのものを動かします(第3回)。
+**感度はフィネスの裏返しです。** リングが共鳴からはずれるには線幅程度の位相変化で足り、MZIに必要な $\pi$ のおよそ $F/2 \approx 14$ 分の1です。そのため、MZIでは長さ数mmの位相シフタを必要とするプラズマ分散効果でも、直径約12 µmのリング変調器で利用できます。同じ理由で、リングは作製や温度にとても敏感です。実効屈折率が $\delta n_\text{eff}$ 変わると、共鳴は
 
-### 3. 部品から回路へ
+$$
+\delta\lambda = \frac{\lambda\,\delta n_\text{eff}}{n_g}
+$$
 
-どの要素も小さなSマトリクス(複素数で、波長に依存し、理想的にはユニタリ)なので、回路はそれらの合成にすぎません。実際のフォトニック回路もこのように設計されます。各部品を電磁界シミュレーションや測定で一度だけ評価して**コンパクトモデル**にし、**回路シミュレータ**がそれらをつないで回路全体を数ミリ秒で評価します。そのため、掃引や最適化、ばらつき解析を行う余裕が生まれます[^bogaerts2018]。
+<Symbols title="記号">
 
-このシリーズには、ツールキット自身のデータでこれが機能することを示す確認が2つあります。第2回では、別途シミュレーションしたカプラと解析的なアーム位相から組み立てたMZIが、デバイス全体のFDTDスペクトルをパワーのrms差0.013で再現しました。ツールキットの回路ノートブックでも、アーム位相に小さな補正をフィットした同種の合成が、デバイス全体のMZIシミュレーションと平均誤差0.008で一致しています。どちらも、コンパクトモデルがパワーだけでなく**位相**をもっているからこそ成り立ちます。カプラの90°の位相とアームの位相がなければ、回路はそもそも干渉しません。
+- $\delta\lambda$ — 共鳴波長のずれ(nm)
+- $\delta n_\text{eff}$ — 実効屈折率の変化(幅、温度、キャリアなどによる)
+- $n_g$ — 群屈折率
+
+</Symbols>
+
+だけずれます。シミュレーションした導波路では、幅が1 nm変わると共鳴が約0.45 nmずれ、これは線幅全体の0.5 nmに匹敵します。そのためリングは、動作中にチューニングやロックをかけるのが普通です。
+
+**トレランスの現れ方は素子ごとに違います。** カプラでは、単位長さあたりの結合係数がギャップ $g$ に対して $e^{-\gamma g}$ で減る($\gamma$ はエバネッセント場の減衰定数)ので、ギャップが10 nmずれると結合が約9 %変わります。MZIでは、不完全なカプラは干渉縞を動かしませんが、クロス側が完全にゼロになる一方で、バー側の消光比を $1/(1-2K)^2$ に制限します($K=\kappa^2$ はパワーの交差結合)。リングでは、結合の誤差は素子をアンダー/オーバーカップリングの曲線に沿って動かして消光比を変え、屈折率や幅の誤差は共鳴そのものを動かします。
+
+#### 設計の早見表:何を調整すると何が決まるか
+
+<Callout kind="design" title="何を調整すると何が決まるか">
+
+| 設計パラメータ | 方向性結合器 | MZI | リング共振器 |
+|---|---|---|---|
+| ギャップ $g$ | 結合を指数関数的に決め、長さと合わせて分岐比を決める | カプラのバランス、したがって消光比を決める | $\kappa$ を決める:線幅と結合の領域(臨界結合は $t=a$) |
+| 長さ | 結合長:分岐比 $\sin^2$ | アーム長差 $\Delta L$:FSR、位相シフタ長:$V_\pi$ | 1周の長さ $L$:FSR |
+| $n_\text{eff}$(幅、温度、キャリア) | 影響は小さい | アームの位相:スイッチング | 共鳴の位置:チューニング、変調 |
+| $n_g$(断面の分散) | — | FSR | FSR、線幅 |
+| 伝搬損失 | 影響は小さい | アーム間で異なるとゼロが浅くなる | $a$:固有Q値、臨界結合に必要な結合 |
+| 波長 | 分岐比がずれる | 干渉縞。カプラの $K$ により消光比が変わる | FSRごとに共鳴 |
+
+</Callout>
+
+### シミュレーション
+
+#### 部品から回路へ
+
+どの要素も小さな<Term id="ja-smatrix" n={9}>Sマトリクス</Term>(複素数で、波長に依存し、理想的にはユニタリ)なので、回路はそれらの合成にすぎません。実際のフォトニック回路もこのように設計されます。各部品を電磁界シミュレーション(FDTD、固有モード展開、モードソルバ)や測定で一度だけ評価して<Term id="ja-compact" n={10}>コンパクトモデル</Term>にし、回路シミュレータがそれらをつないで回路全体を数ミリ秒で評価します。そのため、掃引や最適化、ばらつき解析を行う余裕が生まれます[^bogaerts2018]。
+
+ツールキット自身のデータでこれが機能することを示す確認が2つあります。別途シミュレーションしたカプラと解析的なアーム位相から組み立てたMZIは、デバイス全体のFDTDスペクトルをパワーのrms差0.013で再現しました。ツールキットの回路ノートブックでも、アーム位相に小さな補正をフィットした同種の合成が、デバイス全体のMZIシミュレーションと平均誤差0.008で一致しています。どちらも、コンパクトモデルがパワーだけでなく**位相**をもっているからこそ成り立ちます。カプラの90°の位相とアームの位相がなければ、回路はそもそも干渉しません。
+
+<Glossary title="用語">
+<Def id="ja-smatrix" n={9} term="Sマトリクスとユニタリ性">
+散乱行列(Sマトリクス)は、あらゆるポートの組について、あるポートに単位入力を入れたとき別のポートに届く複素振幅を並べたものです。無損失の部品のSマトリクスはユニタリで、出力の全パワーは常に入力パワーに等しくなります。
+</Def>
+<Def id="ja-compact" n={10} term="コンパクトモデル">
+部品を表す小さく高速なモデルで、通常は波長に対するSマトリクスです。電磁界シミュレーションや測定から一度だけ求めます。回路シミュレータは場を計算する代わりに、これらをつなぎ合わせます。
+</Def>
+</Glossary>
 
 合成によって新しい機能も生まれます。
 
 - **ラティスフィルタ。** カプラと遅延線を多段に重ねると、MZIの正弦波が設計どおりのフィルタになります。JingujiとKawachiは、目標の応答に対してこのようなラティスの結合比を合成する方法を示しました。FIRデジタルフィルタの設計とまったく同じやり方です[^jinguji]。図3は、ツールキットで合成している最大平坦(ハーフバンド)設計の理想応答です。カプラを4個にすると1 dB以内の通過帯域はFSRの30 %から36 %に、6個では39 %に広がり、クロスオーバーは周期の半分の位置に固定されたままです。$N=4$ の合成で得られるパワー結合比は0.93、0、0.75、0.50です。
 - **高次のリングフィルタ。** 複数のリングを直列に結合すると、1つのリングより平坦な通過帯域と急峻な遮断が得られます。Littleらはこれを時間領域の結合モード理論で解析しました[^little]。
-- **メッシュ。** 任意の $N\times N$ ユニタリ変換は、2×2のビームスプリッタと位相シフタのメッシュに分解できます[^reck]。長方形の配置にすると、物理的な占有面積が半分になり、損失にも強くなります[^clements]。集積化した形ではこの2×2要素がチューナブルなMZIで、メッシュはソフトウェアで構成を変えられるプログラマブル光回路になり、ルーティング、フィルタリング、線形光演算に使えます[^bogaerts2020]。第2回で見たMZIの主な制約である不完全な分岐比は、このときメッシュ自身によって補償されます。
+- **メッシュ。** 任意の $N\times N$ ユニタリ変換は、2×2のビームスプリッタと位相シフタのメッシュに分解できます[^reck]。長方形の配置にすると、物理的な占有面積が半分になり、損失にも強くなります[^clements]。集積化した形ではこの2×2要素がチューナブルなMZIで、メッシュはソフトウェアで構成を変えられるプログラマブル光回路になり、ルーティング、フィルタリング、線形光演算に使えます[^bogaerts2020]。MZIの主な制約である不完全な分岐比は、このときメッシュ自身によって補償されます。
 
 <Figure src={fig3} alt="カプラ2、4、6個のラティスフィルタについて、遅延線位相1周期に対するバー側パワー。すべて同じ位相で0.5と交わり、カプラが多いほど頂部が平坦で縁が急峻になる。" caption="N個のカプラと同一の遅延線からなる最大平坦ラティスフィルタの理想的(無損失)なバー側応答を、1 FSR分の遅延線位相に対して示したもの。N = 2は通常のMZI。Nが増えると平坦な頂部が広がるが、0.5のクロスオーバーは固定されたまま。circuits/wdm_sax.ipynb での合成の目標となる閉じた形の応答。" number={3} />
 
-### 4. 設計ワークフローと、このシリーズからの教訓
+#### 設計ワークフローと、シミュレーションからの教訓
 
-| 段階 | 計算するもの | このシリーズからの教訓 |
+| 段階 | 計算するもの | シミュレーションからの教訓 |
 |---|---|---|
-| 1. 断面 | モード屈折率 $n_\text{eff}$、群屈折率 $n_g$、減衰定数 $\gamma$ | FSRと線幅を決めるのはすべて $n_\text{eff}$ ではなく $n_g$(第2・3回) |
-| 2. 部品のシミュレーション | 波長に対するSパラメータ(FDTD) | κならスーパーモード(第1回)、リングの損失なら吸収の下限(第3回)のように、独立なモデルで確認する |
-| 3. コンパクトモデル | フィットまたは表形式の複素Sマトリクス | **位相**を残す。MZIの応答もリングの結合の領域も位相で決まる(第2・3回) |
-| 4. 回路シミュレーション | 合成したSマトリクス、掃引、トレランス | 合成結果を、デバイス全体のシミュレーション1つと照合する(第2回) |
+| 1. 断面 | モード屈折率 $n_\text{eff}$、群屈折率 $n_g$、減衰定数 $\gamma$ | FSRと線幅を決めるのはすべて $n_\text{eff}$ ではなく $n_g$ |
+| 2. 部品のシミュレーション | 波長に対するSパラメータ(FDTD) | 結合ならスーパーモード、リングの損失なら吸収の下限のように、独立なモデルで確認する |
+| 3. コンパクトモデル | フィットまたは表形式の複素Sマトリクス | **位相**を残す。MZIの応答もリングの結合の領域も位相で決まる |
+| 4. 回路シミュレーション | 合成したSマトリクス、掃引、トレランス | 合成結果を、デバイス全体のシミュレーション1つと照合する |
 | 5. レイアウト | シミュレーションした形状と一致するマスク形状 | 描いた形状がシミュレーションした形状でなければならない |
 
-全体を通じて繰り返し現れたのは、「よく合うフィット」が「正しいモデル」とは限らないということです。リングのパワースペクトルはアンダーとオーバーカップリングを見分けられず、それができたのは位相かパラメータの物理だけでした。MZIの干渉縞のフィットは、基準波長を誤ると群屈折率が数%ずれました。もっともらしい単一共鳴のフィットは、誤った実効屈折率を返しました。そのたびに、解決策は独立した物理的な確認でした。
+繰り返し現れたのは、「よく合うフィット」が「正しいモデル」とは限らないということです。リングのパワースペクトルはアンダーとオーバーカップリングを見分けられず、それができたのは位相かパラメータの物理だけでした。MZIの干渉縞のフィットは、基準波長を誤ると群屈折率が数%ずれました。もっともらしい単一共鳴のフィットは、誤った実効屈折率を返しました。そのたびに、解決策は独立した物理的な確認でした。
 
-### 5. まとめ
+#### まとめ
 
 結合・干渉・共鳴は、同じ物理、つまり光の振幅が位相とともに足し合わされることの3つの領域です。カプラは連続的にパワーを交換し、MZIは2つの経路を一度だけ足し、リングはフィードバックによって無限に多くの周回を足し合わせます。寄与の数がフィネスを決め、フィネスがスペクトルの選択性、切り替えの感度、作製への敏感さを決めます。そしてどの部品も位相をもつ小さなSマトリクスなので、回路はそれらを合成して設計されます。MZIのラティス、リングの連結、プログラマブルなメッシュがその例です。
 

@@ -1,0 +1,50 @@
+---
+// Inline marker for a technical term, paired with a <Def> in a <Glossary> box.
+// MDX: <Term id="en-finesse" n={1}>finesse</Term>
+//   -> "finesse※1", where ※1 links to #term-en-finesse.
+// Mark only the FIRST occurrence of a term (the marker carries id="ref-{id}",
+// which the Def's back-link points to). Prefix ids with en- / ja-.
+export interface Props {
+  id: string;
+  n: number;
+}
+const { id, n } = Astro.props;
+const ja = id.startsWith("ja-");
+const srLabel = ja ? `（用語注${n}）` : ` (term note ${n})`;
+---
+
+<span class="term" id={`ref-${id}`}><slot /></span><sup class="term-mark"
+  ><a href={`#term-${id}`} aria-describedby={`term-${id}-body`}
+    ><span aria-hidden="true">※{n}</span><span class="visually-hidden">{srLabel}</span></a
+  ></sup
+>
+
+<style>
+  .term {
+    font-weight: 600;
+    scroll-margin-top: 6rem;
+  }
+  .term-mark {
+    font-family: var(--font-sans);
+    font-size: 0.68em;
+    font-weight: 600;
+    line-height: 0;
+    margin-left: 0.08em;
+    white-space: nowrap;
+  }
+  .term-mark a {
+    color: var(--accent);
+    text-decoration: none;
+    padding: 0 0.1em;
+  }
+  .term-mark a:hover {
+    color: var(--accent-strong);
+    text-decoration: underline;
+    text-decoration-color: var(--accent-line);
+  }
+  @media print {
+    .term-mark a {
+      color: inherit;
+    }
+  }
+</style>

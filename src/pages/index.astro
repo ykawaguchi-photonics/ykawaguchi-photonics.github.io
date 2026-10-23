@@ -6,11 +6,11 @@ import PubItem from "../components/PubItem.astro";
 import PostCard from "../components/PostCard.astro";
 import { profileLinks, site } from "../data/site";
 import { headshot, headshotAlt, headshotSchemaPath } from "../data/headshot";
-import { getPosts, getProjects, getPublications, getResearchAreas } from "../utils/content";
+import { featuredPublications, getPosts, getProjects, getPublications, getResearchAreas } from "../utils/content";
 import { personSchema, websiteSchema } from "../utils/schema";
 
 const pubs = await getPublications();
-const featured = pubs.filter((p) => p.data.featured).slice(0, 5);
+const featured = featuredPublications(pubs);
 const areas = await getResearchAreas();
 const project = (await getProjects())[0];
 const posts = (await getPosts()).slice(0, 3);
@@ -41,22 +41,29 @@ const photoPath = await headshotSchemaPath();
           <p class="eyebrow">{site.title}</p>
           <h1 id="name">{site.name}</h1>
           <p class="tagline">{site.tagline}</p>
+          <p class="headline">{site.headline}</p>
         </div>
       </div>
       <div class="bio">
         <p>
-          I am a {site.position} at {site.affiliation} in {site.location}. I received my Ph.D. in Electrical Engineering
-          from The City College of New York (CUNY) in 2024, with a dissertation on ring resonators with dichroic materials
-          and spin-valley controlled topological photonic systems.
+          I am a {site.position} at {site.affiliation} in {site.location}, where I work on metasurfaces. I received my
+          Ph.D. in Electrical Engineering from The City College of New York (CUNY) in 2024, with a dissertation on ring
+          resonators with dichroic materials and spin-valley controlled topological photonic systems.
         </p>
         <p>
-          My research spans metasurfaces and flat optics, silicon photonic integrated circuits, topological and
-          nonreciprocal photonics, and optical sensing, combining full-wave simulation with nanophotonic device design.
+          My work combines full-wave simulation (Lumerical FDTD, Meep, COMSOL, RCWA) with nanophotonic device design
+          across silicon photonic integrated circuits, metasurfaces and flat optics, topological and nonreciprocal
+          photonics, and optical sensing. My designs have been experimentally demonstrated on silicon chips (Science
+          Advances 2024) and published in Nature Nanotechnology, Science Advances and Nature Communications. I also
+          maintain an open-source photonics simulation toolkit that turns FDTD-verified PIC components into
+          circuit-level models and fabricable GDS layouts.
         </p>
+        <p class="facts">Based in {site.location} · {site.languages}</p>
       </div>
       <ul class="link-list profile-links" aria-label="Profiles">
         {profileLinks().map((l) => <li><a class="chip" href={l.href} rel="me noopener">{l.label}</a></li>)}
         <li><a class="chip" href="/cv/">CV</a></li>
+        {site.resumePdf && <li><a class="chip" href={site.resumePdf}>Download resume (PDF)</a></li>}
       </ul>
     </section>
 
@@ -168,6 +175,17 @@ const photoPath = await headshotSchemaPath();
     font-size: 1.1875rem;
     line-height: 1.7;
     color: var(--text);
+  }
+  .bio p.facts {
+    font-family: var(--font-sans);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .identity .headline {
+    margin: var(--space-2) 0 0;
+    color: var(--text-muted);
+    font-size: var(--step-0);
+    line-height: 1.5;
   }
   .profile-links {
     margin-top: var(--space-5);

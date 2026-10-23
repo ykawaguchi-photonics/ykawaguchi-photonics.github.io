@@ -19,3 +19,6 @@ npm-debug.log*
 private/
 *.pdf
 *.docx
+# exception: the approved public 2-page resume (CLAUDE.md, hard rule 3)
+!public/resume.pdf
+resume/build/

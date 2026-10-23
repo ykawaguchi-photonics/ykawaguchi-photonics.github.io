@@ -1,6 +1,7 @@
 ---
-// HTML-only CV. There is deliberately no PDF download: the full CV contains
-// confidential information and must never be published or committed.
+// HTML CV. The full CV contains confidential information and must never be published or
+// committed. The only downloadable document is the separate public 2-page industry resume,
+// linked here only when site.resumePdf is set (see CLAUDE.md, hard rule 3).
 import PageLayout from "../layouts/PageLayout.astro";
 import JsonLd from "../components/JsonLd.astro";
 import Timeline from "../components/Timeline.astro";
@@ -14,8 +15,9 @@ const pubs = await getPublications();
 const areas = await getResearchAreas();
 const types = ["journal", "conference", "preprint", "thesis"] as const;
 
-const providers = [...new Set(coursework.map((c) => c.provider))];
-const courseGroups = providers.map((p) => ({ provider: p, courses: coursework.filter((c) => c.provider === p) }));
+const shownCourses = coursework.filter((c) => c.highlight);
+const providers = [...new Set(shownCourses.map((c) => c.provider))];
+const courseGroups = providers.map((p) => ({ provider: p, courses: shownCourses.filter((c) => c.provider === p) }));
 ---
 
 <PageLayout
@@ -27,6 +29,14 @@ const courseGroups = providers.map((p) => ({ provider: p, courses: coursework.fi
   narrow
 >
   <JsonLd slot="head" data={personSchema(Astro.site)} />
+
+  {
+    site.resumePdf && (
+      <p class="resume-link">
+        <a class="chip" href={site.resumePdf}>Download resume (PDF)</a>
+      </p>
+    )
+  }
 
   <section class="cv-section">
     <h2>Positions</h2>
@@ -73,22 +83,42 @@ const courseGroups = providers.map((p) => ({ provider: p, courses: coursework.fi
     <h2>Skills &amp; tools</h2>
     <dl class="skills">
       <div>
-        <dt>Simulation</dt>
-        <dd>Lumerical FDTD, Meep (FDTD, adjoint optimization), COMSOL Multiphysics, RCWA (Meent)</dd>
+        <dt>Component design &amp; full-wave simulation</dt>
+        <dd>Lumerical FDTD, Meep (FDTD, adjoint / inverse design), COMSOL Multiphysics, RCWA (Meent)</dd>
       </div>
       <div>
-        <dt>Design &amp; layout</dt>
-        <dd>GDSFactory, SAX circuit simulation</dd>
+        <dt>Circuit modelling</dt>
+        <dd>SAX (S-parameter circuit simulation), compact models from FDTD-verified design points</dd>
+      </div>
+      <div>
+        <dt>Layout</dt>
+        <dd>GDSFactory (parametric layout, GDS export)</dd>
+      </div>
+      <div>
+        <dt>Robustness</dt>
+        <dd>Tolerance and fabrication-bias analysis, fabrication-robust inverse design</dd>
+      </div>
+      <div>
+        <dt>Devices</dt>
+        <dd>
+          Ring resonators, directional couplers, MZIs / modulators (incl. Vπ characterisation), grating couplers, WDM
+          (de)multiplexers, metalenses
+        </dd>
       </div>
       <div>
         <dt>Programming</dt>
-        <dd>Python (NumPy, SciPy, Matplotlib, Jupyter)</dd>
+        <dd>Python (NumPy, SciPy, Matplotlib, Jupyter), Git/GitHub</dd>
       </div>
     </dl>
   </section>
 
+  <section class="cv-section">
+    <h2>Languages</h2>
+    <p>{site.languages}</p>
+  </section>
+
   <section class="cv-section" id="coursework">
-    <h2>Coursework</h2>
+    <h2>Selected coursework</h2>
     {
       courseGroups.length > 0 ? (
         courseGroups.map((g) => (
@@ -140,7 +170,7 @@ const courseGroups = providers.map((p) => ({ provider: p, courses: coursework.fi
   }
   .skills div {
     display: grid;
-    grid-template-columns: 9rem 1fr;
+    grid-template-columns: 12rem 1fr;
     gap: var(--space-4);
     padding: var(--space-3) 0;
   }
@@ -149,6 +179,15 @@ const courseGroups = providers.map((p) => ({ provider: p, courses: coursework.fi
   }
   .skills dd {
     margin: 0;
+  }
+  @media (max-width: 560px) {
+    .skills div {
+      grid-template-columns: 1fr;
+      gap: var(--space-1);
+    }
+  }
+  .resume-link {
+    margin: 0 0 var(--space-6);
   }
   .course-group h3 {
     font-size: var(--step-0);

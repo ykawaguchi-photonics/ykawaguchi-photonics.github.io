@@ -26,6 +26,7 @@ tags:
   - "domain walls"
 featured: true
 selfRole: "first"
+featuredRank: 4
 
 # Optional figure: put an image in this folder and uncomment.
 # image: ./figure.png

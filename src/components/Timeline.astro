@@ -19,6 +19,11 @@ const { entries } = Astro.props;
             {e.place && <span class="muted"> · {e.place}</span>}
           </p>
           {e.detail && <p class="detail">{e.detail}</p>}
+          {e.bullets && e.bullets.length > 0 && (
+            <ul class="bullets">
+              {e.bullets.map((b) => <li>{b}</li>)}
+            </ul>
+          )}
         </div>
       </li>
     ))
@@ -31,15 +36,24 @@ const { entries } = Astro.props;
     padding: 0;
     margin: 0;
   }
-  li {
+  .timeline > li {
     display: grid;
     grid-template-columns: 6rem 1fr;
     gap: var(--space-4);
     padding: var(--space-4) 0;
     border-bottom: 1px solid var(--border);
   }
-  li:last-child {
+  .timeline > li:last-child {
     border-bottom: 0;
+  }
+  .bullets {
+    margin: var(--space-2) 0 0;
+    padding-left: 1.2em;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+  }
+  .bullets li + li {
+    margin-top: var(--space-1);
   }
   .period {
     font-variant-numeric: tabular-nums;
@@ -61,7 +75,7 @@ const { entries } = Astro.props;
     margin-top: var(--space-1);
   }
   @media (max-width: 520px) {
-    li {
+    .timeline > li {
       grid-template-columns: 1fr;
       gap: var(--space-1);
     }

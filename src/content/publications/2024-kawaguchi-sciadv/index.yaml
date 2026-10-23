@@ -28,6 +28,7 @@ tags:
   - "Aharonov-Bohm effect"
 featured: true
 selfRole: "first"
+featuredRank: 1
 
 image: ./figure.png
 imageAlt: "Illustration of a topological boundary mode propagating along the interface between two domains of a silicon photonic metasurface, with left- and right-circularly polarized and linearly polarized emission."

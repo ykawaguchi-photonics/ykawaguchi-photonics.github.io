@@ -32,7 +32,13 @@ const publications = defineCollection({
       areas: z.array(reference("research")).default([]),
       tags: z.array(z.string()).default([]),
       featured: z.boolean().default(false),
+      // Order on the Home page "Selected publications" (1 = first). Unranked featured papers follow by date.
+      featuredRank: z.number().int().positive().optional(),
       selfRole: z.enum(["first", "corresponding", "co"]).optional(),
+      // "My role" / "Key result" lines shown above the abstract. Text containing "[" (e.g. a
+      // [CHECK] placeholder) is treated as unconfirmed and never rendered (see isConfirmed()).
+      role: z.string().optional(),
+      keyResult: z.string().optional(),
       // Drop an image into the paper's folder and reference it as ./file.png
       image: image().optional(),
       imageAlt: z.string().optional(),

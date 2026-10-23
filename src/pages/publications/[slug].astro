@@ -11,6 +11,7 @@ import {
   doiUrl,
   getPosts,
   getPublications,
+  isConfirmed,
   pubTypeLabel,
   venueLine,
   type Publication,
@@ -98,6 +99,23 @@ const bib = bibtex(pub);
       <figure class="lead-figure">
         <Image src={d.image} alt={d.imageAlt ?? ""} widths={[480, 800, 1200]} sizes="(max-width: 800px) 100vw, 736px" />
       </figure>
+    )
+  }
+
+  {
+    (isConfirmed(d.role) || isConfirmed(d.keyResult)) && (
+      <section class="block contribution">
+        {isConfirmed(d.role) && (
+          <p>
+            <strong>My role:</strong> {d.role}
+          </p>
+        )}
+        {isConfirmed(d.keyResult) && (
+          <p>
+            <strong>Key result:</strong> {d.keyResult}
+          </p>
+        )}
+      </section>
     )
   }
 

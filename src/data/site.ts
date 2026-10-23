@@ -1,15 +1,22 @@
 // Single source of truth for identity, affiliation, and profile links.
-// Samsung rule: affiliation is stated as "Researcher at Samsung R&D" only —
-// never describe work, projects, or products there anywhere on this site.
+// Samsung rule: affiliation is stated as "Researcher at Samsung R&D", and the work there is
+// described by the single word "metasurfaces" only — never tools, projects, products or results.
 export const site = {
   name: "Yuma Kawaguchi",
   title: "Photonics Researcher",
-  tagline: "Metasurfaces · Silicon Photonics · Topological Photonics",
+  tagline: "Silicon Photonics · Metasurfaces · Topological Photonics",
+  // One line under the name on the Home page.
+  headline:
+    "Photonics Design Engineer — silicon photonics and metasurface design, from FEM- and FDTD-verified components to GDS layout.",
   description:
-    "Yuma Kawaguchi is a photonics researcher working on metasurfaces, silicon photonics, and topological photonics. Publications, research notes, and simulation projects.",
+    "Yuma Kawaguchi is a photonics design engineer working on silicon photonics, metasurfaces, and topological photonics. Publications, research notes, and simulation projects.",
   position: "Researcher",
   affiliation: "Samsung R&D",
   location: "Yokohama, Japan",
+  languages: "Japanese (native) · English (fluent, full working proficiency)",
+  // Public 2-page industry resume. Leave empty to hide the download button/link; set to
+  // "/resume.pdf" only after public/resume.pdf has been approved (see CLAUDE.md, hard rule 3).
+  resumePdf: "" as string,
   locale: "en_US",
   // Leave empty to hide. Set only to an address you want published.
   email: "" as string,
@@ -28,10 +35,10 @@ export const site = {
   ],
   knowsAbout: [
     "Photonics",
-    "Metasurfaces",
-    "Flat optics",
     "Silicon photonics",
     "Photonic integrated circuits",
+    "Metasurfaces",
+    "Flat optics",
     "Topological photonics",
     "Nonreciprocal photonics",
     "Optical sensing",

@@ -32,6 +32,23 @@ export function formatDate(d: Date, style: "long" | "short" = "long") {
   });
 }
 
+/** Drafted text with a placeholder such as "[CHECK]" or "[INSERT: …]" is not published. */
+export function isConfirmed(text?: string): text is string {
+  return !!text && !text.includes("[");
+}
+
+/**
+ * Papers for the Home page "Selected publications". If any paper has a featuredRank, exactly the
+ * ranked papers are shown in rank order (so the chosen order is kept); otherwise the newest
+ * featured papers are shown.
+ */
+export function featuredPublications(pubs: Publication[], n = 5) {
+  const ranked = pubs
+    .filter((p) => p.data.featuredRank !== undefined)
+    .sort((a, b) => a.data.featuredRank! - b.data.featuredRank!);
+  return (ranked.length > 0 ? ranked : pubs.filter((p) => p.data.featured)).slice(0, n);
+}
+
 export function isoDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }

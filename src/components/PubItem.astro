@@ -4,6 +4,7 @@ import Authors from "./Authors.astro";
 import {
   arxivUrl,
   doiUrl,
+  isConfirmed,
   pubTypeLabel,
   venueLine,
   type Publication,
@@ -49,6 +50,24 @@ const searchText = [d.title, d.authors.join(" "), d.venue, d.venueShort ?? "", d
       {!compact && d.type !== "journal" && <span class="type">{pubTypeLabel[d.type]}</span>}
     </p>
     {
+      !compact && (isConfirmed(d.role) || isConfirmed(d.keyResult)) && (
+        <dl class="contribution">
+          {isConfirmed(d.role) && (
+            <div>
+              <dt>My role</dt>
+              <dd>{d.role}</dd>
+            </div>
+          )}
+          {isConfirmed(d.keyResult) && (
+            <div>
+              <dt>Key result</dt>
+              <dd>{d.keyResult}</dd>
+            </div>
+          )}
+        </dl>
+      )
+    }
+    {
       !compact && (
         <ul class="link-list links" aria-label="Links">
           {d.doi && <li><a class="chip" href={doiUrl(d.doi)} rel="noopener">DOI</a></li>}
@@ -71,6 +90,25 @@ const searchText = [d.title, d.authors.join(" "), d.venue, d.venueShort ?? "", d
 </li>
 
 <style>
+  .contribution {
+    margin: var(--space-2) 0 0;
+    font-size: 0.9375rem;
+  }
+  .contribution div + div {
+    margin-top: var(--space-1);
+  }
+  .contribution dt {
+    display: inline;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .contribution dt::after {
+    content: ": ";
+  }
+  .contribution dd {
+    display: inline;
+    margin: 0;
+  }
   .pub {
     display: grid;
     grid-template-columns: 1fr;

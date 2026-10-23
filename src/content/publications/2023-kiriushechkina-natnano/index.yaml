@@ -27,6 +27,7 @@ tags:
   - "topological photonics"
 featured: true
 selfRole: "co"
+featuredRank: 2
 
 # Optional figure: put an image in this folder and uncomment.
 # image: ./figure.png

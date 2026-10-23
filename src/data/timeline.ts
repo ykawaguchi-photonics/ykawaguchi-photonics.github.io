@@ -6,6 +6,7 @@ export type TimelineEntry = {
   org: string;
   place?: string;
   detail?: string;
+  bullets?: string[];
 };
 
 export const positions: TimelineEntry[] = [
@@ -14,20 +15,24 @@ export const positions: TimelineEntry[] = [
     role: "Researcher",
     org: "Samsung R&D",
     place: "Yokohama, Japan",
-    detail:
-      "Metalens and Meta-optics.",
+    // Samsung rule (CLAUDE.md): describe the work by the single word "metasurfaces" only.
+    detail: "Metasurfaces.",
   },
   {
     period: "Sep 2024 – Oct 2024",
     role: "Visiting Researcher",
     org: "Brandenburg University of Technology",
     place: "Cottbus, Germany",
+    bullets: ["FDTD (Lumerical) simulations of germanium photodiode pillars."],
   },
    {
     period: "Jun 2024 – Aug 2024",
     role: "Postdoctoral Researcher",
     org: "The City College of New York, CUNY",
     place: "New York, USA",
+    bullets: [
+      "Continued doctoral research on topological photonic resonators, including freeform topological photonic vortex resonators (arXiv 2026).",
+    ],
   },
 ];
 
@@ -39,6 +44,9 @@ export const education: TimelineEntry[] = [
     place: "New York, USA",
     detail:
       "Dissertation: Ring Resonators Integrating With Dichroic Materials and in Spin-Valley Controlled Photonic Topological System.",
+    bullets: [
+      "First-author experimental demonstration of pseudo-spin switching of topological boundary modes on a silicon chip (Science Advances 2024).",
+    ],
   },
   {
     period: "Apr 2017 – Mar 2019",

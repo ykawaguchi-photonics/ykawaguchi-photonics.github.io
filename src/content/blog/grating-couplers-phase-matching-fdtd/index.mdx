@@ -237,13 +237,13 @@ Varying the grating strength along its length (for example the fill factor or et
 
 #### The model used here
 
-The main device is a grating etched into a **400 nm silicon-nitride (SiN) core** ($n=2.0$) on a BOX layer over a silicon substrate, with oxide top cladding (Fig. 1). The light is TE-polarized (electric field along the grating lines) at $\lambda_0 = 1.35$ µm, and it couples to an SMF-28 fiber (mode-field diameter 9.2 µm) tilted 10° in the oxide.
+The main device is a grating etched into a **400 nm silicon-nitride (SiN) core** ($n=2.0$) on a BOX layer over a silicon substrate, with oxide top cladding (Fig. 1). The light is TE-polarized (electric field along the grating lines) at $\lambda_0 = 1.35$ µm, and it couples to an SMF-28 fiber (mode-field diameter 9.2 µm) tilted 10° in the oxide. The period is set by phase matching; the tooth width and etch depth were then optimized with adjoint gradients and Adam, a method described in [Topology Optimization and the Adjoint Method](/blog/inverse-design-topology-optimization-adjoint/).
 
 The simulations are **2D cross-sections** (the propagation direction $x$ and the vertical $z$) with bulk refractive indices, run with the <Term id="en-fdtd" n={8}>finite-difference time-domain (FDTD)</Term> method in Meep[^meep] using my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit). Materials are non-dispersive, and the structure is assumed infinitely wide along the grating lines. A 2D model therefore has no lateral mode mismatch and no taper loss, so its efficiencies are upper bounds for a real device. All runs use 160 pixels/µm (6.25 nm cells) for the final numbers, after a mesh-convergence study.
 
 <Glossary>
 <Def id="en-fdtd" n={8} term="FDTD (finite-difference time-domain)">
-A simulation method that solves Maxwell's equations directly on a grid, stepping the electric and magnetic fields forward in time. A single run with a short pulse gives the response over a whole wavelength band.
+A simulation method that solves Maxwell's equations directly on a grid, stepping the electric and magnetic fields forward in time. A single run with a short pulse gives the response over a whole wavelength band. How it compares with FEM and RCWA is explained in [FDTD, FEM and RCWA](/blog/em-simulation-methods-fdtd-fem-rcwa/).
 </Def>
 </Glossary>
 
@@ -571,13 +571,13 @@ $$
 
 #### 本記事のモデル
 
-主に扱うのは、シリコン基板上のBOXの上に置いた**厚さ400 nmの窒化シリコン(SiN)コア**($n=2.0$)にグレーティングを刻み、上部を酸化膜で覆った素子です(図1)。光はTE偏光(電場がグレーティングの溝に平行)で波長 $\lambda_0 = 1.35$ µm、結合先は酸化膜中で10°傾けたSMF-28ファイバ(モードフィールド径9.2 µm)です。
+主に扱うのは、シリコン基板上のBOXの上に置いた**厚さ400 nmの窒化シリコン(SiN)コア**($n=2.0$)にグレーティングを刻み、上部を酸化膜で覆った素子です(図1)。光はTE偏光(電場がグレーティングの溝に平行)で波長 $\lambda_0 = 1.35$ µm、結合先は酸化膜中で10°傾けたSMF-28ファイバ(モードフィールド径9.2 µm)です。周期は位相整合で決め、歯の幅とエッチ深さは随伴法の勾配とAdamで最適化しました。その方法は[トポロジー最適化と随伴法](/blog/inverse-design-topology-optimization-adjoint/)の記事で説明しています。
 
 シミュレーションは、伝搬方向 $x$ と鉛直方向 $z$ の**2次元断面**で、バルクの屈折率を用い、Meep[^meep]による<Term id="ja-fdtd" n={8}>時間領域差分(FDTD)法</Term>で[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)を使って計算しています。材料分散は無視し、構造は溝の方向に無限に一様と仮定しています。そのため横方向のモード不整合やテーパ損失が含まれず、効率は実デバイスに対する上限値になります。最終的な数値は、メッシュ収束の確認を経て、160 pixels/µm(セル6.25 nm)で計算したものです。
 
 <Glossary title="用語">
 <Def id="ja-fdtd" n={8} term="FDTD(時間領域差分法)">
-格子上でMaxwell方程式を直接解き、電場と磁場を時間方向に少しずつ進めていくシミュレーション手法です。短いパルスで1回計算すれば、波長帯全体の応答が得られます。
+格子上でMaxwell方程式を直接解き、電場と磁場を時間方向に少しずつ進めていくシミュレーション手法です。短いパルスで1回計算すれば、波長帯全体の応答が得られます。FEMやRCWAとの比較は[FDTD、FEM、RCWA](/blog/em-simulation-methods-fdtd-fem-rcwa/)の記事で説明しています。
 </Def>
 </Glossary>
 

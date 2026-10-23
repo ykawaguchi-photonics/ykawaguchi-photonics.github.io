@@ -98,7 +98,10 @@ const { title = "Where" } = Astro.props;
     overflow-x: auto;
     margin: 0;
     font-size: 1em;
-    border-collapse: collapse;
+  }
+  /* sticky first column (prose.css) needs the box's own opaque background */
+  .symbols-body :global(:is(th, td):first-child) {
+    background: var(--surface);
   }
   .symbols-body :global(th),
   .symbols-body :global(td) {
@@ -107,6 +110,12 @@ const { title = "Where" } = Astro.props;
   }
   .symbols-body :global(tr:last-child td) {
     border-bottom: 0;
+  }
+  @media (max-width: 480px) {
+    .symbols-body :global(th),
+    .symbols-body :global(td) {
+      padding: 0.3em 0.5em 0.3em 0;
+    }
   }
   .symbols-body :global(th) {
     font-size: 0.875em;

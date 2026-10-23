@@ -128,13 +128,13 @@ $$
 
 </Symbols>
 
-<Figure src={fig2} alt="Two field maps of the racetrack and bus. Left, at a resonance wavelength, a strong standing pattern fills the whole ring and the bus field after the ring is weak. Right, off resonance, the field runs straight along the bus and the ring is nearly dark." caption="What resonance looks like: Re(Hz) from FDTD for Lc = 4 µm (arbitrary units). Left: at the resonance near 1308.5 nm, the field builds up all around the ring and the transmitted bus field is reduced. Right: off resonance (1316.3 nm), the light passes the ring almost untouched. Gray bands: absorbing boundary layers. From notebooks/05_racetrack_resonator.ipynb, Section 11." number={2} size="wide" />
-
 <Glossary>
 <Def id="en-fsr" n={4} term="Free spectral range (FSR)">
 The spacing, in wavelength or frequency, between neighbouring resonances of a ring (or neighbouring fringes of an interferometer). A shorter ring has a larger FSR.
 </Def>
 </Glossary>
+
+<Figure src={fig2} alt="Two field maps of the racetrack and bus. Left, at a resonance wavelength, a strong standing pattern fills the whole ring and the bus field after the ring is weak. Right, off resonance, the field runs straight along the bus and the ring is nearly dark." caption="What resonance looks like: Re(Hz) from FDTD for Lc = 4 µm (arbitrary units). Left: at the resonance near 1308.5 nm, the field builds up all around the ring and the transmitted bus field is reduced. Right: off resonance (1316.3 nm), the light passes the ring almost untouched. Gray bands: absorbing boundary layers. From notebooks/05_racetrack_resonator.ipynb, Section 11." number={2} size="wide" />
 
 <Callout kind="design" title="What this means for design">
 
@@ -205,7 +205,7 @@ The ratio of the free spectral range to the resonance width. It measures how man
 
 #### Depth: critical coupling
 
-The depth of the dip is a different question from its width. On resonance,
+The depth of the dip is a different question from its width. On resonance the transmission is:
 
 $$
 T_\text{min} = \frac{(a-t)^2}{(1-at)^2},
@@ -218,13 +218,7 @@ $$
 
 </Symbols>
 
-which vanishes when $t = a$. This is <Term id="en-critical" n={7}>critical coupling</Term>.[^yariv] Physically, the light coupled out of the ring into the bus exactly cancels the light that passes the coupler without entering the ring. The same condition appears in three equivalent forms, because different conventions are in use:
-
-- **Field amplitudes per round trip:** $t = a$. This is the form used in this article.
-- **Power per round trip:** $\kappa^2 = 1-a^2 \approx \alpha L$. The power coupled out per round trip equals the power lost per round trip.
-- **Decay rates or Q factors:** $Q_c = Q_i$, so that at critical coupling $Q_L = Q_i/2$.[^samarelli] In temporal coupled-mode theory the same condition reads "external decay rate = intrinsic decay rate". Whether amplitude or energy decay rates are used does not change the condition, since an energy decay rate is twice the corresponding amplitude decay rate for both channels; but the two conventions must not be mixed in one formula.
-
-With $t > a$ (coupling weaker than loss) the ring is <Term id="en-regime" n={8}>under-coupled</Term>; with $t < a$ (coupling stronger than loss) it is over-coupled. Critical coupling is a condition on the **balance of coupling and loss**, and a ring can be perfectly on resonance and still far from critical coupling.
+It vanishes when $t = a$. This is <Term id="en-critical" n={7}>critical coupling</Term>.[^yariv] Physically, the light coupled out of the ring into the bus exactly cancels the light that passes the coupler without entering the ring. The same condition appears in three equivalent forms, because different conventions are in use:
 
 <Glossary>
 <Def id="en-critical" n={7} term="Critical coupling">
@@ -234,6 +228,12 @@ The condition at which a ring's coupling to the bus exactly balances its interna
 Under-coupled: the coupling is weaker than the loss ($t>a$); the dip is shallow and narrow. Over-coupled: the coupling is stronger than the loss ($t<a$); the dip is shallow and broad. The power spectrum alone cannot tell them apart; the phase of the transmitted light can.
 </Def>
 </Glossary>
+
+- **Field amplitudes per round trip:** $t = a$. This is the form used in this article.
+- **Power per round trip:** $\kappa^2 = 1-a^2 \approx \alpha L$. The power coupled out per round trip equals the power lost per round trip.
+- **Decay rates or Q factors:** $Q_c = Q_i$, so that at critical coupling $Q_L = Q_i/2$.[^samarelli] In temporal coupled-mode theory the same condition reads "external decay rate = intrinsic decay rate". Whether amplitude or energy decay rates are used does not change the condition, since an energy decay rate is twice the corresponding amplitude decay rate for both channels; but the two conventions must not be mixed in one formula.
+
+With $t > a$ (coupling weaker than loss) the ring is <Term id="en-regime" n={8}>under-coupled</Term>; with $t < a$ (coupling stronger than loss) it is over-coupled. Critical coupling is a condition on the **balance of coupling and loss**, and a ring can be perfectly on resonance and still far from critical coupling.
 
 <Callout kind="design" title="What this means for design">
 
@@ -450,13 +450,13 @@ $$
 
 </Symbols>
 
-<Figure src={fig2} alt="レーストラックとバスの電場分布2枚。左は共鳴波長で、リング全体に強い定在パターンが満ち、リング通過後のバスの場は弱い。右は非共鳴で、場はバスに沿ってそのまま進み、リングはほぼ暗い。" caption="共鳴の様子:Lc = 4 µmのFDTDによるRe(Hz)(任意単位)。左:1308.5 nm付近の共鳴では、場がリング全周で蓄積し、透過するバスの場は弱まる。右:非共鳴(1316.3 nm)では、光はリングの影響をほとんど受けずに通過する。灰色の帯は吸収境界層。notebooks/05_racetrack_resonator.ipynb、11節より。" number={2} size="wide" />
-
 <Glossary title="用語">
 <Def id="ja-fsr" n={4} term="自由スペクトル領域(FSR)">
 リングの隣り合う共鳴(または干渉計の隣り合う干渉縞)の間隔を、波長または周波数で表したものです。リングが短いほどFSRは大きくなります。
 </Def>
 </Glossary>
+
+<Figure src={fig2} alt="レーストラックとバスの電場分布2枚。左は共鳴波長で、リング全体に強い定在パターンが満ち、リング通過後のバスの場は弱い。右は非共鳴で、場はバスに沿ってそのまま進み、リングはほぼ暗い。" caption="共鳴の様子:Lc = 4 µmのFDTDによるRe(Hz)(任意単位)。左:1308.5 nm付近の共鳴では、場がリング全周で蓄積し、透過するバスの場は弱まる。右:非共鳴(1316.3 nm)では、光はリングの影響をほとんど受けずに通過する。灰色の帯は吸収境界層。notebooks/05_racetrack_resonator.ipynb、11節より。" number={2} size="wide" />
 
 <Callout kind="design" title="設計上の意味">
 
@@ -472,7 +472,7 @@ $$
 
 #### 線幅とQ値
 
-共鳴付近の谷の幅(半分の深さでの全幅)は
+共鳴付近の谷の幅(半分の深さでの全幅)は次のとおりです。
 
 $$
 \Delta\lambda_\text{FWHM} = \frac{(1-at)\,\lambda^2}{\pi\, n_g L \sqrt{at}}
@@ -486,7 +486,7 @@ $$
 
 </Symbols>
 
-です。共鳴の鋭さは通常<Term id="ja-q" n={5}>Q値</Term>で表し、**負荷Q値** $Q_L = \lambda/\Delta\lambda_\text{FWHM}$ がそれにあたります。線幅の式は高フィネス極限での透過率の式[^yariv]から得られ、1周の位相を $d\phi/d\lambda = -2\pi n_g L/\lambda^2$ で波長に換算するので、分散のある導波路では群屈折率が入ります[^bogaerts]。共鳴の間隔と幅の比が<Term id="ja-finesse" n={6}>フィネス</Term>です。
+共鳴の鋭さは通常<Term id="ja-q" n={5}>Q値</Term>で表し、**負荷Q値** $Q_L = \lambda/\Delta\lambda_\text{FWHM}$ がそれにあたります。線幅の式は高フィネス極限での透過率の式[^yariv]から得られ、1周の位相を $d\phi/d\lambda = -2\pi n_g L/\lambda^2$ で波長に換算するので、分散のある導波路では群屈折率が入ります[^bogaerts]。共鳴の間隔と幅の比が<Term id="ja-finesse" n={6}>フィネス</Term>です。
 
 $$
 F = \frac{\mathrm{FSR}}{\Delta\lambda_\text{FWHM}} = \frac{\pi\sqrt{at}}{1-at}
@@ -499,7 +499,7 @@ $$
 
 </Symbols>
 
-幅が積 $at$ で決まるのは、光がリングから出ていく経路が2つあるからです。リングの中で**失われる**($a<1$)か、バスへ**結合して出ていく**($t<1$)かです。それぞれの経路に固有のQ値があります。1周あたりに出ていくパワーを、損失については $\alpha L$、結合については $\kappa^2$ と書くと(どちらも小さいとして)
+幅が積 $at$ で決まるのは、光がリングから出ていく経路が2つあるからです。リングの中で**失われる**($a<1$)か、バスへ**結合して出ていく**($t<1$)かです。それぞれの経路に固有のQ値があります。1周あたりに出ていくパワーを、損失については $\alpha L$、結合については $\kappa^2$ と書くと(どちらも小さいとして)、次のようになります。
 
 $$
 Q_i = \frac{2\pi n_g}{\lambda\,\alpha}, \qquad Q_c \approx \frac{2\pi n_g L}{\lambda\,\kappa^2}, \qquad \frac{1}{Q_L} = \frac{1}{Q_i} + \frac{1}{Q_c}
@@ -514,7 +514,7 @@ $$
 
 </Symbols>
 
-となります。$Q_i$ は単位長さあたりの損失だけで決まってリングの大きさによらないので、作製品質の指標になります。$Q_c$ はカプラで決まり、ギャップを狭くする($\kappa^2$ を大きくする)と下がって共鳴が広がります。$Q_c$ の近似形は $\kappa^2 \ll 1$ を仮定しています。厳密な線幅は上の式です。
+$Q_i$ は単位長さあたりの損失だけで決まってリングの大きさによらないので、作製品質の指標になります。$Q_c$ はカプラで決まり、ギャップを狭くする($\kappa^2$ を大きくする)と下がって共鳴が広がります。$Q_c$ の近似形は $\kappa^2 \ll 1$ を仮定しています。厳密な線幅は上の式です。
 
 <Glossary title="用語">
 <Def id="ja-q" n={5} term="Q値(品質係数)">
@@ -527,7 +527,7 @@ $$
 
 #### 深さ:臨界結合
 
-谷の深さは幅とは別の問題です。共鳴では
+谷の深さは幅とは別の問題です。共鳴での透過率は次のとおりです。
 
 $$
 T_\text{min} = \frac{(a-t)^2}{(1-at)^2}
@@ -540,13 +540,7 @@ $$
 
 </Symbols>
 
-となり、$t = a$ のときゼロになります。これが<Term id="ja-critical" n={7}>臨界結合</Term>です[^yariv]。物理的には、リングからバスへ結合して出ていく光が、リングに入らずにカプラを通り過ぎる光とちょうど打ち消し合っています。慣習が複数あるため、同じ条件は3つの等価な形で現れます。
-
-- **1周あたりの場の振幅:** $t = a$。本記事で使う形です。
-- **1周あたりのパワー:** $\kappa^2 = 1-a^2 \approx \alpha L$。1周で結合して出ていくパワーが、1周で失われるパワーに等しい。
-- **減衰率またはQ値:** $Q_c = Q_i$。したがって臨界結合では $Q_L = Q_i/2$ です[^samarelli]。時間領域の結合モード理論では「外部への減衰率 = 内部の減衰率」と書かれます。振幅の減衰率を使うかエネルギーの減衰率を使うかで条件は変わりません。どちらの経路でもエネルギー減衰率は振幅減衰率の2倍だからです。ただし、1つの式の中で2つの慣習を混ぜてはいけません。
-
-$t > a$(結合が損失より弱い)ならリングは<Term id="ja-regime" n={8}>アンダーカップリング</Term>、$t < a$(結合が損失より強い)ならオーバーカップリングです。臨界結合は**結合と損失のバランス**の条件であり、リングが完全に共鳴していても、臨界結合からは遠いということがありえます。
+これは $t = a$ のときゼロになります。これが<Term id="ja-critical" n={7}>臨界結合</Term>です[^yariv]。物理的には、リングからバスへ結合して出ていく光が、リングに入らずにカプラを通り過ぎる光とちょうど打ち消し合っています。慣習が複数あるため、同じ条件は3つの等価な形で現れます。
 
 <Glossary title="用語">
 <Def id="ja-critical" n={7} term="臨界結合">
@@ -556,6 +550,12 @@ $t > a$(結合が損失より弱い)ならリングは<Term id="ja-regime" n={8}
 アンダーカップリング:結合が損失より弱い($t>a$)。谷は浅く狭い。オーバーカップリング:結合が損失より強い($t<a$)。谷は浅く広い。パワースペクトルだけでは両者を区別できず、透過光の位相で区別できます。
 </Def>
 </Glossary>
+
+- **1周あたりの場の振幅:** $t = a$。本記事で使う形です。
+- **1周あたりのパワー:** $\kappa^2 = 1-a^2 \approx \alpha L$。1周で結合して出ていくパワーが、1周で失われるパワーに等しい。
+- **減衰率またはQ値:** $Q_c = Q_i$。したがって臨界結合では $Q_L = Q_i/2$ です[^samarelli]。時間領域の結合モード理論では「外部への減衰率 = 内部の減衰率」と書かれます。振幅の減衰率を使うかエネルギーの減衰率を使うかで条件は変わりません。どちらの経路でもエネルギー減衰率は振幅減衰率の2倍だからです。ただし、1つの式の中で2つの慣習を混ぜてはいけません。
+
+$t > a$(結合が損失より弱い)ならリングは<Term id="ja-regime" n={8}>アンダーカップリング</Term>、$t < a$(結合が損失より強い)ならオーバーカップリングです。臨界結合は**結合と損失のバランス**の条件であり、リングが完全に共鳴していても、臨界結合からは遠いということがありえます。
 
 <Callout kind="design" title="設計上の意味">
 
@@ -569,7 +569,7 @@ $t > a$(結合が損失より弱い)ならリングは<Term id="ja-regime" n={8}
 
 #### アッドドロップ型リング
 
-バスを2本にすると、リングは波長ルータになります。共鳴でリングに蓄積した光は、単に失われるだけでなく、2本目のバスである**ドロップ**ポートから出ていけるようになります。入力側の自己結合を $t_1$、ドロップ側を $t_2$ とすると[^little] [^bogaerts]、
+バスを2本にすると、リングは波長ルータになります。共鳴でリングに蓄積した光は、単に失われるだけでなく、2本目のバスである**ドロップ**ポートから出ていけるようになります。入力側の自己結合を $t_1$、ドロップ側を $t_2$ とすると、透過率は次のようになります[^little] [^bogaerts]。
 
 $$
 T_\text{through} = \frac{t_2^2a^2 - 2t_1t_2a\cos\phi + t_1^2}{1 - 2t_1t_2a\cos\phi + (t_1t_2a)^2}, \qquad
@@ -585,7 +585,7 @@ $$
 
 </Symbols>
 
-です。スルー側が共鳴でゼロになる条件は $t_1 = a\,t_2$ です。入力側のバスから見ると、2本目のバスは内部損失を増やすだけで、損失のパラメータを $a$ から $a\,t_2$ に変えるからです[^yariv]。無損失で対称なリング($a=1$、$t_1=t_2$)では、共鳴波長の光はすべてドロップされます。損失があるとドロップ効率は下がるので、効率のよいドロップフィルタには、低損失のリングと、損失よりずっと強い結合が必要です。Littleらは、このようなチャネルドロップフィルタとその多段構成を、時間領域の結合モード理論で解析しました[^little]。
+スルー側が共鳴でゼロになる条件は $t_1 = a\,t_2$ です。入力側のバスから見ると、2本目のバスは内部損失を増やすだけで、損失のパラメータを $a$ から $a\,t_2$ に変えるからです[^yariv]。無損失で対称なリング($a=1$、$t_1=t_2$)では、共鳴波長の光はすべてドロップされます。損失があるとドロップ効率は下がるので、効率のよいドロップフィルタには、低損失のリングと、損失よりずっと強い結合が必要です。Littleらは、このようなチャネルドロップフィルタとその多段構成を、時間領域の結合モード理論で解析しました[^little]。
 
 #### 設計の早見表:何を変えると何が変わるか
 

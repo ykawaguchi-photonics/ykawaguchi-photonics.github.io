@@ -93,6 +93,11 @@ const backLabel = ja ? `本文の「${term}」に戻る` : `Back to “${term}�
   .def-body :global(li + li) {
     margin-top: 0.2em;
   }
+  /* sticky first column (prose.css): opaque page colour under the glossary's amber wash */
+  .def-body :global(:is(th, td):first-child) {
+    background-color: var(--bg);
+    background-image: linear-gradient(var(--accent-tint), var(--accent-tint));
+  }
   .def-body > :global(:first-child) {
     margin-top: 0;
   }

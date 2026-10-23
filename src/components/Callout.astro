@@ -75,6 +75,10 @@ const label = title ?? fallback;
   .callout-body :global(table) {
     margin: 0 0 0.75em;
   }
+  /* sticky first column (prose.css) needs the box's own opaque background */
+  .callout-body :global(:is(th, td):first-child) {
+    background: var(--surface);
+  }
   @media (max-width: 480px) {
     .callout {
       padding: var(--space-3) var(--space-4);

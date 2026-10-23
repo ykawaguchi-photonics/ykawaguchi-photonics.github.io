@@ -1,0 +1,616 @@
+---
+title: "Topology Optimization and the Adjoint Method"
+description: "Topology optimization, gradient-based optimizers and the adjoint method are the three parts of photonic inverse design. What each does and how they fit together."
+date: 2026-10-22
+category: technical-notes
+tags: [inverse design, topology optimization, adjoint method, gradient-based optimization, Meep, silicon photonics]
+areas: [silicon-photonics]
+draft: true
+---
+
+import Figure from "@/components/Figure.astro";
+import Term from "@/components/Term.astro";
+import Glossary from "@/components/Glossary.astro";
+import Def from "@/components/Def.astro";
+import Symbols from "@/components/Symbols.astro";
+import Callout from "@/components/Callout.astro";
+import fig1 from "./fig1_loop.png";
+import fig2 from "./fig2_filter_projection.png";
+import fig3 from "./fig3_bend_history.png";
+import fig4 from "./fig4_footprint_robustness.png";
+import fig5 from "./fig5_adam_grating.png";
+
+**Language:** [English](#english) · [日本語](#日本語)
+
+## English
+
+**Topology optimization** is a design method that lets an optimizer decide, pixel by pixel, where material should be placed in a device so as to maximize a performance goal. In photonics it is combined with two other ingredients: a **gradient-based optimizer**, which updates the design step by step, and the **adjoint method**, which computes the gradient with respect to every pixel from just two electromagnetic simulations. Together they form the core of photonic <Term id="en-inverse" n={1}>inverse design</Term>.
+
+### Overview
+
+#### What problem these methods solve
+
+Conventional photonic design starts from a known shape (a bend radius, a coupler length, a grating period) and tunes a few parameters by physical insight and sweeps. Inverse design reverses the direction: the designer states what the device must do, for example "transmit as much light as possible around a 90° corner within 2.5 µm", and an algorithm searches for a structure that does it. The result can be a compact, non-intuitive shape that no parameter sweep would have found.[^molesky] [^jensen]
+
+Three terms are often used interchangeably, but they describe different parts of the method (Fig. 1):
+
+- **Topology optimization** is a *problem formulation*: the design is described by a density in every pixel of a design region, so the optimizer can create, merge or remove features freely.
+- **Gradient-based optimization** is the *update algorithm*: steepest ascent, Adam, L-BFGS or MMA use the gradient of the objective to choose the next design.
+- **The adjoint method** is the *way the gradient is computed*: one forward and one adjoint simulation give the derivative with respect to every design variable at once.
+
+Each can be used without the others. A design with two parameters can be optimized with adjoint gradients and Adam (an example is shown below); topology optimization can, in principle, be done without gradients, but only for very few pixels. In practice, large-scale photonic topology optimization is possible only because adjoint gradients make every iteration cost two simulations, whatever the number of pixels.
+
+<Figure src={fig1} alt="Flow diagram of the optimization loop. Design variables go through filter and projection to a permittivity, then a forward simulation gives the objective, an adjoint simulation gives its derivative with respect to permittivity, the chain rule gives the derivative with respect to the design variables, and a gradient-based update returns to the design variables. Labels group the boxes into problem formulation, gradient computation and update algorithm." caption="One iteration of adjoint-based topology optimization. The problem formulation (indigo) maps design variables to a permittivity; the adjoint method (teal) gives the gradient from a forward and an adjoint simulation; a gradient-based optimizer (olive) updates the design. The three parts are independent and can be combined differently." number={1} size="wide" />
+
+<Glossary>
+<Def id="en-inverse" n={1} term="Inverse design">
+Designing a device by specifying the desired performance and letting an algorithm find the structure, instead of choosing a structure and analysing its performance. Optimization with many design variables and a numerical simulator is the usual way to do it.
+</Def>
+</Glossary>
+
+### Theory
+
+#### The optimization problem
+
+Every optimization starts with three choices: what to maximize (the <Term id="en-objective" n={2}>objective function</Term>), what may change, and what must be respected. Written formally:
+
+$$
+\max_{\mathbf{p}}\; F\big(\mathbf{E}(\mathbf{p})\big) \quad \text{subject to} \quad \mathbf{A}(\mathbf{p})\,\mathbf{E} = \mathbf{b}, \quad 0 \le p_i \le 1 .
+$$
+
+<Symbols>
+
+- $\mathbf{p}$ — vector of design variables (a few geometric parameters, or one density per pixel)
+- $F$ — objective function, e.g. the transmission $|S_{21}|^2$ at one wavelength
+- $\mathbf{E}$ — the simulated field, which depends on the design
+- $\mathbf{A}(\mathbf{p})\,\mathbf{E} = \mathbf{b}$ — Maxwell's equations after discretization ($\mathbf{A}$ contains the permittivity, $\mathbf{b}$ the source)
+- $0 \le p_i \le 1$ — bounds; fabrication rules can be added as further constraints
+
+</Symbols>
+
+The constraint is not optional: the field $\mathbf{E}$ is not free but must solve Maxwell's equations for the current structure. That is what makes each evaluation of $F$ a full electromagnetic simulation, and what makes the gradient expensive unless it is computed cleverly.
+
+Photonic design problems are almost always **non-convex**: they have many <Term id="en-local" n={3}>local optima</Term>. A gradient method finds a good design near its starting point, not the best possible design. The starting point and the optimization schedule therefore matter.
+
+<Glossary>
+<Def id="en-objective" n={2} term="Objective function (figure of merit)">
+The single number that the optimizer tries to maximize or minimize, computed from the simulated fields. Several goals (several wavelengths, both polarizations, fabrication variants) are combined into one objective by averaging, a minimum, or a weighted sum.
+</Def>
+<Def id="en-local" n={3} term="Local optimum">
+A design that cannot be improved by any small change, although a better design may exist elsewhere. Gradient-based methods converge to local optima, so different starting points can give different final designs.
+</Def>
+</Glossary>
+
+#### Parameter optimization versus topology optimization
+
+The two formulations differ in what $\mathbf{p}$ describes.
+
+- In **parameter (shape) optimization**, $\mathbf{p}$ is a handful of dimensions: a tooth width, an etch depth, a radius. The topology (how many pieces, how many holes) is fixed by the designer.
+- In **topology optimization**, the design region is divided into $N$ pixels, and each pixel has a density $\rho_i$ between 0 (cladding) and 1 (core).[^bendsoe] The permittivity follows from the density by a material interpolation:
+
+$$
+\varepsilon_r(\bar\rho_i) = \varepsilon_\text{clad} + \bar\rho_i\,\big(\varepsilon_\text{core} - \varepsilon_\text{clad}\big),
+$$
+
+<Symbols>
+
+- $\bar\rho_i$ — density of pixel $i$ after filtering and projection (see below), between 0 and 1
+- $\varepsilon_\text{clad}$, $\varepsilon_\text{core}$ — relative permittivities of cladding and core ($n^2$)
+- $\varepsilon_r(\bar\rho_i)$ — permittivity used in the simulation for that pixel
+
+</Symbols>
+
+Because every pixel can change, features can appear, merge and disappear during the optimization. Intermediate densities ("grey" pixels) are allowed during the search to make the problem continuous and differentiable, but they are not fabricable, so the final design must be pushed to 0 or 1.
+
+#### Gradient-based updates
+
+Given the gradient $\nabla F = (\partial F/\partial p_1, \dots, \partial F/\partial p_N)$, the simplest update moves uphill:
+
+$$
+\mathbf{p}^{(k+1)} = \mathbf{p}^{(k)} + \alpha\,\nabla F\big(\mathbf{p}^{(k)}\big).
+$$
+
+<Symbols>
+
+- $\mathbf{p}^{(k)}$ — design at iteration $k$
+- $\alpha$ — step size (learning rate)
+- $\nabla F$ — gradient of the objective with respect to all design variables
+
+</Symbols>
+
+Practical optimizers refine this. <Term id="en-adam" n={4}>Adam</Term> keeps running averages of the gradient and its square, which adapts the step for each variable and damps noise.[^kingma] L-BFGS builds an approximation of the curvature from past gradients.[^lbfgs] The <Term id="en-mma" n={5}>method of moving asymptotes (MMA)</Term> solves a sequence of simple convex approximations and handles bounds and constraints well; it is the classic choice for topology optimization.[^svanberg] All of them need the gradient, and the gradient is the expensive part.
+
+<Glossary>
+<Def id="en-adam" n={4} term="Adam">
+A gradient-based optimizer that scales each step by running averages of past gradients and of their squares. It needs little tuning and is widely used in machine learning; it handles bounds only by clipping or projection.
+</Def>
+<Def id="en-mma" n={5} term="Method of moving asymptotes (MMA)">
+An optimizer developed for structural topology optimization. At each iteration it replaces the problem by a convex approximation whose asymptotes move to control the step, which makes it robust with many variables and with constraints. NLopt's MMA and CCSA implementations are used with Meep.
+</Def>
+</Glossary>
+
+#### The adjoint method: the whole gradient from two simulations
+
+The obvious way to obtain the gradient is finite differences: change each $p_i$ slightly and simulate again. That needs $N+1$ simulations per iteration, about $10^4$ for a $101\times101$-pixel design. The <Term id="en-adjoint" n={6}>adjoint method</Term> gives the same gradient from two.[^giles] [^lalau]
+
+<Glossary>
+<Def id="en-adjoint" n={6} term="Adjoint method">
+A technique for computing the gradient of one output with respect to many inputs at the cost of one extra simulation. It solves a second, "adjoint" problem driven by the sensitivity of the output, and combines its solution with the original one. It is the same idea as backpropagation in neural networks.
+</Def>
+</Glossary>
+
+Start from the discretized Maxwell equations $\mathbf{A}(\mathbf{p})\,\mathbf{E} = \mathbf{b}$ and differentiate with respect to one design variable. The source does not depend on the design, so differentiating gives:
+
+$$
+\begin{aligned}
+\frac{\partial \mathbf{A}}{\partial p_i}\,\mathbf{E} + \mathbf{A}\,\frac{\partial \mathbf{E}}{\partial p_i} &= 0,\\
+\frac{\partial \mathbf{E}}{\partial p_i} &= -\mathbf{A}^{-1}\,\frac{\partial \mathbf{A}}{\partial p_i}\,\mathbf{E}.
+\end{aligned}
+$$
+
+<Symbols>
+
+- $\partial\mathbf{E}/\partial p_i$ — how the whole field changes when design variable $p_i$ changes
+- $\partial\mathbf{A}/\partial p_i$ — how the system matrix changes; for a pixel this is the permittivity change at that pixel only
+- $\mathbf{A}^{-1}$ — solving Maxwell's equations once more
+
+</Symbols>
+
+For a real objective of the complex field, the chain rule gives $dF/dp_i = 2\,\mathrm{Re}\big[(\partial F/\partial\mathbf{E})\,\partial\mathbf{E}/\partial p_i\big]$. Inserting the expression above and grouping the factors differently gives the adjoint formula:
+
+$$
+\begin{aligned}
+\frac{dF}{dp_i} &= -2\,\mathrm{Re}\!\left[\boldsymbol{\lambda}^{T}\,\frac{\partial \mathbf{A}}{\partial p_i}\,\mathbf{E}\right],\\
+\mathbf{A}^{T}\boldsymbol{\lambda} &= \left(\frac{\partial F}{\partial \mathbf{E}}\right)^{T}.
+\end{aligned}
+$$
+
+<Symbols>
+
+- $\boldsymbol{\lambda}$ — the **adjoint field**: the solution of a second simulation with matrix $\mathbf{A}^T$ and a source $\partial F/\partial\mathbf{E}$
+- $\partial F/\partial\mathbf{E}$ — sensitivity of the objective to the field; nonzero only where $F$ is measured (the output monitor)
+- $\mathbf{E}$ — the **forward field** from the ordinary simulation
+- $\mathrm{Re}$ — real part; the factor 2 appears because $F$ is real while $\mathbf{E}$ is complex (conventions differ between papers)
+
+</Symbols>
+
+The key point is that $\boldsymbol{\lambda}$ does not depend on $i$. One forward simulation gives $\mathbf{E}$, one adjoint simulation gives $\boldsymbol{\lambda}$, and then every component of the gradient is a cheap local product. For reciprocal materials $\mathbf{A}^T = \mathbf{A}$, so the adjoint simulation is an ordinary simulation with a source placed at the output monitor. Because $\partial\mathbf{A}/\partial\varepsilon$ is local, the sensitivity to the permittivity at a point is proportional to $\mathrm{Re}[\mathbf{E}(\mathbf{r})\cdot\boldsymbol{\lambda}(\mathbf{r})]$, the overlap of the forward and adjoint fields there. Meep's adjoint solver does exactly this: a forward and an adjoint time-domain run, with the gradient assembled from their Fourier-transformed fields.[^hammond2022]
+
+<Callout kind="note" title="Assumptions">
+
+The derivation assumes a linear problem with a well-defined derivative: linear, non-magnetic materials, a design that changes the permittivity smoothly (hence the continuous densities), and an objective that is a differentiable function of the fields. Nonlinear devices need an extended formulation.[^hughes] Several objectives (several wavelengths or fabrication variants) need one adjoint simulation each, or one per frequency group.
+
+</Callout>
+
+#### Filters, projection and fabricable designs
+
+Raw pixel densities left to themselves produce checkerboards and features far smaller than can be fabricated. Two operations are applied before every simulation (Fig. 2).
+
+First, a <Term id="en-filter" n={7}>density filter</Term> blurs the raw densities over a radius $r$:
+
+$$
+\begin{aligned}
+\tilde\rho_i &= \frac{\sum_j w_{ij}\,\rho_j}{\sum_j w_{ij}},\\
+w_{ij} &= \max\big(0,\; r - |\mathbf{x}_i - \mathbf{x}_j|\big)
+\end{aligned}
+$$
+
+<Symbols>
+
+- $\rho_j$ — raw design variable of pixel $j$; $\tilde\rho_i$ — filtered density of pixel $i$
+- $w_{ij}$ — cone-shaped ("conic") weight, largest for nearby pixels and zero beyond the radius
+- $r$ — filter radius (µm); $\mathbf{x}_i$ — position of pixel $i$
+
+</Symbols>
+
+Second, a <Term id="en-projection" n={8}>projection</Term> pushes the smooth filtered field back toward 0 or 1 with a smoothed threshold:[^wang]
+
+$$
+\bar\rho_i = \frac{\tanh(\beta\eta) + \tanh\big(\beta(\tilde\rho_i - \eta)\big)}{\tanh(\beta\eta) + \tanh\big(\beta(1-\eta)\big)} .
+$$
+
+<Symbols>
+
+- $\bar\rho_i$ — projected density used in the material interpolation
+- $\eta$ — threshold (0.5 for no bias)
+- $\beta$ — sharpness: $\beta \to 0$ leaves $\tilde\rho$ unchanged, $\beta \to \infty$ is a hard step
+
+</Symbols>
+
+$\beta$ is increased in stages during the optimization (**$\beta$-continuation**): a small $\beta$ keeps the problem smooth while the topology forms, and a large $\beta$ makes the design nearly binary at the end. The filter radius and the threshold together set a <Term id="en-length" n={9}>minimum length scale</Term>: features and gaps narrower than a size related to $r$ are suppressed, which is how fabrication limits enter the optimization.[^wang] [^hammond2021]
+
+The threshold also offers a simple model of fabrication error. Raising $\eta$ above 0.5 shrinks every feature slightly (an **eroded** design, like over-etching); lowering it grows every feature (**dilated**). <Term id="en-robust" n={10}>Robust optimization</Term> maximizes the average (or the worst case) of the objective over the eroded, nominal and dilated designs built from the same variables, so the result tolerates a known bias by construction.[^wang]
+
+<Glossary>
+<Def id="en-filter" n={7} term="Density filter">
+A local weighted average of the design variables. It prevents single-pixel features and checkerboards, and makes the optimized structure depend smoothly on the variables.
+</Def>
+<Def id="en-projection" n={8} term="Projection (and β-continuation)">
+A smoothed step function that maps filtered densities toward 0 or 1. Its steepness $\beta$ is raised in stages so that the design becomes binary without trapping the optimizer early.
+</Def>
+<Def id="en-length" n={9} term="Minimum length scale">
+The smallest feature (solid line or gap) that a design may contain, chosen to match the fabrication process. Filtering, projection and explicit constraints are used to enforce it.
+</Def>
+<Def id="en-robust" n={10} term="Robust optimization">
+Optimizing the performance over several perturbed versions of a design (for example eroded, nominal and dilated) instead of the nominal design only, so that the final device keeps its performance under fabrication variation.
+</Def>
+</Glossary>
+
+<Figure src={fig2} alt="Two panels of density versus position for a 1D toy example. Left: a noisy raw density between 0 and 1 and a smooth filtered version. Right: the filtered density after tanh projection with beta 4, which is still partly grey, with beta 32, which is nearly a square wave of 0 and 1, and with beta 32 and threshold 0.556, which gives slightly narrower features." caption="Filter and projection on a 1D toy density (closed-form illustration, not a simulation). Left: the conic filter removes pixel-scale noise. Right: the tanh projection with β = 4 still leaves grey values; β = 32 is nearly binary; raising the threshold to η = 0.556 shrinks every feature slightly (an eroded design)." number={2} size="wide" />
+
+#### Design guide: what changes what
+
+The same handful of settings decides the outcome of almost every inverse-design run. The list below gives their effect and the reason.
+
+<Callout kind="design" title="Rules of thumb">
+
+- **More design variables (parameters → pixels)** → more freedom and better optima, but only adjoint gradients stay affordable. *Why:* finite differences cost $N+1$ simulations.
+- **Larger design region** → higher performance; beyond a few wavelengths a conventional shape is already good and the gain vanishes. *Why:* more room for the field to turn.
+- **Larger filter radius $r$** → larger minimum features, fewer tiny holes, easier fabrication; peak performance may drop. *Why:* blurring over $r$.
+- **$\beta$ raised too fast** → the design binarizes before its topology is settled, giving a poorer local optimum. *Why:* the problem becomes non-smooth early.
+- **Different starting density** → a different local optimum; a uniform grey start can stall. *Why:* the problem is non-convex.
+- **Robust objective (eroded / nominal / dilated)** → much smaller sensitivity to a fabrication bias at little nominal cost, but 3× simulations per iteration. *Why:* the average penalizes fragile features.
+- **Objective at one vs many wavelengths** → broadband designs need a multi-wavelength (or worst-case) objective. *Why:* the optimizer only improves what it measures.
+- **Optimizer (MMA, Adam, L-BFGS)** → speed and constraint handling differ; the gradient is the same. *Why:* only the update algorithm changes.
+
+</Callout>
+
+### Simulation
+
+#### What is shown here
+
+The examples re-use saved results from my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit), computed with Meep's adjoint solver in 2D (effective-index silicon strip, $n_\text{core}=2.7$, $n_\text{clad}=1.44$, 500 nm wide waveguides, TE polarization). No new optimizations were run for this article. The [FDTD, FEM and RCWA](/blog/em-simulation-methods-fdtd-fem-rcwa/) article explains the FDTD method used for every simulation.
+
+#### Example 1: topology optimization of a compact bend
+
+The task is a 90° waveguide bend inside a 2.5 µm × 2.5 µm design region, about 1.85 wavelengths across. The region has $101 \times 101 = 10\,201$ pixels, the conic filter radius is 0.2 µm, and the objective is the transmission $|S_{21}|^2$ at 1.35 µm. The optimizer is MMA from NLopt, run for 80 iterations in four stages of 20 with $\beta = 4, 8, 16, 32$. Training used a resolution of 30 pixels/µm; the final binarized design was re-measured independently at 40 pixels/µm. The starting density was a corner-biased random field; a uniform grey start was tried and stalled.
+
+Fig. 3 shows the objective rising from 0.026 to 0.883 over the 80 iterations, with visible steps at each $\beta$ change, and the final designs. Each iteration cost one forward and one adjoint FDTD run, so the 10 201-component gradient was computed 80 times for the price of 160 simulations. Finite differences would have needed about 800 000.
+
+<Figure src={fig3} alt="Left: objective versus iteration from 1 to 80 for the single-objective and robust optimizations; both rise from about 0.03 to about 0.6 by iteration 20 and to about 0.88 by iteration 80, with dotted lines at the beta changes 4, 8, 16 and 32. Middle and right: the final binarized designs as green and white pixel maps of the 2.5 micrometre design region, a curved main path with a few small islands near the edges; the robust design has fewer small islands." caption="Adjoint topology optimization of a 90° bend (2.5 µm design region, 101 × 101 pixels). Left: objective |S₂₁|² at 1.35 µm in the training runs, for the single-objective and the robust (3-way averaged) optimization, with the β stages marked. Middle and right: final binarized designs (green: core). From data/sparams/bend_topopt_robust/final (notebooks 04 and 04b)." number={3} size="wide" />
+
+Is the result worth it? Fig. 4 (left) compares the optimized bend with a conventional Euler bend fitted into the same footprint, both measured at 40 pixels/µm. At 2.5 µm the optimized design transmits 0.816 against 0.625 for the Euler bend. The advantage shrinks as the footprint grows: at 4.05 µm the two are within 0.3 %, and at 4.5 µm the Euler bend is slightly better (0.968 against 0.964). Topology optimization pays off when the space is too small for a smooth shape, not when a smooth shape already works.
+
+#### Example 2: making the bend tolerant to fabrication
+
+The single-objective design was then tested under a ±10 nm boundary bias, modelled by projecting the same variables with thresholds $\eta_e = 0.556$ (eroded) and $\eta_d = 0.444$ (dilated), values calibrated to a 10 nm edge shift. Its transmission (0.797 in this continuous representation) dropped to 0.751 when eroded and 0.764 when dilated, a worst-case change of 0.046.
+
+A robust optimization from the same starting density, maximizing the average of the eroded, nominal and dilated transmissions, gave 0.810 nominal, 0.795 eroded and 0.807 dilated: a worst-case change of only 0.015, a third of before, with no loss of nominal performance (Fig. 4, right). The price was three forward and three adjoint runs per iteration, and about three times the run time (19 instead of 7 minutes). The robust design also has fewer small islands (Fig. 3), which is what one expects when fragile features are penalized.
+
+(The nominal values 0.797 and 0.816 for the same single-objective design differ because the bias test uses the continuous filter-and-projection pipeline, which can be eroded and dilated, while 0.816 is the hard-thresholded fabrication mask.)
+
+<Figure src={fig4} alt="Left: transmission versus design-region size from 2 to 4.5 micrometres for an Euler bend, rising from 0.47 to 0.97, and for the topology-optimized bend, rising from 0.69 to 0.96; the gap is largest at small sizes and closes by 4 micrometres. Right: grouped bars of transmission for eroded, nominal and dilated versions: the single-objective design drops from 0.80 to 0.75 and 0.76, while the robust design stays between 0.795 and 0.81." caption="Left: transmission at 1.35 µm of an Euler bend and of the topology-optimized bend at matched footprints (resolution 40, binarized designs). Right: transmission of the single-objective and robust designs when eroded (−10 nm), nominal and dilated (+10 nm). From notebook 04 Section 3, conventional_reference.json and data/design_points/bend_topopt_robust.yaml." number={4} size="wide" />
+
+#### Example 3: adjoint gradients for just two parameters
+
+The adjoint method is not tied to topology optimization. In the [grating coupler](/blog/grating-couplers-phase-matching-fdtd/) work, a conventional silicon-nitride grating has a fixed period and two free parameters: the tooth width and the etch depth. They were optimized for fiber-coupling efficiency with Meep adjoint gradients and Adam (30 steps, learning rate decaying from 20 nm to 2 nm per step), from three deliberately different starting points.
+
+All three runs reached nearly the same efficiency (Fig. 5): 0.371, 0.354 and 0.368 at the optimization resolution, from starts of 0.350, 0.021 and 0.033. With only two parameters, the whole landscape could also be mapped directly on a 7 × 7 grid; its best grid point, 0.360, lies slightly below the Adam results because the optimizer is not restricted to the grid. Re-evaluated at 160 pixels/µm, the best design gives −4.14 dB.
+
+This example shows the division of labour in Fig. 1. The formulation here is parameter optimization, not topology optimization, yet the gradient still comes from the adjoint method and the update from a standard optimizer. With two parameters, mapping the landscape is affordable and confirms the optimum; with ten thousand pixels, it is not, and the adjoint gradient is the only practical route.
+
+<Figure src={fig5} alt="Coupling efficiency versus Adam iteration from 0 to 30 for three starting points. One start begins near 0.35 and rises to 0.37; the other two start near 0.02 and 0.03, rise steeply and settle between 0.35 and 0.37. A dashed line at 0.36 marks the best point of the mapped grid." caption="Adam with adjoint gradients on the two-parameter SiN grating (tooth width and etch depth), from three starting points (efficiency at the optimization resolution of 60 pixels/µm). Dashed: best point of a 7 × 7 grid scan of the same two parameters. From meta/data/step2 (meta/notebooks/02_uniform_adam.ipynb)." number={5} />
+
+#### Summary
+
+| Part | Role | In the examples |
+|---|---|---|
+| Problem formulation | what the design variables are | 10 201 pixel densities (bend); 2 dimensions (grating) |
+| Gradient computation | adjoint method: one forward + one adjoint simulation | the same in both examples |
+| Update algorithm | uses the gradient to choose the next design | MMA (bend), Adam (grating) |
+| Fabrication | filter, projection, robust objective | 0.2 µm filter, β = 4→32, ±10 nm robust average |
+
+Topology optimization decides what may change, the adjoint method makes the gradient cheap, and the optimizer decides how to move. Good results come from choosing each part deliberately: a footprint where freedom actually helps, a filter that matches the process, a $\beta$ schedule that lets the topology form, and an objective that includes the variations the real device will see.
+
+### Code and data
+
+- Bend topology optimization: [`notebooks/04_bend_topology_optimization.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/04_bend_topology_optimization.ipynb); robust version: [`notebooks/04b_bend_topopt_robust.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/04b_bend_topopt_robust.ipynb)
+- Simulation modules: [`bend_topopt.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt.py), [`bend_topopt_robust.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt_robust.py); design points `data/design_points/bend_topopt*.yaml`
+- Two-parameter grating optimization: [`meta/notebooks/02_uniform_adam.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/02_uniform_adam.ipynb)
+- Figures 1–5 and the numbers above are produced from the saved data by `scripts/blog_figures/optimization.py` in the same repository. No new optimizations were run.
+
+---
+
+## 日本語
+
+**トポロジー最適化**は、デバイスのどこに材料を置くかを最適化アルゴリズムにピクセル単位で決めさせ、性能目標を最大化する設計手法です。フォトニクスでは、他の2つの要素と組み合わせて使います。設計を一歩ずつ更新する**勾配法による最適化**と、すべてのピクセルに対する勾配をわずか2回の電磁界シミュレーションで計算する**随伴法**です。この3つが合わさって、フォトニクスの<Term id="ja-inverse" n={1}>逆設計</Term>の中核を成しています。
+
+### 概要
+
+#### これらの手法が解く問題
+
+従来のフォトニクス設計では、既知の形(ベンドの半径、カプラの長さ、グレーティングの周期)から出発し、物理的な見通しと掃引で少数のパラメータを調整します。逆設計は向きを逆にします。設計者はデバイスが何をすべきか、たとえば「2.5 µm以内で90°の角を曲がる光をできるだけ多く通す」と指定し、アルゴリズムがそれを実現する構造を探します。その結果、どのパラメータ掃引でも見つからなかったような、小型で直感に反する形が得られることがあります[^molesky] [^jensen]。
+
+3つの用語はしばしば区別なく使われますが、手法の異なる部分を指しています(図1)。
+
+- **トポロジー最適化**は**問題の定式化**です。設計領域の各ピクセルの密度で設計を表すので、最適化アルゴリズムは構造を自由に生み出し、つなげ、消すことができます。
+- **勾配法による最適化**は**更新アルゴリズム**です。最急上昇法、Adam、L-BFGS、MMAは、目的関数の勾配を使って次の設計を選びます。
+- **随伴法**は**勾配の計算方法**です。順方向と随伴の2回のシミュレーションで、すべての設計変数に対する微分が一度に得られます。
+
+それぞれは他と切り離しても使えます。2つのパラメータの設計を随伴法の勾配とAdamで最適化することもできます(例は後で示します)。トポロジー最適化も原理的には勾配なしで行えますが、それはピクセルがごく少ない場合だけです。実際には、大規模なフォトニクスのトポロジー最適化が可能なのは、随伴法の勾配によって、ピクセル数によらず1反復のコストがシミュレーション2回で済むからです。
+
+<Figure src={fig1} alt="最適化ループの流れ図。設計変数がフィルタと投影を経て誘電率になり、順方向シミュレーションで目的関数が、随伴シミュレーションで誘電率に対するその微分が得られ、連鎖律で設計変数に対する微分が求まり、勾配法による更新で設計変数に戻る。ラベルが箱を、問題の定式化、勾配の計算、更新アルゴリズムにまとめている。" caption="随伴法によるトポロジー最適化の1反復。問題の定式化(藍)が設計変数を誘電率に写し、随伴法(青緑)が順方向と随伴のシミュレーションから勾配を求め、勾配法の最適化アルゴリズム(オリーブ)が設計を更新する。3つの部分は独立で、異なる組み合わせも可能。" number={1} size="wide" />
+
+<Glossary title="用語">
+<Def id="ja-inverse" n={1} term="逆設計">
+構造を選んでその性能を解析するのではなく、望む性能を指定してアルゴリズムに構造を探させる設計方法です。通常は、多数の設計変数と数値シミュレータを使った最適化で行います。
+</Def>
+</Glossary>
+
+### 理論
+
+#### 最適化問題
+
+どの最適化も3つの選択から始まります。何を最大化するか(<Term id="ja-objective" n={2}>目的関数</Term>)、何を変えてよいか、何を守らなければならないかです。形式的に書くと次のとおりです。
+
+$$
+\max_{\mathbf{p}}\; F\big(\mathbf{E}(\mathbf{p})\big) \quad \text{subject to} \quad \mathbf{A}(\mathbf{p})\,\mathbf{E} = \mathbf{b}, \quad 0 \le p_i \le 1
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{p}$ — 設計変数のベクトル(少数の幾何パラメータ、またはピクセルごとの密度)
+- $F$ — 目的関数。たとえば1つの波長での透過率 $|S_{21}|^2$
+- $\mathbf{E}$ — 設計に依存するシミュレーションの場
+- $\mathbf{A}(\mathbf{p})\,\mathbf{E} = \mathbf{b}$ — 離散化したMaxwell方程式($\mathbf{A}$ は誘電率を、$\mathbf{b}$ は光源を含む)
+- $0 \le p_i \le 1$ — 上下限。作製ルールを追加の制約として加えることもできる
+
+</Symbols>
+
+この制約は省けません。場 $\mathbf{E}$ は自由ではなく、そのときの構造についてMaxwell方程式を満たさなければなりません。そのため $F$ の評価1回ごとに電磁界シミュレーションが必要になり、工夫して計算しない限り勾配は高くつきます。
+
+フォトニクスの設計問題はほぼ必ず**非凸**で、多くの<Term id="ja-local" n={3}>局所最適解</Term>をもちます。勾配法が見つけるのは出発点の近くのよい設計であって、ありうる最善の設計ではありません。そのため出発点と最適化のスケジュールが重要になります。
+
+<Glossary title="用語">
+<Def id="ja-objective" n={2} term="目的関数(性能指数)">
+最適化アルゴリズムが最大化または最小化しようとする1つの数で、シミュレーションの場から計算します。複数の目標(複数の波長、両偏光、作製のばらつき)は、平均、最小値、重み付き和などで1つの目的関数にまとめます。
+</Def>
+<Def id="ja-local" n={3} term="局所最適解">
+どんな小さな変更でも改善できないが、別の場所にもっとよい設計があるかもしれない設計です。勾配法は局所最適解に収束するので、出発点が違えば最終設計も違うことがあります。
+</Def>
+</Glossary>
+
+#### パラメータ最適化とトポロジー最適化
+
+2つの定式化は、$\mathbf{p}$ が何を表すかで異なります。
+
+- **パラメータ(形状)最適化**では、$\mathbf{p}$ は少数の寸法(歯の幅、エッチ深さ、半径など)です。トポロジー(いくつの部品に分かれるか、穴がいくつあるか)は設計者が決めます。
+- **トポロジー最適化**では、設計領域を $N$ 個のピクセルに分け、各ピクセルが0(クラッド)から1(コア)の密度 $\rho_i$ をもちます[^bendsoe]。誘電率は材料補間によって密度から決まります。
+
+$$
+\varepsilon_r(\bar\rho_i) = \varepsilon_\text{clad} + \bar\rho_i\,\big(\varepsilon_\text{core} - \varepsilon_\text{clad}\big)
+$$
+
+<Symbols title="記号">
+
+- $\bar\rho_i$ — フィルタと投影(後述)を経たピクセル $i$ の密度。0から1の間
+- $\varepsilon_\text{clad}$、$\varepsilon_\text{core}$ — クラッドとコアの比誘電率($n^2$)
+- $\varepsilon_r(\bar\rho_i)$ — そのピクセルのシミュレーションで使う誘電率
+
+</Symbols>
+
+すべてのピクセルが変われるので、最適化の途中で構造が現れ、つながり、消えることができます。探索中は問題を連続で微分可能にするため中間の密度(「灰色」のピクセル)を許しますが、それは作製できないので、最終設計は0か1に押しやる必要があります。
+
+#### 勾配法による更新
+
+勾配 $\nabla F = (\partial F/\partial p_1, \dots, \partial F/\partial p_N)$ が与えられたとき、最も単純な更新は坂を上る方向に進むことです。
+
+$$
+\mathbf{p}^{(k+1)} = \mathbf{p}^{(k)} + \alpha\,\nabla F\big(\mathbf{p}^{(k)}\big)
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{p}^{(k)}$ — 反復 $k$ での設計
+- $\alpha$ — ステップの大きさ(学習率)
+- $\nabla F$ — すべての設計変数に対する目的関数の勾配
+
+</Symbols>
+
+実用的な最適化アルゴリズムはこれを改良したものです。<Term id="ja-adam" n={4}>Adam</Term>は勾配とその2乗の移動平均を保ち、変数ごとにステップを適応させてノイズを抑えます[^kingma]。L-BFGSは過去の勾配から曲率の近似を組み立てます[^lbfgs]。<Term id="ja-mma" n={5}>移動漸近線法(MMA)</Term>は単純な凸近似の列を解き、上下限や制約をうまく扱えるので、トポロジー最適化の定番になっています[^svanberg]。どれも勾配を必要とし、高くつくのはその勾配です。
+
+<Glossary title="用語">
+<Def id="ja-adam" n={4} term="Adam">
+過去の勾配とその2乗の移動平均で各ステップを調整する勾配法の最適化アルゴリズムです。調整がほとんど要らず、機械学習で広く使われています。上下限はクリッピングや射影でしか扱えません。
+</Def>
+<Def id="ja-mma" n={5} term="移動漸近線法(MMA)">
+構造のトポロジー最適化のために開発された最適化アルゴリズムです。各反復で問題を凸近似で置き換え、その漸近線を動かしてステップを制御するので、変数が多く制約がある問題でも安定です。MeepではNLoptのMMAやCCSAの実装が使われます。
+</Def>
+</Glossary>
+
+#### 随伴法:2回のシミュレーションで勾配全体を得る
+
+勾配を得る素直な方法は差分です。各 $p_i$ を少し変えて再びシミュレーションします。これには1反復あたり $N+1$ 回のシミュレーションが必要で、$101\times101$ ピクセルの設計なら約 $10^4$ 回です。<Term id="ja-adjoint" n={6}>随伴法</Term>は同じ勾配を2回で求めます[^giles] [^lalau]。
+
+<Glossary title="用語">
+<Def id="ja-adjoint" n={6} term="随伴法">
+1つの出力の多数の入力に対する勾配を、シミュレーション1回分の追加コストで計算する技法です。出力の感度で駆動される2つ目の「随伴」問題を解き、その解を元の解と組み合わせます。ニューラルネットワークの誤差逆伝播法と同じ考え方です。
+</Def>
+</Glossary>
+
+離散化したMaxwell方程式 $\mathbf{A}(\mathbf{p})\,\mathbf{E} = \mathbf{b}$ から出発し、1つの設計変数で微分します。光源は設計に依存しないので、微分すると次の式が得られます。
+
+$$
+\begin{aligned}
+\frac{\partial \mathbf{A}}{\partial p_i}\,\mathbf{E} + \mathbf{A}\,\frac{\partial \mathbf{E}}{\partial p_i} &= 0,\\
+\frac{\partial \mathbf{E}}{\partial p_i} &= -\mathbf{A}^{-1}\,\frac{\partial \mathbf{A}}{\partial p_i}\,\mathbf{E}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $\partial\mathbf{E}/\partial p_i$ — 設計変数 $p_i$ が変わったときに場全体がどう変わるか
+- $\partial\mathbf{A}/\partial p_i$ — 系の行列がどう変わるか。ピクセルの場合はそのピクセルの誘電率の変化だけ
+- $\mathbf{A}^{-1}$ — Maxwell方程式をもう一度解くこと
+
+</Symbols>
+
+複素数の場の実数値の目的関数では、連鎖律から $dF/dp_i = 2\,\mathrm{Re}\big[(\partial F/\partial\mathbf{E})\,\partial\mathbf{E}/\partial p_i\big]$ です。上の式を代入して因子のくくり方を変えると、次の随伴法の式が得られます。
+
+$$
+\begin{aligned}
+\frac{dF}{dp_i} &= -2\,\mathrm{Re}\!\left[\boldsymbol{\lambda}^{T}\,\frac{\partial \mathbf{A}}{\partial p_i}\,\mathbf{E}\right],\\
+\mathbf{A}^{T}\boldsymbol{\lambda} &= \left(\frac{\partial F}{\partial \mathbf{E}}\right)^{T}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $\boldsymbol{\lambda}$ — **随伴場**:行列 $\mathbf{A}^T$ と光源 $\partial F/\partial\mathbf{E}$ による2回目のシミュレーションの解
+- $\partial F/\partial\mathbf{E}$ — 場に対する目的関数の感度。$F$ を測る場所(出力モニタ)でだけゼロでない
+- $\mathbf{E}$ — 通常のシミュレーションによる**順方向の場**
+- $\mathrm{Re}$ — 実部。$F$ が実数で $\mathbf{E}$ が複素数なので係数2が現れる(論文によって慣習が異なる)
+
+</Symbols>
+
+要点は、$\boldsymbol{\lambda}$ が $i$ によらないことです。順方向シミュレーション1回で $\mathbf{E}$ が、随伴シミュレーション1回で $\boldsymbol{\lambda}$ が得られ、あとは勾配のどの成分も安い局所的な積で求まります。相反性のある材料では $\mathbf{A}^T = \mathbf{A}$ なので、随伴シミュレーションは、出力モニタの位置に光源を置いた普通のシミュレーションです。$\partial\mathbf{A}/\partial\varepsilon$ は局所的なので、ある点の誘電率に対する感度は、その点での順方向の場と随伴場の重なり $\mathrm{Re}[\mathbf{E}(\mathbf{r})\cdot\boldsymbol{\lambda}(\mathbf{r})]$ に比例します。Meepの随伴ソルバはまさにこれを行います。時間領域の順方向計算と随伴計算を1回ずつ行い、それらのFourier変換した場から勾配を組み立てます[^hammond2022]。
+
+<Callout kind="note" title="前提">
+
+この導出は、微分がきちんと定義できる線形の問題を仮定しています。線形で非磁性の材料、誘電率をなめらかに変える設計(そのため密度を連続にする)、場の微分可能な関数である目的関数です。非線形デバイスには拡張した定式化が必要です[^hughes]。複数の目的(複数の波長や作製のばらつき)には、それぞれに、または周波数のグループごとに、随伴シミュレーションが1回ずつ必要です。
+
+</Callout>
+
+#### フィルタ、投影、作製可能な設計
+
+ピクセルの密度をそのままにしておくと、市松模様や作製できないほど小さな構造ができてしまいます。そこで、毎回のシミュレーションの前に2つの操作を行います(図2)。
+
+まず<Term id="ja-filter" n={7}>密度フィルタ</Term>が、生の密度を半径 $r$ の範囲でぼかします。
+
+$$
+\begin{aligned}
+\tilde\rho_i &= \frac{\sum_j w_{ij}\,\rho_j}{\sum_j w_{ij}},\\
+w_{ij} &= \max\big(0,\; r - |\mathbf{x}_i - \mathbf{x}_j|\big)
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $\rho_j$ — ピクセル $j$ の生の設計変数、$\tilde\rho_i$ — ピクセル $i$ のフィルタ後の密度
+- $w_{ij}$ — 円錐形(conic)の重み。近いピクセルほど大きく、半径の外ではゼロ
+- $r$ — フィルタ半径(µm)、$\mathbf{x}_i$ — ピクセル $i$ の位置
+
+</Symbols>
+
+次に<Term id="ja-projection" n={8}>投影</Term>が、なめらかなしきい値処理によって、ぼかした場を0か1へ押し戻します[^wang]。
+
+$$
+\bar\rho_i = \frac{\tanh(\beta\eta) + \tanh\big(\beta(\tilde\rho_i - \eta)\big)}{\tanh(\beta\eta) + \tanh\big(\beta(1-\eta)\big)}
+$$
+
+<Symbols title="記号">
+
+- $\bar\rho_i$ — 材料補間に使う投影後の密度
+- $\eta$ — しきい値(偏りがなければ0.5)
+- $\beta$ — 鋭さ。$\beta \to 0$ では $\tilde\rho$ がそのまま、$\beta \to \infty$ では完全な階段になる
+
+</Symbols>
+
+$\beta$ は最適化の途中で段階的に大きくします(**$\beta$ の段階的増加**)。トポロジーができあがるまでは小さな $\beta$ で問題をなめらかに保ち、最後に大きな $\beta$ で設計をほぼ二値にします。フィルタ半径としきい値が合わさって<Term id="ja-length" n={9}>最小寸法</Term>が決まります。$r$ に関係する大きさより細い構造や隙間は抑えられ、これが作製上の制限を最適化に取り込む方法です[^wang] [^hammond2021]。
+
+しきい値は作製誤差の簡単なモデルにもなります。$\eta$ を0.5より上げるとすべての構造がわずかに細くなり(**侵食**した設計、エッチしすぎに相当)、下げるとすべての構造が太くなります(**膨張**)。<Term id="ja-robust" n={10}>ロバスト最適化</Term>は、同じ変数から作った侵食・公称・膨張の設計について目的関数の平均(または最悪値)を最大化するので、結果は既知の偏りに対して最初から強くなります[^wang]。
+
+<Glossary title="用語">
+<Def id="ja-filter" n={7} term="密度フィルタ">
+設計変数の局所的な重み付き平均です。1ピクセルだけの構造や市松模様を防ぎ、最適化される構造が変数になめらかに依存するようにします。
+</Def>
+<Def id="ja-projection" n={8} term="投影(とβの段階的増加)">
+フィルタ後の密度を0か1へ写す、なめらかな階段関数です。早い段階で最適化を行き詰まらせずに設計を二値にするため、鋭さ $\beta$ を段階的に上げていきます。
+</Def>
+<Def id="ja-length" n={9} term="最小寸法">
+設計に含めてよい最小の構造(線や隙間)の大きさで、作製プロセスに合わせて選びます。フィルタ、投影、明示的な制約で守らせます。
+</Def>
+<Def id="ja-robust" n={10} term="ロバスト最適化">
+公称の設計だけでなく、設計をずらした複数の版(たとえば侵食・公称・膨張)について性能を最適化し、作製ばらつきがあっても最終デバイスが性能を保つようにすることです。
+</Def>
+</Glossary>
+
+<Figure src={fig2} alt="1次元の簡単な例での密度と位置の関係の2パネル。左:0と1の間でばらつく生の密度と、そのなめらかなフィルタ後の分布。右:フィルタ後の密度をtanh投影したもので、β = 4ではまだ一部が灰色、β = 32ではほぼ0と1の矩形波、β = 32でしきい値0.556では構造がわずかに細くなる。" caption="1次元の簡単な密度分布に対するフィルタと投影(閉じた式による例示で、シミュレーションではない)。左:円錐フィルタがピクセル単位のノイズを取り除く。右:β = 4のtanh投影ではまだ灰色の値が残り、β = 32ではほぼ二値になる。しきい値を η = 0.556 に上げると、すべての構造がわずかに細くなる(侵食した設計)。" number={2} size="wide" />
+
+#### 設計の早見表:何を変えると何が変わるか
+
+ほとんどの逆設計の結果は、同じ少数の設定で決まります。以下にその効果と理由をまとめます。
+
+<Callout kind="design" title="経験則">
+
+- **設計変数を増やす(パラメータ → ピクセル)** → 自由度が増えてよい最適解が得られるが、現実的なのは随伴法の勾配だけになる。*理由:* 差分では $N+1$ 回のシミュレーションが必要。
+- **設計領域を大きくする** → 性能は上がる。数波長を超えると従来の形状でも十分よく、利得は消える。*理由:* 場が曲がる余裕が増える。
+- **フィルタ半径 $r$ を大きくする** → 最小構造が大きく、小さな穴が減り、作製しやすくなる。最高性能は下がることがある。*理由:* $r$ の範囲でぼかす。
+- **$\beta$ を急に上げる** → トポロジーが定まる前に二値化し、劣った局所最適解になる。*理由:* 問題が早く非なめらかになる。
+- **初期密度を変える** → 別の局所最適解になる。一様な灰色から始めると止まることがある。*理由:* 非凸な問題。
+- **ロバストな目的関数(侵食・公称・膨張)** → 作製の偏りへの感度がずっと小さくなり、公称性能の損失はわずか。ただし1反復のシミュレーション数は3倍。*理由:* 平均が壊れやすい構造を罰する。
+- **1波長か多波長かの目的関数** → 広帯域の設計には多波長(または最悪値)の目的関数が必要。*理由:* 最適化アルゴリズムは測ったものしか改善しない。
+- **最適化アルゴリズム(MMA、Adam、L-BFGS)** → 速さと制約の扱いが異なる。勾配は同じ。*理由:* 更新アルゴリズムだけの違い。
+
+</Callout>
+
+### シミュレーション
+
+#### ここで示すもの
+
+以下の例は、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)でMeepの随伴ソルバを使い2次元で計算した保存済みの結果を再利用しています(等価屈折率のシリコン細線、$n_\text{core}=2.7$、$n_\text{clad}=1.44$、導波路幅500 nm、TE偏波)。本記事のために新たな最適化は行っていません。すべての計算で使っているFDTD法については、[FDTD、FEM、RCWA](/blog/em-simulation-methods-fdtd-fem-rcwa/)の記事で説明しています。
+
+#### 例1:小型ベンドのトポロジー最適化
+
+課題は、2.5 µm × 2.5 µm(約1.85波長)の設計領域の中での90°導波路ベンドです。領域は $101 \times 101 = 10\,201$ ピクセル、円錐フィルタの半径は0.2 µm、目的関数は1.35 µmでの透過率 $|S_{21}|^2$ です。最適化アルゴリズムはNLoptのMMAで、$\beta = 4, 8, 16, 32$ の4段階を20反復ずつ、計80反復行いました。学習時の分解能は30 pixels/µmで、最終的な二値化設計は40 pixels/µmで独立に測り直しています。初期密度は角に偏ったランダムな場で、一様な灰色から始める方法も試しましたが、止まってしまいました。
+
+図3は、目的関数が80反復で0.026から0.883まで上がる様子(各 $\beta$ の切り替えで段差が見える)と、最終設計です。各反復は順方向と随伴のFDTD計算を1回ずつ要したので、10 201成分の勾配を80回、シミュレーション160回分のコストで計算したことになります。差分なら約80万回が必要でした。
+
+<Figure src={fig3} alt="左:単一目的とロバスト最適化の目的関数と反復1から80の関係。どちらも約0.03から反復20で約0.6、反復80で約0.88まで上がり、β = 4、8、16、32の切り替えに点線がある。中央と右:2.5マイクロメートルの設計領域の最終的な二値化設計を緑と白のピクセル図で示したもの。曲がった主経路と縁付近のいくつかの小さな島からなり、ロバスト設計の方が小さな島が少ない。" caption="90°ベンドの随伴法によるトポロジー最適化(設計領域2.5 µm、101 × 101ピクセル)。左:単一目的とロバスト(3通りの平均)最適化の学習時の目的関数 |S₂₁|²(1.35 µm)。βの段階を示す。中央と右:最終的な二値化設計(緑:コア)。data/sparams/bend_topopt_robust/final(ノートブック04と04b)より。" number={3} size="wide" />
+
+その結果に意味はあるでしょうか。図4(左)は、最適化したベンドと、同じ大きさに収めた従来のEulerベンドを、どちらも40 pixels/µmで測って比べたものです。2.5 µmでは、最適化した設計の透過率0.816に対しEulerベンドは0.625です。大きさが増えると利点は縮みます。4.05 µmでは両者の差は0.3 %以内で、4.5 µmではEulerベンドの方がわずかによくなります(0.968対0.964)。トポロジー最適化が効くのは、なめらかな形には狭すぎる空間であって、なめらかな形がすでにうまく働く場合ではありません。
+
+#### 例2:作製に強いベンドにする
+
+次に、単一目的の設計を±10 nmの境界の偏りのもとで試しました。同じ変数をしきい値 $\eta_e = 0.556$(侵食)と $\eta_d = 0.444$(膨張)で投影して偏りを模擬しています。これらの値は10 nmの縁のずれに対して較正したものです。透過率(この連続表現では0.797)は、侵食で0.751、膨張で0.764まで下がり、最悪の変化は0.046でした。
+
+同じ初期密度から、侵食・公称・膨張の透過率の平均を最大化するロバスト最適化を行うと、公称0.810、侵食0.795、膨張0.807となりました。最悪の変化はわずか0.015で以前の3分の1になり、公称性能も損なわれていません(図4右)。代償は1反復あたり順方向・随伴の計算が3回ずつになることで、計算時間はおよそ3倍(7分に対して19分)でした。ロバスト設計は小さな島も少なく(図3)、壊れやすい構造を罰すれば期待どおりの結果です。
+
+(同じ単一目的の設計の公称値が0.797と0.816で異なるのは、偏りの試験では侵食・膨張できる連続的なフィルタ・投影の表現を使い、0.816はしきい値で完全に二値化した作製用マスクの値だからです。)
+
+<Figure src={fig4} alt="左:設計領域の大きさ2から4.5マイクロメートルに対する透過率。Eulerベンドは0.47から0.97へ、トポロジー最適化したベンドは0.69から0.96へ上がり、差は小さい領域で最も大きく、4マイクロメートルでほぼなくなる。右:侵食・公称・膨張版の透過率の棒グラフ。単一目的の設計は0.80から0.75と0.76に下がり、ロバスト設計は0.795から0.81の間にとどまる。" caption="左:同じ大きさでのEulerベンドとトポロジー最適化したベンドの1.35 µmでの透過率(分解能40、二値化設計)。右:単一目的とロバストの設計を侵食(−10 nm)、公称、膨張(+10 nm)したときの透過率。ノートブック04の3節、conventional_reference.json、data/design_points/bend_topopt_robust.yaml より。" number={4} size="wide" />
+
+#### 例3:2つのパラメータだけに随伴法の勾配を使う
+
+随伴法はトポロジー最適化に限ったものではありません。[グレーティングカップラー](/blog/grating-couplers-phase-matching-fdtd/)の研究では、従来型の窒化シリコングレーティングは周期が固定で、自由なパラメータは歯の幅とエッチ深さの2つです。これを、Meepの随伴法の勾配とAdam(30ステップ、学習率は1ステップあたり20 nmから2 nmへ減衰)で、意図的に異なる3つの出発点からファイバ結合効率について最適化しました。
+
+3つの計算はいずれもほぼ同じ効率に達しました(図5)。出発点の0.350、0.021、0.033から、最適化の分解能でそれぞれ0.371、0.354、0.368です。パラメータが2つしかないので、7 × 7の格子で地形全体を直接調べることもできました。その最良の格子点0.360がAdamの結果をわずかに下回るのは、最適化アルゴリズムが格子に縛られないからです。160 pixels/µmで評価し直すと、最良の設計は−4.14 dBです。
+
+この例は図1の役割分担を示しています。ここでの定式化はトポロジー最適化ではなくパラメータ最適化ですが、勾配はやはり随伴法から、更新は標準的な最適化アルゴリズムから得ています。パラメータが2つなら地形を調べるのも安く、最適解を確かめられます。1万ピクセルではそれは不可能で、随伴法の勾配が唯一の現実的な方法です。
+
+<Figure src={fig5} alt="3つの出発点についてのAdam反復0から30に対する結合効率。1つは約0.35から0.37へ上がり、残り2つは約0.02と0.03から急に上がって0.35から0.37の間に落ち着く。0.36の破線が格子走査の最良点を示す。" caption="2パラメータ(歯の幅とエッチ深さ)のSiNグレーティングに対する、随伴法の勾配を使ったAdam。3つの出発点から(効率は最適化の分解能60 pixels/µmでの値)。破線:同じ2つのパラメータの7 × 7格子走査の最良点。meta/data/step2(meta/notebooks/02_uniform_adam.ipynb)より。" number={5} />
+
+#### まとめ
+
+| 部分 | 役割 | 例での対応 |
+|---|---|---|
+| 問題の定式化 | 設計変数が何か | 10 201個のピクセル密度(ベンド)、2つの寸法(グレーティング) |
+| 勾配の計算 | 随伴法:順方向1回 + 随伴1回のシミュレーション | 両方の例で同じ |
+| 更新アルゴリズム | 勾配を使って次の設計を選ぶ | MMA(ベンド)、Adam(グレーティング) |
+| 作製 | フィルタ、投影、ロバストな目的関数 | フィルタ0.2 µm、β = 4→32、±10 nmのロバスト平均 |
+
+トポロジー最適化は何を変えてよいかを決め、随伴法は勾配を安くし、最適化アルゴリズムはどう動くかを決めます。よい結果は、それぞれを意図して選ぶことから生まれます。自由度が実際に役立つ大きさの設計領域、プロセスに合ったフィルタ、トポロジーが形づくられる余裕のある $\beta$ のスケジュール、そして実際のデバイスが受けるばらつきを含む目的関数です。
+
+### コードとデータ
+
+- ベンドのトポロジー最適化:[`notebooks/04_bend_topology_optimization.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/04_bend_topology_optimization.ipynb)、ロバスト版:[`notebooks/04b_bend_topopt_robust.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/04b_bend_topopt_robust.ipynb)
+- シミュレーションモジュール:[`bend_topopt.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt.py)、[`bend_topopt_robust.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt_robust.py)、設計値 `data/design_points/bend_topopt*.yaml`
+- 2パラメータのグレーティング最適化:[`meta/notebooks/02_uniform_adam.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/02_uniform_adam.ipynb)
+- 図1–5と本文の数値は、保存済みデータから同リポジトリの `scripts/blog_figures/optimization.py` で作成しました。新たな最適化は行っていません。
+
+---
+
+## References / 参考文献
+
+[^molesky]: S. Molesky, Z. Lin, A. Y. Piggott, W. Jin, J. Vučković and A. W. Rodriguez, "Inverse design in nanophotonics," *Nature Photonics* **12**, 659–670 (2018). [doi:10.1038/s41566-018-0246-9](https://doi.org/10.1038/s41566-018-0246-9)
+[^jensen]: J. S. Jensen and O. Sigmund, "Topology optimization for nano-photonics," *Laser & Photonics Reviews* **5**, 308–321 (2011). [doi:10.1002/lpor.201000014](https://doi.org/10.1002/lpor.201000014)
+[^bendsoe]: M. P. Bendsøe and O. Sigmund, *Topology Optimization: Theory, Methods, and Applications* (Springer, 2004). [doi:10.1007/978-3-662-05086-6](https://doi.org/10.1007/978-3-662-05086-6)
+[^kingma]: D. P. Kingma and J. Ba, "Adam: A method for stochastic optimization," arXiv:1412.6980 (2014). [arXiv:1412.6980](https://arxiv.org/abs/1412.6980)
+[^lbfgs]: D. C. Liu and J. Nocedal, "On the limited memory BFGS method for large scale optimization," *Mathematical Programming* **45**, 503–528 (1989). [doi:10.1007/BF01589116](https://doi.org/10.1007/BF01589116)
+[^svanberg]: K. Svanberg, "The method of moving asymptotes—a new method for structural optimization," *International Journal for Numerical Methods in Engineering* **24**, 359–373 (1987). [doi:10.1002/nme.1620240207](https://doi.org/10.1002/nme.1620240207)
+[^giles]: M. B. Giles and N. A. Pierce, "An introduction to the adjoint approach to design," *Flow, Turbulence and Combustion* **65**, 393–415 (2000). [doi:10.1023/A:1011430410075](https://doi.org/10.1023/A:1011430410075)
+[^lalau]: C. M. Lalau-Keraly, S. Bhargava, O. D. Miller and E. Yablonovitch, "Adjoint shape optimization applied to electromagnetic design," *Optics Express* **21**, 21693 (2013). [doi:10.1364/OE.21.021693](https://doi.org/10.1364/OE.21.021693)
+[^hughes]: T. W. Hughes, M. Minkov, I. A. D. Williamson and S. Fan, "Adjoint method and inverse design for nonlinear nanophotonic devices," *ACS Photonics* **5**, 4781–4787 (2018). [doi:10.1021/acsphotonics.8b01522](https://doi.org/10.1021/acsphotonics.8b01522)
+[^hammond2022]: A. M. Hammond, A. Oskooi, M. Chen, Z. Lin, S. G. Johnson and S. E. Ralph, "High-performance hybrid time/frequency-domain topology optimization for large-scale photonics inverse design," *Optics Express* **30**, 4467 (2022). [doi:10.1364/OE.442074](https://doi.org/10.1364/OE.442074)
+[^wang]: F. Wang, B. S. Lazarov and O. Sigmund, "On projection methods, convergence and robust formulations in topology optimization," *Structural and Multidisciplinary Optimization* **43**, 767–784 (2011). [doi:10.1007/s00158-010-0602-y](https://doi.org/10.1007/s00158-010-0602-y)
+[^hammond2021]: A. M. Hammond, A. Oskooi, S. G. Johnson and S. E. Ralph, "Photonic topology optimization with semiconductor-foundry design-rule constraints," *Optics Express* **29**, 23916 (2021). [doi:10.1364/OE.431188](https://doi.org/10.1364/OE.431188)

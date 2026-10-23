@@ -68,7 +68,7 @@ The quality factor of a resonator, $Q = \lambda/\Delta\lambda$: the resonance wa
 
 #### One matrix, three architectures
 
-Every device here is built from the lossless coupler matrix
+Every device here is built from waveguide sections that only add phase (and loss) and from the lossless coupler matrix:
 
 $$
 \mathbf{C} = \begin{pmatrix} t & -j\kappa \\ -j\kappa & t \end{pmatrix}, \qquad t^2 + \kappa^2 = 1,
@@ -83,7 +83,7 @@ $$
 
 </Symbols>
 
-plus waveguide sections that only add phase (and loss). The [directional coupler article](/blog/directional-couplers-cmt-fdtd/) shows how $t$ and $\kappa$ follow from the coupling coefficient per unit length, the gap and the coupler length.
+The [directional coupler article](/blog/directional-couplers-cmt-fdtd/) shows how $t$ and $\kappa$ follow from the coupling coefficient per unit length, the gap and the coupler length.
 
 - **Coupling** (directional coupler) is already interference in disguise. Inside the coupler, the even and odd <Term id="en-supermode" n={7}>supermodes</Term> travel with different phase velocities, and their beating over the coupler length sets $t$ and $\kappa$. Its spectral response is slow, because nothing in it has a long path difference; it changes only through the wavelength dependence of the coupling (a simulated 50:50 coupler's cross:through split drifted from 39:61 to 63:37 across 100 nm).
 - **Interference** (Mach–Zehnder interferometer) is a feed-forward product, $\mathbf{C}\,\mathbf{A}\,\mathbf{C}$, where $\mathbf{A}$ holds the two arm phases. Two contributions with a phase difference $\Delta\phi$ add once, giving $\cos^2(\Delta\phi/2)$ for ideal couplers.
@@ -115,7 +115,7 @@ A finite-impulse-response (FIR) filter forms its output from a finite number of 
 
 #### Once versus many times: the finesse
 
-Fig. 2 puts a simulated MZI and a simulated racetrack ring on the same axis, detuning in units of each device's own FSR. Both have the same kind of periodicity,
+Fig. 2 puts a simulated MZI and a simulated racetrack ring on the same axis, detuning in units of each device's own FSR. Both have the same kind of periodicity:
 
 $$
 \mathrm{FSR} = \frac{\lambda^2}{n_g L},
@@ -129,7 +129,7 @@ $$
 
 </Symbols>
 
-but their shapes are completely different. The MZI's dip fills half the period, because two contributions interfering once give a sinusoid. The ring's dip occupies only a few percent, because many contributions must stay in phase.
+Their shapes, however, are completely different. The MZI's dip fills half the period, because two contributions interfering once give a sinusoid. The ring's dip occupies only a few percent, because many contributions must stay in phase.
 
 The ratio of period to width is the finesse. It is 2 for the MZI by construction, and for an all-pass ring it is
 
@@ -160,7 +160,7 @@ This one number explains most of the practical differences:
 
 #### Sensitivity and tolerance
 
-**Sensitivity is the flip side of finesse.** A ring needs a phase change only of order its linewidth to go from on to off resonance, roughly $F/2 \approx 14$ times less than the $\pi$ an MZI needs. That is why a ring modulator about 12 µm across can use the same plasma-dispersion effect that needs phase shifters millimetres long in an MZI. It is also why rings are so sensitive to fabrication and temperature. A change of effective index $\delta n_\text{eff}$ shifts a resonance by
+**Sensitivity is the flip side of finesse.** A ring needs a phase change only of order its linewidth to go from on to off resonance, roughly $F/2 \approx 14$ times less than the $\pi$ an MZI needs. That is why a ring modulator about 12 µm across can use the same plasma-dispersion effect that needs phase shifters millimetres long in an MZI. It is also why rings are so sensitive to fabrication and temperature. A change of effective index $\delta n_\text{eff}$ shifts a resonance by:
 
 $$
 \delta\lambda = \frac{\lambda\,\delta n_\text{eff}}{n_g},
@@ -174,7 +174,7 @@ $$
 
 </Symbols>
 
-and in the simulated waveguide a 1 nm change of width shifts the resonance by about 0.45 nm, comparable to the whole 0.5 nm linewidth. Rings are therefore usually tuned or locked in operation.
+In the simulated waveguide a 1 nm change of width shifts the resonance by about 0.45 nm, comparable to the whole 0.5 nm linewidth. Rings are therefore usually tuned or locked in operation.
 
 **Tolerance has a different signature in each device.** For the coupler, the coupling coefficient per unit length falls as $e^{-\gamma g}$ with the gap $g$ ($\gamma$ is the evanescent decay constant), so a 10 nm gap error changes the coupling by about 9 %. For the MZI, imperfect couplers do not move the fringes, but they limit the bar-port extinction to $1/(1-2K)^2$, with $K=\kappa^2$ the power cross-coupling, while the cross port still nulls. For the ring, the coupling error moves the device along the under- to over-coupled curve and changes the extinction, while index and width errors move the resonance itself.
 
@@ -289,7 +289,7 @@ Coupling, interference and resonance are three regimes of the same physics: opti
 
 #### 1つの行列から3つの構成へ
 
-ここで扱う素子はどれも、無損失カプラ行列
+ここで扱う素子はどれも、位相(と損失)だけを与える導波路区間と、次の無損失カプラ行列からできています。
 
 $$
 \mathbf{C} = \begin{pmatrix} t & -j\kappa \\ -j\kappa & t \end{pmatrix}, \qquad t^2 + \kappa^2 = 1
@@ -304,7 +304,7 @@ $$
 
 </Symbols>
 
-と、位相(と損失)だけを与える導波路区間からできています。$t$ と $\kappa$ が単位長さあたりの結合係数、ギャップ、カプラ長からどう決まるかは[方向性結合器の記事](/blog/directional-couplers-cmt-fdtd/)で示しています。
+$t$ と $\kappa$ が単位長さあたりの結合係数、ギャップ、カプラ長からどう決まるかは[方向性結合器の記事](/blog/directional-couplers-cmt-fdtd/)で示しています。
 
 - **結合**(方向性結合器)は、実は姿を変えた干渉です。カプラの中では偶・奇の<Term id="ja-supermode" n={7}>スーパーモード</Term>が異なる位相速度で進み、結合長にわたるそのうなりが $t$ と $\kappa$ を決めます。長い光路差がないので、スペクトルの応答はゆるやかで、結合の波長依存性を通じてのみ変化します(シミュレーションした50:50カプラのクロス:スルーの比は100 nmの範囲で39:61から63:37まで変化しました)。
 - **干渉**(Mach–Zehnder干渉計)はフィードフォワードの積 $\mathbf{C}\,\mathbf{A}\,\mathbf{C}$ です($\mathbf{A}$ は2本のアームの位相)。位相差 $\Delta\phi$ をもつ2つの寄与が一度だけ足し合わされ、理想的なカプラでは $\cos^2(\Delta\phi/2)$ になります。
@@ -336,7 +336,7 @@ $$
 
 #### 一度か、何度もか:フィネス
 
-図2は、シミュレーションしたMZIとレーストラック型リングを、それぞれ自分のFSRを単位とした離調という共通の軸に並べたものです。どちらも同じ種類の周期性
+図2は、シミュレーションしたMZIとレーストラック型リングを、それぞれ自分のFSRを単位とした離調という共通の軸に並べたものです。どちらも次の同じ種類の周期性をもちます。
 
 $$
 \mathrm{FSR} = \frac{\lambda^2}{n_g L}
@@ -350,9 +350,9 @@ $$
 
 </Symbols>
 
-をもちますが、形はまったく違います。MZIの谷は周期の半分を占めます。2つの寄与が一度だけ干渉すると正弦波になるからです。リングの谷は数%しか占めません。多くの寄与が位相をそろえ続ける必要があるからです。
+それなのに、形はまったく違います。MZIの谷は周期の半分を占めます。2つの寄与が一度だけ干渉すると正弦波になるからです。リングの谷は数%しか占めません。多くの寄与が位相をそろえ続ける必要があるからです。
 
-周期と幅の比がフィネスです。MZIでは構造上2で、オールパス型リングでは
+周期と幅の比がフィネスです。MZIでは構造上2で、オールパス型リングでは次のとおりです。
 
 $$
 F = \frac{\pi\sqrt{at}}{1-at}
@@ -365,7 +365,7 @@ $$
 
 </Symbols>
 
-です。シミュレーションしたリングのフィットした $t$ と $a$ からは30、FDTDの谷からは28が得られます。
+シミュレーションしたリングのフィットした $t$ と $a$ からは30、FDTDの谷からは28が得られます。
 
 <Figure src={fig2} alt="FSRで規格化した離調−0.5から0.5に対する透過パワー。MZIのクロス側は周期全体を占める幅広いsin²型の谷をもつ。リングのスルー側は1付近で平坦で、離調ゼロに約0.45まで下がる鋭い谷がある。" caption="一度の干渉と何度もの干渉。MZIのクロス側(ΔL = 12.5 µm)とレーストラック型リングのスルー側(Lc = 3 µm)のFDTDスペクトルを、それぞれ自分のFSRで割った離調に対して描いたもの。灰色:理想的なsin²と、フィットしたt、aによるオールパス式。フィネスはMZIで2、このリングで約28。notebooks/07_mzi.ipynb と notebooks/05_racetrack_resonator.ipynb の保存データより。" number={2} />
 
@@ -381,7 +381,7 @@ $$
 
 #### 感度とトレランス
 
-**感度はフィネスの裏返しです。** リングが共鳴からはずれるには線幅程度の位相変化で足り、MZIに必要な $\pi$ のおよそ $F/2 \approx 14$ 分の1です。そのため、MZIでは長さ数mmの位相シフタを必要とするプラズマ分散効果でも、直径約12 µmのリング変調器で利用できます。同じ理由で、リングは作製や温度にとても敏感です。実効屈折率が $\delta n_\text{eff}$ 変わると、共鳴は
+**感度はフィネスの裏返しです。** リングが共鳴からはずれるには線幅程度の位相変化で足り、MZIに必要な $\pi$ のおよそ $F/2 \approx 14$ 分の1です。そのため、MZIでは長さ数mmの位相シフタを必要とするプラズマ分散効果でも、直径約12 µmのリング変調器で利用できます。同じ理由で、リングは作製や温度にとても敏感です。実効屈折率が $\delta n_\text{eff}$ 変わると、共鳴は次の量だけずれます。
 
 $$
 \delta\lambda = \frac{\lambda\,\delta n_\text{eff}}{n_g}
@@ -395,7 +395,7 @@ $$
 
 </Symbols>
 
-だけずれます。シミュレーションした導波路では、幅が1 nm変わると共鳴が約0.45 nmずれ、これは線幅全体の0.5 nmに匹敵します。そのためリングは、動作中にチューニングやロックをかけるのが普通です。
+シミュレーションした導波路では、幅が1 nm変わると共鳴が約0.45 nmずれ、これは線幅全体の0.5 nmに匹敵します。そのためリングは、動作中にチューニングやロックをかけるのが普通です。
 
 **トレランスの現れ方は素子ごとに違います。** カプラでは、単位長さあたりの結合係数がギャップ $g$ に対して $e^{-\gamma g}$ で減る($\gamma$ はエバネッセント場の減衰定数)ので、ギャップが10 nmずれると結合が約9 %変わります。MZIでは、不完全なカプラは干渉縞を動かしませんが、クロス側が完全にゼロになる一方で、バー側の消光比を $1/(1-2K)^2$ に制限します($K=\kappa^2$ はパワーの交差結合)。リングでは、結合の誤差は素子をアンダー/オーバーカップリングの曲線に沿って動かして消光比を変え、屈折率や幅の誤差は共鳴そのものを動かします。
 

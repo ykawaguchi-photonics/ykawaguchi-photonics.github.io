@@ -112,7 +112,7 @@ The condition under which a grating reflects a guided wave back on itself: the w
 
 #### Where the power goes: directionality
 
-Once the grating radiates, the incident guided power splits four ways: radiated **up** toward the fiber, radiated **down** into the substrate, **transmitted** past the grating without being scattered, and **reflected** back into the input waveguide. The fraction going up is described by the <Term id="en-dir" n={6}>directionality</Term>. This article uses the definition
+Once the grating radiates, the incident guided power splits four ways: radiated **up** toward the fiber, radiated **down** into the substrate, **transmitted** past the grating without being scattered, and **reflected** back into the input waveguide. The fraction going up is described by the <Term id="en-dir" n={6}>directionality</Term>. This article uses the definition of Korček et al., the ratio of upward to total radiated power:[^korcek]
 
 $$
 D = \frac{P_\text{up}}{P_\text{up} + P_\text{down}},
@@ -125,7 +125,13 @@ $$
 
 </Symbols>
 
-the ratio of upward to total radiated power, as in Korček et al.[^korcek] Some authors instead define directionality relative to the input guided power, $P_\text{up}/P_\text{wg}$;[^marchetti] for the design below that would give 0.60 instead of 0.73, so the definition must be checked before comparing numbers.
+<Glossary>
+<Def id="en-dir" n={6} term="Directionality">
+The share of the light scattered by a grating that goes toward the fiber rather than into the substrate. A symmetric grating has a directionality near 50 %; overlays, multi-level etches and bottom mirrors raise it.
+</Def>
+</Glossary>
+
+Some authors instead define directionality relative to the input guided power, $P_\text{up}/P_\text{wg}$;[^marchetti] for the design below that would give 0.60 instead of 0.73, so the definition must be checked before comparing numbers.
 
 Directionality is a property of the vertical structure. A grating whose teeth are symmetric about the core scatters roughly equally up and down, which by itself would limit the efficiency to about 50 %; only the reflection from the layers below, or a deliberate up–down asymmetry, breaks that balance.[^marchetti]
 
@@ -146,12 +152,6 @@ $$
 </Symbols>
 
 $P_\text{up}$ (directionality and the unradiated remainder) and $M$ (beam shape) are controlled by different design parameters, so the factorization tells the designer what to improve.
-
-<Glossary>
-<Def id="en-dir" n={6} term="Directionality">
-The share of the light scattered by a grating that goes toward the fiber rather than into the substrate. A symmetric grating has a directionality near 50 %; overlays, multi-level etches and bottom mirrors raise it.
-</Def>
-</Glossary>
 
 <Callout kind="design" title="What this means for design">
 
@@ -204,9 +204,11 @@ A one-sided exponential overlaps a Gaussian at best about **80 %**, reached when
 
 <Callout kind="design" title="What this means for design">
 
-The decay length is set by how strongly each tooth scatters, that is, by the index contrast, the etch depth and the fill factor. A grating that scatters too weakly (long $L_d$) spreads the light over too long a region; one that scatters too strongly (short $L_d$) emits a beam narrower than the fiber mode. No uniform grating can exceed the 80 % limit, which is why high-efficiency designs use <Term id="en-apod" n={7}>apodization</Term>. In Fraser et al.'s simulations, their final, apodized design raises the overlap from 77 % to 90 %.[^fraser]
+The decay length is set by how strongly each tooth scatters, that is, by the index contrast, the etch depth and the fill factor. A grating that scatters too weakly (long $L_d$) spreads the light over too long a region; one that scatters too strongly (short $L_d$) emits a beam narrower than the fiber mode.
 
 </Callout>
+
+No uniform grating can exceed the 80 % limit, which is why high-efficiency designs use <Term id="en-apod" n={7}>apodization</Term>. In Fraser et al.'s simulations, their final, apodized design raises the overlap from 77 % to 90 %.[^fraser]
 
 <Glossary>
 <Def id="en-apod" n={7} term="Apodization">
@@ -412,7 +414,7 @@ $$
 
 **なぜファイバを傾けるのか。** 真上に放射させる($\theta=0$)と $P=\lambda/n_B$ となり、このとき**2次**の回折が<Term id="ja-bragg" n={5}>ブラッグ条件</Term> $2K_g = 2\beta$ を満たして、前進する導波モードをそのまま導波路へ反射し返してしまいます。周期をわずかに長くする($P > \lambda/n_B$)と放射が鉛直から傾き、この強い後方反射を抑えられます[^marchetti]。シリコンの設計では8–10°程度がよく使われ、他のプラットフォームでは数度から15°程度までの角度が使われます[^taillaert2006] [^marchetti]。
 
-**なぜ帯域が限られるのか。** グレーティング方程式は、波長によってビームがどう動くかも決めます。$n_B$ の分散を無視して微分すると
+**なぜ帯域が限られるのか。** グレーティング方程式は、波長によってビームがどう動くかも決めます。$n_B$ の分散を無視して微分すると、次のようになります(図2)。
 
 $$
 \frac{d\theta}{d\lambda} = -\frac{1}{P\,n_\text{clad}\cos\theta} \approx -0.044°\ \text{/nm}
@@ -426,7 +428,7 @@ $$
 
 </Symbols>
 
-となります(図2)。40 nmの帯域でビームは約2°振れるので、角度を固定したファイバとの重なりは設計波長の両側で下がります。
+40 nmの帯域でビームは約2°振れるので、角度を固定したファイバとの重なりは設計波長の両側で下がります。
 
 <Figure src={fig2} alt="折れ線グラフ:酸化膜中の放射角が、1280 nmの13度から1420 nmの7度まで直線的に減少し、1350 nmでファイバ角10度と交わる。" caption="酸化膜クラッド中の1次放射角と波長の関係。測定したブロッホ屈折率 n_B = 1.708 と P = 926 nm を用いたグレーティング方程式による(n_B の分散は無視)。ビームは設計波長1.35 µmでファイバ角10°と一致し、1 nmあたり約0.044°振れる。" number={2} />
 
@@ -457,6 +459,12 @@ $$
 
 </Symbols>
 
+<Glossary title="用語">
+<Def id="ja-dir" n={6} term="方向性">
+グレーティングで散乱された光のうち、基板ではなくファイバの方へ向かう割合です。上下対称なグレーティングでは約50 %で、オーバーレイ、多段エッチ、下部ミラーで高められます。
+</Def>
+</Glossary>
+
 これはKorčekらと同じく、放射された全パワーに対する上向き放射の比です[^korcek]。一方で、入射導波光のパワーに対する比 $P_\text{up}/P_\text{wg}$ で方向性を定義する文献もあります[^marchetti]。後の設計ではこの定義だと0.73ではなく0.60になるので、数値を比べる前に定義を確認する必要があります。
 
 方向性は鉛直方向の構造で決まる性質です。歯がコアに対して上下対称なら上下にほぼ等しく散乱し、それだけで効率は約50 %に制限されます。そのバランスを崩すのは、下の層からの反射か、意図的に作った上下の非対称性だけです[^marchetti]。
@@ -478,12 +486,6 @@ $$
 </Symbols>
 
 $P_\text{up}$(方向性と放射されずに残る分)と $M$(ビームの形)は異なる設計パラメータで決まるので、この分解は何を改善すべきかを教えてくれます。
-
-<Glossary title="用語">
-<Def id="ja-dir" n={6} term="方向性">
-グレーティングで散乱された光のうち、基板ではなくファイバの方へ向かう割合です。上下対称なグレーティングでは約50 %で、オーバーレイ、多段エッチ、下部ミラーで高められます。
-</Def>
-</Glossary>
 
 <Callout kind="design" title="設計上の意味">
 
@@ -536,9 +538,11 @@ $$
 
 <Callout kind="design" title="設計上の意味">
 
-減衰長は一つ一つの歯がどれだけ強く散乱するか、つまり屈折率差、エッチ深さ、フィルファクタで決まります。散乱が弱すぎる(長い $L_d$)と光が長すぎる範囲に広がり、強すぎる(短い $L_d$)とファイバモードより細いビームになります。一様なグレーティングでは80 %の上限を超えられないため、高効率の設計では<Term id="ja-apod" n={7}>アポダイゼーション</Term>を行います。Fraserらのシミュレーションでは、最終的なアポダイズ設計により重なりが77 %から90 %に上がっています[^fraser]。
+減衰長は一つ一つの歯がどれだけ強く散乱するか、つまり屈折率差、エッチ深さ、フィルファクタで決まります。散乱が弱すぎる(長い $L_d$)と光が長すぎる範囲に広がり、強すぎる(短い $L_d$)とファイバモードより細いビームになります。
 
 </Callout>
+
+一様なグレーティングでは80 %の上限を超えられないため、高効率の設計では<Term id="ja-apod" n={7}>アポダイゼーション</Term>を行います。Fraserらのシミュレーションでは、最終的なアポダイズ設計により重なりが77 %から90 %に上がっています[^fraser]。
 
 <Glossary title="用語">
 <Def id="ja-apod" n={7} term="アポダイゼーション">

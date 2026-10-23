@@ -1,0 +1,655 @@
+---
+title: "FDTD, FEM and RCWA"
+description: "FDTD, FEM and RCWA are the main methods for solving Maxwell's equations in photonics. How each works, what it costs, and which problems each one suits."
+date: 2026-10-22
+category: technical-notes
+tags: [FDTD, FEM, RCWA, electromagnetic simulation, Meep, silicon photonics]
+areas: [silicon-photonics]
+draft: true
+---
+
+import Figure from "@/components/Figure.astro";
+import Term from "@/components/Term.astro";
+import Glossary from "@/components/Glossary.astro";
+import Def from "@/components/Def.astro";
+import Symbols from "@/components/Symbols.astro";
+import Callout from "@/components/Callout.astro";
+import fig1 from "./fig1_discretization.png";
+import fig2 from "./fig2_convergence.png";
+
+**Language:** [English](#english) · [日本語](#日本語)
+
+## English
+
+**FDTD** (finite-difference time-domain), **FEM** (finite-element method) and **RCWA** (rigorous coupled-wave analysis) are the three most widely used numerical methods for solving Maxwell's equations in photonics. FDTD steps the fields forward in time on a regular grid, FEM solves for the fields at one frequency on a flexible mesh, and RCWA expands the fields of a periodic, layered structure in Fourier orders. Each is best suited to a different kind of problem.
+
+### Overview
+
+#### What electromagnetic simulation is for
+
+A photonic device is designed by asking how light behaves in a given geometry: how much is transmitted to each port, which guided modes exist, where the resonances are, into which directions a grating diffracts. For all but the simplest structures these questions have no closed-form answer, so Maxwell's equations are solved numerically. The result is a field distribution, from which the designer extracts the quantities that matter: <Term id="en-sparam" n={1}>S-parameters</Term>, effective indices, Q factors, diffraction efficiencies.
+
+Every numerical method replaces the continuous fields by a finite number of unknowns. How it does that decides what it is good at:
+
+- **FDTD** puts the fields on a regular grid and marches them in time. One run with a short pulse gives the response over a whole wavelength band.
+- **FEM** divides space into small elements (triangles or tetrahedra) that follow the geometry, and solves one frequency at a time. It is the method of choice for waveguide modes and curved or multi-scale structures.
+- **RCWA** treats a structure that is periodic in the plane and layered in depth. Inside each layer the fields are a sum of Fourier orders, and the layers are joined by matching boundary conditions. It is very efficient for gratings and metasurface unit cells.
+
+<Figure src={fig1} alt="Three schematic panels. Left: a square Yee grid with Hz at cell centres and Ex and Ey on cell edges, crossing a waveguide strip. Middle: a triangular mesh around a rectangular waveguide core, with smaller triangles near the core. Right: one period of a layered grating with a film, a patterned layer and a substrate, an incident wave and three diffracted orders labelled −1, 0 and +1." caption="How each method discretizes a problem (schematic). FDTD: field components staggered on a regular Yee grid, advanced in time. FEM: an unstructured mesh that follows the geometry, solved at one frequency. RCWA: a periodic structure cut into layers, with the fields in each layer written as a sum of Fourier (diffraction) orders." number={1} size="wide" />
+
+<Glossary>
+<Def id="en-sparam" n={1} term="S-parameters">
+Complex numbers $S_{ij}$ that give the output amplitude at port $i$ for a unit input at port $j$. Their squared magnitude is a power transmission or reflection, and their angle is the phase.
+</Def>
+</Glossary>
+
+### Theory
+
+#### Maxwell's equations in the time and frequency domains
+
+All three methods solve the same equations. In a linear, non-magnetic, source-free medium with relative permittivity $\varepsilon_r(\mathbf{r})$, Maxwell's curl equations are:
+
+$$
+\begin{aligned}
+\nabla\times\mathbf{E} &= -\mu_0\,\frac{\partial\mathbf{H}}{\partial t},\\
+\nabla\times\mathbf{H} &= \varepsilon_0\,\varepsilon_r(\mathbf{r})\,\frac{\partial\mathbf{E}}{\partial t}.
+\end{aligned}
+$$
+
+<Symbols>
+
+- $\mathbf{E}$ — electric field (V/m), a function of position $\mathbf{r}$ and time $t$
+- $\mathbf{H}$ — magnetic field (A/m)
+- $\varepsilon_0$ — vacuum permittivity
+- $\mu_0$ — vacuum permeability
+- $\varepsilon_r(\mathbf{r})$ — relative permittivity of the structure ($n^2$ for a lossless dielectric of index $n$); this is where the geometry enters
+
+</Symbols>
+
+This is the **time-domain** form, which FDTD solves directly. If the fields oscillate at a single angular frequency $\omega$, written as $\mathbf{E}(\mathbf{r})\,e^{j\omega t}$, the two equations combine into the **frequency-domain** wave equation, which FEM and RCWA solve:
+
+$$
+\nabla\times\nabla\times\mathbf{E} - k_0^2\,\varepsilon_r(\mathbf{r})\,\mathbf{E} = 0 .
+$$
+
+<Symbols>
+
+- $\mathbf{E}(\mathbf{r})$ — complex field amplitude at one frequency
+- $k_0 = \omega/c = 2\pi/\lambda$ — vacuum wavenumber (µm⁻¹)
+- $\lambda$ — vacuum wavelength (µm)
+
+</Symbols>
+
+The time convention $e^{+j\omega t}$ is used here; physics texts and Meep use $e^{-i\omega t}$, which flips the sign of $j$ but not the physics. A <Term id="en-domain" n={2}>time-domain</Term> method gets a whole spectrum from one run but must step through time; a frequency-domain method solves one wavelength (or one eigenmode problem) per run but needs no time stepping.
+
+Every method also has a resolution parameter: the grid spacing, the element size, or the number of Fourier orders. The answer is trustworthy only when it no longer changes as that parameter is refined. Checking this, a <Term id="en-convergence" n={3}>convergence study</Term>, is part of every simulation, not an optional extra.
+
+<Glossary>
+<Def id="en-domain" n={2} term="Time domain and frequency domain">
+A time-domain simulation follows how the fields evolve after a source is switched on; a Fourier transform of the recorded fields then gives the response at all frequencies contained in the source pulse. A frequency-domain simulation assumes the fields oscillate at one frequency and solves for their steady-state amplitude directly.
+</Def>
+<Def id="en-convergence" n={3} term="Convergence study">
+Repeating a simulation with a finer grid, smaller elements or more Fourier orders until the extracted quantity stops changing within the required accuracy. The remaining change estimates the numerical error.
+</Def>
+</Glossary>
+
+#### FDTD: fields stepped in time on a grid
+
+FDTD, introduced by Yee in 1966,[^yee] replaces the derivatives in Maxwell's curl equations by centred differences on a staggered grid, the <Term id="en-yee" n={4}>Yee grid</Term> (Fig. 1, left). The electric and magnetic field components sit half a cell apart in space and are updated half a time step apart ("leapfrog"). For a plane wave travelling along $z$ with components $E_x$ and $H_y$, the update of the electric field reads:
+
+$$
+E_x\big|_{k}^{\,n+1} = E_x\big|_{k}^{\,n} - \frac{\Delta t}{\varepsilon_0\varepsilon_r\,\Delta z}\Big(H_y\big|_{k+\frac12}^{\,n+\frac12} - H_y\big|_{k-\frac12}^{\,n+\frac12}\Big),
+$$
+
+<Symbols>
+
+- $E_x\big|_k^{\,n}$ — electric field at grid point $k$ (position $k\,\Delta z$) and time step $n$ (time $n\,\Delta t$)
+- $H_y\big|_{k\pm\frac12}^{\,n+\frac12}$ — magnetic field half a cell and half a time step away
+- $\Delta z$ — grid spacing (µm)
+- $\Delta t$ — time step (s)
+- $\varepsilon_r$ — relative permittivity at that grid point
+
+</Symbols>
+
+A matching update advances $H_y$ from the differences of $E_x$. Each update uses only neighbouring values, so a time step costs a fixed amount of work per cell, and the method is easy to run in parallel.
+
+The time step cannot be chosen freely. A wave must not travel more than about one cell per step, which gives the <Term id="en-courant" n={5}>Courant stability condition</Term>:[^cfl] [^taflove]
+
+$$
+c\,\Delta t \le \frac{1}{\sqrt{\Delta x^{-2}+\Delta y^{-2}+\Delta z^{-2}}} .
+$$
+
+<Symbols>
+
+- $\Delta x$, $\Delta y$, $\Delta z$ — grid spacings in the three directions (µm)
+- $\Delta t$ — time step (s)
+- $c$ — speed of light in vacuum; in a medium of minimum index $n_\text{min}$ the bound relaxes by $n_\text{min}$
+
+</Symbols>
+
+On a uniform grid with spacing $\Delta x$ in $D$ dimensions this becomes $c\,\Delta t \le \Delta x/\sqrt{D}$. Meep uses $c\,\Delta t = 0.5\,\Delta x$ by default, which satisfies this in one to three dimensions.[^meep]
+
+<Glossary>
+<Def id="en-yee" n={4} term="Yee grid">
+The staggered arrangement of field components used by FDTD: each electric-field component is surrounded by the magnetic-field components that determine its curl, and vice versa. It makes the centred differences second-order accurate and automatically keeps the fields divergence-free.
+</Def>
+<Def id="en-courant" n={5} term="Courant (CFL) condition">
+The stability limit of explicit time stepping, named after Courant, Friedrichs and Lewy: the time step must be short enough that information does not cross more than one cell per step. If it is violated, the fields grow without bound.
+</Def>
+</Glossary>
+
+Three further ingredients matter in practice:
+
+- **Open boundaries.** A finite grid must absorb outgoing waves without reflecting them. Bérenger's <Term id="en-pml" n={6}>perfectly matched layer (PML)</Term> does this and is the standard choice.[^berenger]
+- **Numerical dispersion.** On a grid, waves travel at slightly the wrong speed, and the error grows with the cell size relative to the wavelength in the material. A rule of thumb is at least 10–20 cells per wavelength; phase-sensitive quantities such as resonance wavelengths need more.
+- **Interfaces.** A tilted or curved interface becomes a staircase of cells. Meep's <Term id="en-subpixel" n={7}>subpixel averaging</Term> assigns each cell an effective permittivity and greatly reduces this error.[^farjadpour]
+
+<Glossary>
+<Def id="en-pml" n={6} term="Perfectly matched layer (PML)">
+An artificial absorbing layer around the simulation region, designed so that waves enter it without reflection at any angle and then decay. It imitates an infinite open space.
+</Def>
+<Def id="en-subpixel" n={7} term="Subpixel averaging">
+Giving each grid cell that is cut by an interface an averaged, generally anisotropic, permittivity instead of the value at its centre. It makes the results change smoothly as the geometry moves by less than a cell.
+</Def>
+</Glossary>
+
+The cost follows directly. Halving the cell size multiplies the number of cells by $2^D$ and, through the Courant condition, the number of time steps by 2. The run time therefore grows as:
+
+$$
+\text{cost} \propto \left(\frac{1}{\Delta x}\right)^{D+1} .
+$$
+
+<Symbols>
+
+- $1/\Delta x$ — resolution (cells per µm)
+- $D$ — number of dimensions: cost $\propto$ resolution³ in 2D and resolution⁴ in 3D
+
+</Symbols>
+
+This is why 3D FDTD of a whole device is expensive, and why 2D effective-index models are so widely used for design.
+
+#### FEM: a mesh that follows the geometry
+
+FEM divides the domain into small elements, usually triangles in 2D and tetrahedra in 3D, and represents the field inside each element by simple polynomial basis functions.[^jin] Instead of the wave equation itself, it solves its <Term id="en-weak" n={8}>weak form</Term>: the equation is multiplied by test functions $\mathbf{W}$ and integrated over the domain. The condition must hold for every test function $\mathbf{W}$:
+
+$$
+\int_\Omega \Big[(\nabla\times\mathbf{W})\cdot(\nabla\times\mathbf{E}) - k_0^2\,\varepsilon_r\,\mathbf{W}\cdot\mathbf{E}\Big]\,dV = 0 .
+$$
+
+<Symbols>
+
+- $\Omega$ — the simulation domain
+- $dV$ — volume (or, in 2D, area) element
+- $\mathbf{W}$ — test functions, taken from the same set of basis functions as $\mathbf{E}$
+- $k_0$ — vacuum wavenumber (µm⁻¹)
+- $\varepsilon_r$ — relative permittivity of each element
+
+</Symbols>
+
+Boundary terms for ports and absorbing layers are omitted here. Expanding $\mathbf{E}$ in the basis functions turns the weak form into a large but sparse matrix problem, solved once per frequency:
+
+$$
+\left(\mathbf{K} - k_0^2\,\mathbf{M}\right)\mathbf{e} = \mathbf{f} .
+$$
+
+<Symbols>
+
+- $\mathbf{e}$ — vector of unknown field coefficients (one or more per mesh edge or node)
+- $\mathbf{K}$ — "stiffness" matrix from the curl terms
+- $\mathbf{M}$ — "mass" matrix weighted by $\varepsilon_r$
+- $\mathbf{f}$ — excitation (sources and ports); with $\mathbf{f} = 0$ the problem becomes an eigenvalue problem
+
+</Symbols>
+
+For a waveguide cross-section, the same machinery gives an eigenvalue problem whose eigenvalues are the propagation constants $\beta = 2\pi n_\text{eff}/\lambda$ of the guided modes. That is what a <Term id="en-modesolver" n={9}>mode solver</Term> computes.[^rahman]
+
+The strength of FEM is the mesh. Small elements can be placed where the field changes quickly (thin layers, sharp corners, metal surfaces) and large ones elsewhere, and curved boundaries are followed rather than staircased. Its cost is that every frequency needs a new solve, and the sparse system for a large 3D structure can need a lot of memory.
+
+<Glossary>
+<Def id="en-weak" n={8} term="Weak form">
+An integral version of a differential equation, obtained by multiplying it by test functions and integrating by parts. It needs only first derivatives of the fields, which makes simple piecewise-polynomial approximations on a mesh possible.
+</Def>
+<Def id="en-modesolver" n={9} term="Mode solver">
+A program that finds the guided modes of a waveguide cross-section: their field profiles and effective indices. It solves an eigenvalue problem at one wavelength, usually with FEM or finite differences.
+</Def>
+</Glossary>
+
+#### RCWA: Fourier orders in a layered periodic structure
+
+RCWA, formulated for planar gratings by Moharam and Gaylord,[^moharam1981] applies to structures that are periodic in the plane with period $\Lambda$ and piecewise uniform in depth (Fig. 1, right). In each layer the permittivity is expanded in a Fourier series:
+
+$$
+\varepsilon_r(x) = \sum_{h} \varepsilon_h\, e^{\,j h K x} .
+$$
+
+<Symbols>
+
+- $\varepsilon_h$ — Fourier coefficients of the permittivity profile of the layer
+- $h$ — integer harmonic index
+- $K = 2\pi/\Lambda$ — grating wave vector (µm⁻¹)
+- $\Lambda$ — period (µm)
+
+</Symbols>
+
+The field is written as a sum of <Term id="en-orders" n={10}>diffraction orders</Term> whose in-plane wave vectors are fixed by the period:
+
+$$
+k_{x,m} = k_0\left(n_\text{in}\sin\theta - m\,\frac{\lambda}{\Lambda}\right) .
+$$
+
+<Symbols>
+
+- $k_{x,m}$ — in-plane wave vector of order $m$ (µm⁻¹)
+- $m$ — diffraction order, $0, \pm1, \pm2, \dots$
+- $n_\text{in}$ — index of the incidence medium
+- $\theta$ — angle of incidence
+
+</Symbols>
+
+An order propagates in a medium of index $n$ only if $|k_{x,m}| < k_0 n$; otherwise it is evanescent. This is the grating equation in another form. Keeping $N$ orders, Maxwell's equations inside each layer become an $N\times N$ (per polarization) eigenvalue problem whose eigenvectors are the layer's own modes. The layers are then joined by matching the tangential fields at each interface, using a numerically stable <Term id="en-smatrix" n={11}>S-matrix</Term> formulation.[^moharam1995] [^s4] The output is the efficiency and phase of every reflected and transmitted order.
+
+Two numerical points decide RCWA's accuracy:
+
+- **Truncation.** Only a finite number of orders can be kept. The results converge as $N$ grows, slowly for high-contrast or metallic gratings. For TM polarization the convergence was transformed by Li's rules for multiplying Fourier series of discontinuous functions, which every modern code implements.[^li]
+- **Cost.** Each layer needs an eigenvalue solve of size $N$, with a cost that scales as $N^3$. A 1D-periodic structure needs $N = 2M+1$ orders, but a 2D-periodic one needs about $(2M+1)^2$, so 2D metasurface cells with fine features become expensive. Curved or slanted profiles are approximated by a staircase of thin layers.
+
+<Glossary>
+<Def id="en-orders" n={10} term="Diffraction (Fourier) orders">
+A periodic structure can only scatter light into a discrete set of directions. Each direction corresponds to adding an integer multiple of the grating wave vector $2\pi/\Lambda$ to the incident in-plane wave vector. Orders that cannot propagate decay away from the surface.
+</Def>
+<Def id="en-smatrix" n={11} term="S-matrix (scattering matrix)">
+A matrix that relates the outgoing wave amplitudes of a structure to the incoming ones. Combining the S-matrices of individual layers gives the response of the whole stack while avoiding the numerical overflow of growing evanescent waves.
+</Def>
+</Glossary>
+
+#### Comparison and choice of method
+
+| | FDTD | FEM | RCWA |
+|---|---|---|---|
+| Domain | time | frequency | frequency |
+| Discretization | regular grid | unstructured mesh | layers × Fourier orders |
+| Geometry | any; interfaces staircased (subpixel averaging helps) | any; curved and multi-scale shapes followed | periodic in-plane, layered in depth |
+| One run gives | a broad spectrum | one frequency (or a set of modes) | one frequency, all diffraction orders |
+| Main cost driver | cells × time steps, $\propto (1/\Delta x)^{D+1}$ | sparse solve, memory in 3D | eigenproblem per layer, $\propto N^3$ |
+| High-Q resonances | long runs (field must decay) | direct (eigenfrequencies) | sharp features need fine wavelength sampling |
+| Typical PIC use | couplers, MZIs, rings, gratings: broadband S-parameters | waveguide modes, bends, thermal/electrical co-simulation | grating unit cells, metasurfaces, periodic stacks |
+
+The table describes the methods; the practical question is the reverse one: given a design task, which method should be used first?
+
+<Callout kind="design" title="Which method for which problem">
+
+- **Broadband transmission and phase of a component** → FDTD. One pulsed run covers the band and gives S-parameters with phase.
+- **Effective index, group index, mode profile** → FEM or a finite-difference mode solver. It is an eigenvalue problem on the cross-section; no propagation is needed.
+- **Curved, thin or metal features at one wavelength** → FEM. The mesh follows the geometry and refines locally.
+- **Diffraction efficiencies of a periodic grating or metasurface cell** → RCWA. The period is built in, and all orders come out at once.
+- **A quick estimate for a long, slowly varying structure** → a mode solver with coupled-mode theory or eigenmode expansion, far cheaper than a full-wave run.
+- **A trustworthy number from any method** → a convergence study. The answer must not depend on the resolution.
+
+A design flow often combines them: a mode solver for the cross-section, FDTD or FEM for the component, RCWA for periodic sub-structures, and a circuit model built from the resulting S-parameters.
+
+</Callout>
+
+### Simulation
+
+#### What is shown here
+
+This article runs no new simulations. The examples below re-use saved FDTD and mode-solver results from my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit), computed with Meep[^meep] in 2D. FEM and RCWA are described from the literature; no FEM or RCWA results of my own are shown.
+
+#### FDTD convergence in practice
+
+Fig. 2 shows a resolution study from the [grating coupler](/blog/grating-couplers-phase-matching-fdtd/) work: the fiber-coupling efficiency of a silicon-nitride grating (an early, unoptimized design at 1.3 µm) computed at eight resolutions from 20 to 160 pixels/µm, with the geometry represented in two ways.
+
+- With Meep's **subpixel-averaged blocks**, the efficiency jumps up and down by a few tenths of a dB from one resolution to the next (−11.5, −11.6, −11.6, −11.4 dB between 80 and 160 pixels/µm). Each grating tooth is an edge that falls at a different place relative to the grid at each resolution.
+- With a **per-cell fill fraction**, the same quantity changes smoothly and monotonically (−12.0, −11.9, −11.8, −11.7 dB). A smooth trend can be extrapolated; a scattered one only sets an error bar.
+
+The two representations differ by about 0.3 dB even at 160 pixels/µm. That spread is the honest numerical uncertainty of this model, and it was the reason the final grating numbers were computed with the smooth representation at 160 pixels/µm.
+
+The right panel shows the cost. The wall time per run grows from 2.6 s at 20 pixels/µm to 2200 s at 160 pixels/µm, a log-log slope of 3.2, close to the slope of 3 predicted for 2D FDTD. An eightfold finer grid costs almost a thousand times more.
+
+<Figure src={fig2} alt="Two panels versus resolution from 20 to 160 pixels per micrometre on a log axis. Left: coupling efficiency in dB; the subpixel-averaged block curve scatters between about minus 10.6 and minus 11.9 dB, while the fill-fraction curve rises smoothly from minus 12.4 to minus 11.7 dB after a low point at 30. Right: wall time per run on log-log axes, rising from about 3 s to about 2200 s along a dashed line proportional to resolution cubed." caption="Left: fiber-coupling efficiency of a SiN grating coupler (early one-tooth-per-period design, λ = 1.3 µm) versus FDTD resolution, for two representations of the same geometry. Right: wall time per 2D run, with a line ∝ resolution³ for comparison. From meta/data/step1 (mesh study of meta/notebooks/01_sin_validation_mesh.ipynb)." number={2} size="wide" />
+
+#### Mode solver versus FDTD
+
+A frequency-domain mode solver and a time-domain FDTD run can answer the same question in two independent ways. In the [directional coupler](/blog/directional-couplers-cmt-fdtd/) work, a 1D finite-difference mode solver gave the even and odd supermode indices of a coupled waveguide pair, $n_e = 2.4299$ and $n_o = 2.4093$, and hence a coupling coefficient $\kappa = \pi(n_e - n_o)/\lambda = 0.0480\ \mu\text{m}^{-1}$. A 17-point FDTD sweep of the full coupler gave $0.0486\ \mu\text{m}^{-1}$, 1.4 % higher. The mode solve takes seconds; the FDTD sweep takes hours but also captures the S-bends, radiation loss and the wavelength dependence. Using the cheap method to check the expensive one is the most useful habit in simulation.
+
+#### Why most design runs are 2D
+
+The device articles on this site use 2D effective-index FDTD, and the cost scaling explains why. A 2D run at 25–40 pixels/µm takes minutes; the corresponding 3D run is larger by the number of cells across the third dimension and needs a finer grid to resolve a 220 nm silicon layer. A 3D grating-coupler simulation in the same toolkit, run with the JAX-based solver fdtdx on a 36.7 nm grid, already carries an estimated ±10 % uncertainty from that grid. 2D models are used to understand and optimize; 3D runs are reserved for final checks.
+
+#### Summary
+
+Each method has one resolution parameter to converge: the cell size $\Delta x$ for FDTD (with the Courant limit on the time step), the element size and order for FEM, and the number of Fourier orders $N$ for RCWA (with Li's rules for TM light). Whichever method is used, the number that goes into a design is only as good as the convergence study and the independent check behind it.
+
+### Code and data
+
+- Grating mesh-convergence study: [`meta/notebooks/01_sin_validation_mesh.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/01_sin_validation_mesh.ipynb) (saved data in `meta/data/step1`)
+- Directional-coupler supermode solve and FDTD sweep: [`notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/06_directional_coupler.ipynb)
+- 3D track (fdtdx): [`3d/`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/tree/main/3d)
+- Figures 1 and 2 and the numbers above are produced from the saved data by `scripts/blog_figures/em_methods.py` in the same repository. No new simulations were run.
+
+---
+
+## 日本語
+
+**FDTD**(時間領域差分法)、**FEM**(有限要素法)、**RCWA**(厳密結合波解析)は、フォトニクスでMaxwell方程式を解くために最も広く使われている3つの数値計算手法です。FDTDは規則的な格子の上で場を時間方向に進め、FEMは柔軟なメッシュの上で1つの周波数の場を解き、RCWAは周期的な積層構造の場をFourier次数で展開します。それぞれ得意な問題が異なります。
+
+### 概要
+
+#### 電磁界シミュレーションは何のためにあるか
+
+光デバイスの設計では、ある形状の中で光がどう振る舞うかを問います。各ポートへどれだけ透過するか、どんな導波モードがあるか、共鳴はどこにあるか、グレーティングはどの方向へ回折するか、です。ごく単純な構造を除けば、これらの問いに閉じた形の答えはないので、Maxwell方程式を数値的に解きます。得られるのは場の分布で、設計者はそこから必要な量、つまり<Term id="ja-sparam" n={1}>Sパラメータ</Term>、実効屈折率、Q値、回折効率などを取り出します。
+
+どの数値計算手法も、連続な場を有限個の未知数で置き換えます。その置き換え方が、何を得意とするかを決めます。
+
+- **FDTD**は場を規則的な格子に置き、時間方向に進めます。短いパルスで1回計算すれば、波長帯全体の応答が得られます。
+- **FEM**は空間を形状に沿った小さな要素(三角形や四面体)に分け、1つの周波数ずつ解きます。導波モードや、曲面・寸法の大きく異なる構造に最適な手法です。
+- **RCWA**は面内で周期的、深さ方向に層状の構造を扱います。各層の中で場をFourier次数の和で表し、境界条件を合わせて層をつなぎます。グレーティングやメタサーフェスの単位セルでは非常に効率的です。
+
+<Figure src={fig1} alt="3つの模式図。左:導波路の帯を横切る正方形のYee格子で、Hzがセル中心、ExとEyがセルの辺にある。中央:長方形の導波路コアの周りの三角形メッシュで、コア付近ほど三角形が小さい。右:薄膜、パターン層、基板からなる積層グレーティングの1周期と、入射波および−1、0、+1と記された3つの回折次数。" caption="各手法による問題の離散化(模式図)。FDTD:規則的なYee格子にずらして配置した場の成分を時間方向に進める。FEM:形状に沿った非構造メッシュで、1つの周波数について解く。RCWA:周期構造を層に分け、各層の場をFourier(回折)次数の和で表す。" number={1} size="wide" />
+
+<Glossary title="用語">
+<Def id="ja-sparam" n={1} term="Sパラメータ">
+ポート $j$ に単位振幅を入れたときのポート $i$ の出力振幅を表す複素数 $S_{ij}$ です。絶対値の2乗がパワーの透過率や反射率、偏角が位相を表します。
+</Def>
+</Glossary>
+
+### 理論
+
+#### 時間領域と周波数領域のMaxwell方程式
+
+3つの手法はどれも同じ方程式を解きます。比誘電率 $\varepsilon_r(\mathbf{r})$ をもつ線形・非磁性で源のない媒質では、Maxwellの回転の方程式は次のとおりです。
+
+$$
+\begin{aligned}
+\nabla\times\mathbf{E} &= -\mu_0\,\frac{\partial\mathbf{H}}{\partial t},\\
+\nabla\times\mathbf{H} &= \varepsilon_0\,\varepsilon_r(\mathbf{r})\,\frac{\partial\mathbf{E}}{\partial t}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{E}$ — 電場(V/m)。位置 $\mathbf{r}$ と時間 $t$ の関数
+- $\mathbf{H}$ — 磁場(A/m)
+- $\varepsilon_0$ — 真空の誘電率
+- $\mu_0$ — 真空の透磁率
+- $\varepsilon_r(\mathbf{r})$ — 構造の比誘電率(屈折率 $n$ の無損失誘電体では $n^2$)。形状はここに入る
+
+</Symbols>
+
+これが**時間領域**の形で、FDTDはこれを直接解きます。場が1つの角周波数 $\omega$ で振動し、$\mathbf{E}(\mathbf{r})\,e^{j\omega t}$ と書けるとすると、2つの式は次の**周波数領域**の波動方程式にまとまります。FEMとRCWAが解くのはこちらです。
+
+$$
+\nabla\times\nabla\times\mathbf{E} - k_0^2\,\varepsilon_r(\mathbf{r})\,\mathbf{E} = 0
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{E}(\mathbf{r})$ — 1つの周波数での複素場振幅
+- $k_0 = \omega/c = 2\pi/\lambda$ — 真空中の波数(µm⁻¹)
+- $\lambda$ — 真空中の波長(µm)
+
+</Symbols>
+
+ここでは時間依存 $e^{+j\omega t}$ を使います。物理の教科書やMeepは $e^{-i\omega t}$ を使い、$j$ の符号は反転しますが物理は変わりません。<Term id="ja-domain" n={2}>時間領域</Term>の手法は1回の計算でスペクトル全体を得られますが、時間を少しずつ進める必要があります。周波数領域の手法は1回の計算で1つの波長(または1つの固有モード問題)を解きますが、時間発展は要りません。
+
+どの手法にも分解能のパラメータがあります。格子間隔、要素の大きさ、Fourier次数の数です。答えが信頼できるのは、そのパラメータを細かくしても答えが変わらなくなったときだけです。これを確かめる<Term id="ja-convergence" n={3}>収束確認</Term>は、どのシミュレーションでも欠かせない作業であり、省いてよいものではありません。
+
+<Glossary title="用語">
+<Def id="ja-domain" n={2} term="時間領域と周波数領域">
+時間領域のシミュレーションは、光源を入れた後に場がどう時間変化するかを追い、記録した場をFourier変換して、光源パルスに含まれるすべての周波数での応答を得ます。周波数領域のシミュレーションは、場が1つの周波数で振動すると仮定して、定常状態の振幅を直接解きます。
+</Def>
+<Def id="ja-convergence" n={3} term="収束確認">
+格子を細かく、要素を小さく、あるいはFourier次数を多くしてシミュレーションを繰り返し、取り出す量が必要な精度の範囲で変わらなくなるまで確かめることです。残る変化が数値誤差の目安になります。
+</Def>
+</Glossary>
+
+#### FDTD:格子の上で場を時間方向に進める
+
+1966年にYeeが導入したFDTDは[^yee]、Maxwellの回転の方程式の微分を、ずらした格子、つまり<Term id="ja-yee" n={4}>Yee格子</Term>(図1左)の上の中心差分で置き換えます。電場と磁場の成分は空間で半セル、時間で半ステップずれた位置にあり、交互に更新されます(リープフロッグ)。成分 $E_x$ と $H_y$ をもち $z$ 方向に進む平面波では、更新式は次のようになります。
+
+$$
+E_x\big|_{k}^{\,n+1} = E_x\big|_{k}^{\,n} - \frac{\Delta t}{\varepsilon_0\varepsilon_r\,\Delta z}\Big(H_y\big|_{k+\frac12}^{\,n+\frac12} - H_y\big|_{k-\frac12}^{\,n+\frac12}\Big)
+$$
+
+<Symbols title="記号">
+
+- $E_x\big|_k^{\,n}$ — 格子点 $k$(位置 $k\,\Delta z$)、時間ステップ $n$(時刻 $n\,\Delta t$)での電場
+- $H_y\big|_{k\pm\frac12}^{\,n+\frac12}$ — 半セル、半ステップずれた位置の磁場
+- $\Delta z$ — 格子間隔(µm)
+- $\Delta t$ — 時間ステップ(s)
+- $\varepsilon_r$ — その格子点の比誘電率
+
+</Symbols>
+
+これと対になる更新式が、$E_x$ の差分から $H_y$ を進めます。各更新は隣の値しか使わないので、1ステップの計算量はセルあたり一定で、並列計算も容易です。
+
+時間ステップは自由には選べません。波が1ステップで約1セルより遠くへ進んではならないため、<Term id="ja-courant" n={5}>Courantの安定条件</Term>が課されます[^cfl] [^taflove]。
+
+$$
+c\,\Delta t \le \frac{1}{\sqrt{\Delta x^{-2}+\Delta y^{-2}+\Delta z^{-2}}}
+$$
+
+<Symbols title="記号">
+
+- $\Delta x$、$\Delta y$、$\Delta z$ — 3方向の格子間隔(µm)
+- $\Delta t$ — 時間ステップ(s)
+- $c$ — 真空中の光速。最小屈折率 $n_\text{min}$ の媒質では上限が $n_\text{min}$ 倍に緩む
+
+</Symbols>
+
+$D$ 次元の間隔 $\Delta x$ の一様な格子では、これは $c\,\Delta t \le \Delta x/\sqrt{D}$ となります。Meepの既定値は $c\,\Delta t = 0.5\,\Delta x$ で、1〜3次元でこの条件を満たします[^meep]。
+
+<Glossary title="用語">
+<Def id="ja-yee" n={4} term="Yee格子">
+FDTDで使う、場の成分をずらして並べる配置です。各電場成分の周りに、その回転を決める磁場成分が並び、逆も同様です。これにより中心差分が2次精度になり、場の発散がゼロに自動的に保たれます。
+</Def>
+<Def id="ja-courant" n={5} term="Courant(CFL)条件">
+陽的な時間発展の安定限界で、Courant、Friedrichs、Lewyにちなみます。1ステップで情報が1セルより遠くへ伝わらないよう、時間ステップを十分短くする必要があります。破ると場が際限なく増大します。
+</Def>
+</Glossary>
+
+実際にはさらに3つの要素が重要です。
+
+- **開放境界。** 有限の格子は、外へ出ていく波を反射させずに吸収しなければなりません。Bérengerの<Term id="ja-pml" n={6}>完全整合層(PML)</Term>がこれを実現し、標準的に使われています[^berenger]。
+- **数値分散。** 格子上の波はわずかに誤った速さで進み、その誤差は材料中の波長に対するセルの大きさとともに増えます。目安は1波長あたり10〜20セル以上で、共鳴波長のように位相に敏感な量にはさらに多く必要です。
+- **界面。** 傾いた界面や曲がった界面はセルの階段になります。Meepの<Term id="ja-subpixel" n={7}>サブピクセル平均</Term>は各セルに実効的な誘電率を割り当て、この誤差を大きく減らします[^farjadpour]。
+
+<Glossary title="用語">
+<Def id="ja-pml" n={6} term="完全整合層(PML)">
+計算領域の周りに置く人工的な吸収層で、どの角度から入る波も反射せずに入り込み、その中で減衰するように設計されています。無限に広い空間を模擬します。
+</Def>
+<Def id="ja-subpixel" n={7} term="サブピクセル平均">
+界面に切られる格子セルに、中心の値ではなく平均した(一般に異方的な)誘電率を与える手法です。形状がセル以下の量だけ動いたときにも、結果がなめらかに変わるようになります。
+</Def>
+</Glossary>
+
+計算量はここから直接決まります。セルを半分の大きさにすると、セルの数は $2^D$ 倍に、Courant条件を通じて時間ステップの数は2倍になります。したがって計算時間は次のように増えます。
+
+$$
+\text{計算量} \propto \left(\frac{1}{\Delta x}\right)^{D+1}
+$$
+
+<Symbols title="記号">
+
+- $1/\Delta x$ — 分解能(µmあたりのセル数)
+- $D$ — 次元の数:2次元では分解能の3乗、3次元では4乗に比例
+
+</Symbols>
+
+そのためデバイス全体の3次元FDTDは高価で、設計には2次元の等価屈折率モデルが広く使われます。
+
+#### FEM:形状に沿ったメッシュ
+
+FEMは領域を小さな要素、通常は2次元では三角形、3次元では四面体に分け、各要素の中の場を単純な多項式の基底関数で表します[^jin]。波動方程式そのものではなく、その<Term id="ja-weak" n={8}>弱形式</Term>を解きます。方程式に試験関数 $\mathbf{W}$ を掛けて領域全体で積分したもので、すべての試験関数 $\mathbf{W}$ について次の式が成り立つことを求めます。
+
+$$
+\int_\Omega \Big[(\nabla\times\mathbf{W})\cdot(\nabla\times\mathbf{E}) - k_0^2\,\varepsilon_r\,\mathbf{W}\cdot\mathbf{E}\Big]\,dV = 0
+$$
+
+<Symbols title="記号">
+
+- $\Omega$ — 計算領域
+- $dV$ — 体積要素(2次元では面積要素)
+- $\mathbf{W}$ — 試験関数。$\mathbf{E}$ と同じ基底関数の集合から選ぶ
+- $k_0$ — 真空中の波数(µm⁻¹)
+- $\varepsilon_r$ — 各要素の比誘電率
+
+</Symbols>
+
+ポートや吸収層の境界項はここでは省略しています。$\mathbf{E}$ を基底関数で展開すると、弱形式は次の大きいが疎な行列の問題になり、これを周波数ごとに1回解きます。
+
+$$
+\left(\mathbf{K} - k_0^2\,\mathbf{M}\right)\mathbf{e} = \mathbf{f}
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{e}$ — 未知の場の係数を並べたベクトル(メッシュの辺や節点ごとに1つ以上)
+- $\mathbf{K}$ — 回転の項から来る「剛性」行列
+- $\mathbf{M}$ — $\varepsilon_r$ で重み付けした「質量」行列
+- $\mathbf{f}$ — 励振(光源とポート)。$\mathbf{f} = 0$ なら固有値問題になる
+
+</Symbols>
+
+導波路の断面に同じ仕組みを使うと、固有値が導波モードの伝搬定数 $\beta = 2\pi n_\text{eff}/\lambda$ になる固有値問題が得られます。これが<Term id="ja-modesolver" n={9}>モードソルバ</Term>の計算です[^rahman]。
+
+FEMの強みはメッシュにあります。場が急に変わる場所(薄い層、鋭い角、金属表面)には小さな要素を、それ以外には大きな要素を置けますし、曲がった境界も階段にせずにそのまま追えます。その代わり、周波数ごとに新たに解く必要があり、大きな3次元構造の疎行列は多くのメモリを必要とすることがあります。
+
+<Glossary title="用語">
+<Def id="ja-weak" n={8} term="弱形式">
+微分方程式に試験関数を掛けて部分積分し、積分の形にしたものです。場の1階微分だけで済むため、メッシュ上の単純な区分多項式による近似が可能になります。
+</Def>
+<Def id="ja-modesolver" n={9} term="モードソルバ">
+導波路の断面の導波モード、つまり場の分布と実効屈折率を求めるプログラムです。1つの波長での固有値問題を、通常はFEMか差分法で解きます。
+</Def>
+</Glossary>
+
+#### RCWA:積層周期構造のFourier次数
+
+MoharamとGaylordが平面グレーティングについて定式化したRCWAは[^moharam1981]、面内で周期 $\Lambda$ の周期性をもち、深さ方向に区分的に一様な構造に適用されます(図1右)。各層で誘電率をFourier級数に展開します。
+
+$$
+\varepsilon_r(x) = \sum_{h} \varepsilon_h\, e^{\,j h K x}
+$$
+
+<Symbols title="記号">
+
+- $\varepsilon_h$ — その層の誘電率分布のFourier係数
+- $h$ — 整数の高調波番号
+- $K = 2\pi/\Lambda$ — グレーティング波数ベクトル(µm⁻¹)
+- $\Lambda$ — 周期(µm)
+
+</Symbols>
+
+場は<Term id="ja-orders" n={10}>回折次数</Term>の和で表し、その面内波数は周期で決まります。
+
+$$
+k_{x,m} = k_0\left(n_\text{in}\sin\theta - m\,\frac{\lambda}{\Lambda}\right)
+$$
+
+<Symbols title="記号">
+
+- $k_{x,m}$ — $m$ 次の面内波数(µm⁻¹)
+- $m$ — 回折次数($0, \pm1, \pm2, \dots$)
+- $n_\text{in}$ — 入射側媒質の屈折率
+- $\theta$ — 入射角
+
+</Symbols>
+
+屈折率 $n$ の媒質で伝搬できるのは $|k_{x,m}| < k_0 n$ のときだけで、それ以外はエバネッセントになります。これはグレーティング方程式の別の形です。$N$ 個の次数を残すと、各層の中のMaxwell方程式は(偏光ごとに)$N\times N$ の固有値問題になり、その固有ベクトルが層自身のモードです。各界面で接線方向の場を合わせて層をつなぎ、数値的に安定な<Term id="ja-smatrix" n={11}>Sマトリクス</Term>の定式化を使います[^moharam1995] [^s4]。出力は、反射・透過するすべての次数の効率と位相です。
+
+RCWAの精度は2つの数値的な点で決まります。
+
+- **打ち切り。** 残せる次数は有限です。結果は $N$ を増やすと収束しますが、高屈折率差や金属のグレーティングでは収束が遅くなります。TM偏光の収束は、不連続関数のFourier級数の積に関するLiの規則で大きく改善され、現代のコードはすべてこれを実装しています[^li]。
+- **計算量。** 各層で大きさ $N$ の固有値問題を解く必要があり、計算量は $N^3$ に比例します。1次元周期構造では $N = 2M+1$ 次数で済みますが、2次元周期構造ではおよそ $(2M+1)^2$ 必要なので、細かい構造をもつ2次元メタサーフェスのセルは高価になります。曲がった断面や傾いた断面は、薄い層の階段で近似します。
+
+<Glossary title="用語">
+<Def id="ja-orders" n={10} term="回折(Fourier)次数">
+周期構造は、とびとびの方向にしか光を散乱できません。各方向は、入射光の面内波数にグレーティング波数ベクトル $2\pi/\Lambda$ の整数倍を加えたものに対応します。伝搬できない次数は表面から離れるにつれて減衰します。
+</Def>
+<Def id="ja-smatrix" n={11} term="Sマトリクス(散乱行列)">
+構造から出ていく波の振幅を、入ってくる波の振幅と結びつける行列です。各層のSマトリクスを組み合わせると、増大するエバネッセント波による数値的なあふれを避けながら、積層全体の応答が得られます。
+</Def>
+</Glossary>
+
+#### 比較と手法の選び方
+
+| | FDTD | FEM | RCWA |
+|---|---|---|---|
+| 領域 | 時間 | 周波数 | 周波数 |
+| 離散化 | 規則的な格子 | 非構造メッシュ | 層 × Fourier次数 |
+| 形状 | 任意。界面は階段近似(サブピクセル平均で改善) | 任意。曲面や寸法の大きく異なる形状も追える | 面内周期、深さ方向に層状 |
+| 1回の計算で得られるもの | 広いスペクトル | 1つの周波数(またはモードの組) | 1つの周波数、すべての回折次数 |
+| 主な計算コスト | セル数 × 時間ステップ、$\propto (1/\Delta x)^{D+1}$ | 疎行列の求解、3次元ではメモリ | 層ごとの固有値問題、$\propto N^3$ |
+| 高Qの共鳴 | 長い計算(場が減衰するまで) | 直接(固有周波数として) | 鋭い構造には細かい波長刻みが必要 |
+| PICでの代表的な用途 | カプラ、MZI、リング、グレーティング:広帯域Sパラメータ | 導波モード、ベンド、熱・電気との連成 | グレーティングの単位セル、メタサーフェス、周期積層 |
+
+この表は手法の側から見たものです。実際に問われるのは逆向きの問い、つまりある設計課題にまずどの手法を使うべきか、です。
+
+<Callout kind="design" title="どの問題にどの手法を使うか">
+
+- **部品の広帯域な透過率と位相** → FDTD。パルス1回で帯域全体をカバーし、位相つきのSパラメータが得られます。
+- **実効屈折率、群屈折率、モード分布** → FEMまたは差分法のモードソルバ。断面の固有値問題で済み、伝搬を計算する必要がありません。
+- **1つの波長での曲面・薄膜・金属構造** → FEM。メッシュが形状に沿い、局所的に細かくできます。
+- **周期グレーティングやメタサーフェスのセルの回折効率** → RCWA。周期性が組み込まれていて、全次数が一度に得られます。
+- **長くゆっくり変わる構造の手早い見積もり** → モードソルバと結合モード理論、または固有モード展開。フルウェーブ計算よりはるかに安く済みます。
+- **どの手法でも、信頼できる数値** → 収束確認。答えが分解能に依存してはなりません。
+
+設計の流れでは、複数の手法を組み合わせるのが普通です。断面にはモードソルバ、部品にはFDTDかFEM、周期的な部分構造にはRCWAを使い、得られたSパラメータから回路モデルを作ります。
+
+</Callout>
+
+### シミュレーション
+
+#### ここで示すもの
+
+本記事では新たなシミュレーションは行っていません。以下の例は、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)でMeep[^meep]を使って2次元で計算した、保存済みのFDTDとモードソルバの結果を再利用したものです。FEMとRCWAは文献に基づいて説明しており、筆者自身のFEMやRCWAの結果は示していません。
+
+#### 実際のFDTDの収束
+
+図2は[グレーティングカップラー](/blog/grating-couplers-phase-matching-fdtd/)の研究で行った分解能の検討です。窒化シリコングレーティング(1.3 µmでの、最適化前の初期設計)のファイバ結合効率を、20から160 pixels/µmまでの8つの分解能で、形状の2通りの表し方について計算しています。
+
+- Meepの**サブピクセル平均したブロック**では、効率が分解能ごとに0.1 dBの数倍程度上下に跳びます(80–160 pixels/µmで−11.5、−11.6、−11.6、−11.4 dB)。各分解能で、グレーティングの歯の縁が格子に対して異なる位置に来るためです。
+- **セルごとの充填率**で表すと、同じ量がなめらかに単調に変わります(−12.0、−11.9、−11.8、−11.7 dB)。なめらかな傾向なら外挿できますが、ばらつく値は誤差の幅を与えるだけです。
+
+160 pixels/µmでも、2つの表し方の差は約0.3 dBあります。この幅がこのモデルの正直な数値誤差であり、グレーティングの最終的な数値をなめらかな表し方で160 pixels/µmで計算した理由です。
+
+右の図は計算コストです。1回あたりの計算時間は20 pixels/µmの2.6 sから160 pixels/µmの2200 sへと増え、両対数での傾きは3.2で、2次元FDTDで予測される3に近い値です。格子を8倍細かくすると、計算量は約1000倍になります。
+
+<Figure src={fig2} alt="対数軸の分解能20から160 pixels/µmに対する2つのパネル。左:結合効率(dB)。サブピクセル平均したブロックの曲線は約−10.6から−11.9 dBの間でばらつき、充填率の曲線は30での低い点の後、−12.4から−11.7 dBへなめらかに上がる。右:両対数軸での1回あたりの計算時間。約3 sから約2200 sへ、分解能の3乗に比例する破線に沿って増える。" caption="左:SiNグレーティングカップラー(1周期1つの歯の初期設計、λ = 1.3 µm)のファイバ結合効率とFDTDの分解能の関係。同じ形状の2通りの表し方で比較。右:2次元計算1回あたりの計算時間と、比較のための分解能³に比例する線。meta/data/step1(meta/notebooks/01_sin_validation_mesh.ipynb のメッシュ検討)より。" number={2} size="wide" />
+
+#### モードソルバとFDTDの比較
+
+周波数領域のモードソルバと時間領域のFDTDは、同じ問いに独立な2つの方法で答えられます。[方向性結合器](/blog/directional-couplers-cmt-fdtd/)の研究では、1次元差分のモードソルバが結合した導波路対の偶・奇スーパーモードの屈折率 $n_e = 2.4299$、$n_o = 2.4093$ を与え、そこから結合係数 $\kappa = \pi(n_e - n_o)/\lambda = 0.0480\ \mu\text{m}^{-1}$ が得られました。カプラ全体を17点で掃引したFDTDは $0.0486\ \mu\text{m}^{-1}$ で、1.4 %高い値でした。モード計算は数秒、FDTDの掃引は数時間かかりますが、後者はS字ベンド、放射損失、波長依存性も捉えます。安い手法で高い手法を確かめることは、シミュレーションで最も役に立つ習慣です。
+
+#### 設計計算の多くが2次元である理由
+
+このサイトのデバイスの記事は2次元の等価屈折率FDTDを使っており、その理由は計算量のスケーリングで説明できます。25–40 pixels/µmの2次元計算は数分で終わりますが、対応する3次元計算は3つ目の次元方向のセル数だけ大きくなり、さらに220 nmのシリコン層を分解するために細かい格子が必要です。同じツールキットでJAXベースのソルバfdtdxを使い36.7 nmの格子で行った3次元のグレーティングカップラー計算には、その格子だけで推定±10 %の不確かさがあります。2次元モデルは理解と最適化に使い、3次元計算は最終確認に取っておきます。
+
+#### まとめ
+
+どの手法にも収束させるべき分解能のパラメータが1つあります。FDTDではセルの大きさ $\Delta x$(時間ステップにはCourantの上限がある)、FEMでは要素の大きさと次数、RCWAではFourier次数の数 $N$(TM偏光ではLiの規則が必要)です。どの手法を使うにしても、設計に使う数値の信頼性は、その裏にある収束確認と独立な検証で決まります。
+
+### コードとデータ
+
+- グレーティングのメッシュ収束検討:[`meta/notebooks/01_sin_validation_mesh.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/01_sin_validation_mesh.ipynb)(保存データは `meta/data/step1`)
+- 方向性結合器のスーパーモード計算とFDTD掃引:[`notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/06_directional_coupler.ipynb)
+- 3次元(fdtdx):[`3d/`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/tree/main/3d)
+- 図1、図2と本文の数値は、保存済みデータから同リポジトリの `scripts/blog_figures/em_methods.py` で作成しました。新たなシミュレーションは行っていません。
+
+---
+
+## References / 参考文献
+
+[^yee]: K. S. Yee, "Numerical solution of initial boundary value problems involving Maxwell's equations in isotropic media," *IEEE Transactions on Antennas and Propagation* **14**, 302–307 (1966). [doi:10.1109/TAP.1966.1138693](https://doi.org/10.1109/TAP.1966.1138693)
+[^cfl]: R. Courant, K. Friedrichs and H. Lewy, "On the partial difference equations of mathematical physics," *IBM Journal of Research and Development* **11**, 215–234 (1967) (English translation of the 1928 paper). [doi:10.1147/rd.112.0215](https://doi.org/10.1147/rd.112.0215)
+[^taflove]: A. Taflove and S. C. Hagness, *Computational Electrodynamics: The Finite-Difference Time-Domain Method*, 3rd ed. (Artech House, 2005).
+[^meep]: A. F. Oskooi, D. Roundy, M. Ibanescu, P. Bermel, J. D. Joannopoulos and S. G. Johnson, "Meep: A flexible free-software package for electromagnetic simulations by the FDTD method," *Computer Physics Communications* **181**, 687–702 (2010). [doi:10.1016/j.cpc.2009.11.008](https://doi.org/10.1016/j.cpc.2009.11.008)
+[^berenger]: J.-P. Berenger, "A perfectly matched layer for the absorption of electromagnetic waves," *Journal of Computational Physics* **114**, 185–200 (1994). [doi:10.1006/jcph.1994.1159](https://doi.org/10.1006/jcph.1994.1159)
+[^farjadpour]: A. Farjadpour, D. Roundy, A. Rodriguez, M. Ibanescu, P. Bermel, J. D. Joannopoulos, S. G. Johnson and G. W. Burr, "Improving accuracy by subpixel smoothing in the finite-difference time domain," *Optics Letters* **31**, 2972 (2006). [doi:10.1364/OL.31.002972](https://doi.org/10.1364/OL.31.002972)
+[^jin]: J.-M. Jin, *The Finite Element Method in Electromagnetics*, 3rd ed. (Wiley–IEEE Press, 2014).
+[^rahman]: B. M. A. Rahman and J. B. Davies, "Finite-element solution of integrated optical waveguides," *Journal of Lightwave Technology* **2**, 682–688 (1984). [doi:10.1109/JLT.1984.1073669](https://doi.org/10.1109/JLT.1984.1073669)
+[^moharam1981]: M. G. Moharam and T. K. Gaylord, "Rigorous coupled-wave analysis of planar-grating diffraction," *Journal of the Optical Society of America* **71**, 811 (1981). [doi:10.1364/JOSA.71.000811](https://doi.org/10.1364/JOSA.71.000811)
+[^moharam1995]: M. G. Moharam, T. K. Gaylord, E. B. Grann and D. A. Pommet, "Formulation for stable and efficient implementation of the rigorous coupled-wave analysis of binary gratings," *Journal of the Optical Society of America A* **12**, 1068 (1995). [doi:10.1364/JOSAA.12.001068](https://doi.org/10.1364/JOSAA.12.001068)
+[^li]: L. Li, "Use of Fourier series in the analysis of discontinuous periodic structures," *Journal of the Optical Society of America A* **13**, 1870 (1996). [doi:10.1364/JOSAA.13.001870](https://doi.org/10.1364/JOSAA.13.001870)
+[^s4]: V. Liu and S. Fan, "S4: A free electromagnetic solver for layered periodic structures," *Computer Physics Communications* **183**, 2233–2244 (2012). [doi:10.1016/j.cpc.2012.04.026](https://doi.org/10.1016/j.cpc.2012.04.026)

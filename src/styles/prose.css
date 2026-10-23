@@ -135,7 +135,9 @@
 
 .prose table {
   width: 100%;
-  border-collapse: collapse;
+  /* separate (not collapse) so a sticky cell keeps its own bottom border */
+  border-collapse: separate;
+  border-spacing: 0;
   font-family: var(--font-sans);
   font-size: 0.9375rem;
   display: block;
@@ -151,6 +153,19 @@
 .prose th {
   color: var(--text-muted);
   font-weight: 600;
+}
+/* keep the row-label column in view when a wide table scrolls sideways */
+.prose :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg);
+}
+@media (max-width: 480px) {
+  .prose th,
+  .prose td {
+    padding: 0.4em 0.5em;
+  }
 }
 
 .prose img {

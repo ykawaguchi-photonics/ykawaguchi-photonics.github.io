@@ -138,13 +138,13 @@ For ideal 50:50 couplers ($K=1/2$) these reduce to the familiar $P_\text{bar}=\s
 - **Amplitude, not power, interferes.** The two arm contributions add as complex amplitudes in $b_3$ and $b_4$; the $\cos^2$ comes from squaring their sum. Adding the two arm *powers* would give no interference at all.
 - **Imperfect couplers affect the two outputs differently.** The cross output contains the sum of two equal terms, $t\kappa$ each, so it nulls perfectly at $\Delta\phi=\pi$ for any $K$; only its maximum drops to $4K(1-K)$. The bar output contains the difference of $t^2$ and $\kappa^2$, which cancel only if $K=1/2$. Its floor is $(1-2K)^2$, so the bar-port <Term id="en-er" n={2}>extinction ratio</Term> is $1/(1-2K)^2$: a 45:55 coupler already limits it to 20 dB (Fig. 2). Splitter imbalance is the classic limit on MZI extinction, and compensating it is a central problem in large MZI meshes.[^miller]
 
-<Figure src={fig2} alt="Two panels of bar and cross output power versus arm phase difference from 0 to 4 pi. With K equal to 0.5 both outputs swing between 0 and 1. With K equal to 0.4 the cross output still reaches 0 but peaks at 0.96, and the bar output never drops below 0.04." caption="Ideal MZI outputs versus arm phase difference, from the transfer matrices above. Left: 50:50 couplers. Right: 40:60 couplers. The cross port still nulls perfectly, but the bar port cannot go below (1 − 2K)² = 0.04." number={2} size="wide" />
-
 <Glossary>
 <Def id="en-er" n={2} term="Extinction ratio">
 The ratio of the maximum to the minimum output power of a port, usually given in dB. It measures how completely a switch or modulator turns the light off.
 </Def>
 </Glossary>
+
+<Figure src={fig2} alt="Two panels of bar and cross output power versus arm phase difference from 0 to 4 pi. With K equal to 0.5 both outputs swing between 0 and 1. With K equal to 0.4 the cross output still reaches 0 but peaks at 0.96, and the bar output never drops below 0.04." caption="Ideal MZI outputs versus arm phase difference, from the transfer matrices above. Left: 50:50 couplers. Right: 40:60 couplers. The cross port still nulls perfectly, but the bar port cannot go below (1 − 2K)² = 0.04." number={2} size="wide" />
 
 <Callout kind="design" title="What this means for design">
 
@@ -169,8 +169,6 @@ $$
 
 </Symbols>
 
-The fringe spacing is set by the group index $n_g$, not the phase index.[^chrostowski] The group index includes the waveguide dispersion, and it is usually much larger than $n_\text{eff}$ in silicon wires. This is also why MZIs with several arm differences are a standard way to measure the dispersion of fabricated waveguides.[^dwivedi]
-
 <Glossary>
 <Def id="en-fsr" n={3} term="Free spectral range (FSR)">
 The spacing, in wavelength or frequency, between neighbouring repetitions of a periodic spectrum. For an MZI it is the distance between adjacent fringes; for a ring resonator, between adjacent resonances.
@@ -179,6 +177,8 @@ The spacing, in wavelength or frequency, between neighbouring repetitions of a p
 The index that sets the speed of a light pulse (the group velocity $c/n_g$) and how fast the phase changes with wavelength. It differs from the effective index because $n_\text{eff}$ depends on wavelength: $n_g = n_\text{eff} - \lambda\,dn_\text{eff}/d\lambda$. Any spacing of fringes or resonances is set by $n_g$.
 </Def>
 </Glossary>
+
+The fringe spacing is set by the group index $n_g$, not the phase index.[^chrostowski] The group index includes the waveguide dispersion, and it is usually much larger than $n_\text{eff}$ in silicon wires. This is also why MZIs with several arm differences are a standard way to measure the dispersion of fabricated waveguides.[^dwivedi]
 
 <Callout kind="design" title="What this means for design">
 
@@ -269,7 +269,7 @@ A small, fast model of a component, usually its S-matrix as a function of wavele
 
 #### Measuring the group index from the fringes
 
-For the 2D waveguide of this model, the mode solver gives $n_\text{eff}=2.418$ but $n_g = 2.928$, a 20 % difference. Fig. 4 shows how the fringes compress as $\Delta L$ grows from 2.5 to 15 µm. Only $\Delta L \ge 10$ µm puts two full maxima inside the 100 nm band. For each pair of adjacent maxima, the exact relation for constant $n_g$ is
+For the 2D waveguide of this model, the mode solver gives $n_\text{eff}=2.418$ but $n_g = 2.928$, a 20 % difference. Fig. 4 shows how the fringes compress as $\Delta L$ grows from 2.5 to 15 µm. Only $\Delta L \ge 10$ µm puts two full maxima inside the 100 nm band. For each pair of adjacent maxima, the exact relation for constant $n_g$ is:
 
 $$
 n_g = \frac{\lambda_1\lambda_2}{(\lambda_2-\lambda_1)\,\Delta L},
@@ -282,7 +282,7 @@ $$
 
 </Symbols>
 
-and it gives $n_g = 2.91 \pm 0.04$ over five pairs, within 0.7 % of the mode-solver value. (Using $\lambda^2$ at a fixed 1.35 µm instead of the actual fringe wavelengths biases the estimate by a few percent; the fringes here lie between 1.31 and 1.40 µm.)
+Applied to five pairs, it gives $n_g = 2.91 \pm 0.04$, within 0.7 % of the mode-solver value. (Using $\lambda^2$ at a fixed 1.35 µm instead of the actual fringe wavelengths biases the estimate by a few percent; the fringes here lie between 1.31 and 1.40 µm.)
 
 <Figure src={fig4} alt="Six cross-port spectra, offset vertically, for arm differences from 2.5 to 15 micrometres. Short arm differences give slow variations across the band; longer ones show two or three full fringes." caption="Cross-port power versus wavelength for six arm-length differences (curves offset vertically by 1.1). The fringe period shrinks as 1/ΔL. From notebooks/07_mzi.ipynb, Section 10." number={4} />
 
@@ -356,7 +356,7 @@ $$
 
 </Symbols>
 
-同じ導波路で長さ $L_1$ と $L_2 = L_1 + \Delta L$ の2本のアームがあると、その位相差は
+同じ導波路で長さ $L_1$ と $L_2 = L_1 + \Delta L$ の2本のアームがあると、その位相差は次のようになります。
 
 $$
 \Delta\phi(\lambda) = \frac{2\pi\, n_\text{eff}(\lambda)}{\lambda}\,\Delta L
@@ -370,7 +370,7 @@ $$
 
 </Symbols>
 
-となります。つまり $\Delta\phi$ を動かす手段はちょうど2つ、**光路差** $\Delta L$(レイアウトで固定)と、一方のアームの**屈折率** $n_\text{eff}$(熱やキャリアで変える)です。以下では、$\Delta\phi$ がどのように出力パワーになり、その変換を何が制限するかを説明します。
+つまり $\Delta\phi$ を動かす手段はちょうど2つ、**光路差** $\Delta L$(レイアウトで固定)と、一方のアームの**屈折率** $n_\text{eff}$(熱やキャリアで変える)です。以下では、$\Delta\phi$ がどのように出力パワーになり、その変換を何が制限するかを説明します。
 
 <Glossary title="用語">
 <Def id="ja-neff" n={1} term="実効屈折率(n_eff)">
@@ -380,7 +380,7 @@ $$
 
 #### 伝達関数
 
-各カプラを、2つの場の振幅に作用する行列で書きます。パワーの交差結合 $K$ をもつ無損失・対称なカプラは
+各カプラを、2つの場の振幅に作用する行列で書きます。パワーの交差結合 $K$ をもつ無損失・対称なカプラは、次の行列で表せます。
 
 $$
 \mathbf{C} = \begin{pmatrix} t & -j\kappa \\ -j\kappa & t \end{pmatrix}, \qquad t=\sqrt{1-K},\quad \kappa=\sqrt{K}
@@ -395,7 +395,7 @@ $$
 
 </Symbols>
 
-です。$t$ と $\kappa$ がカプラのギャップと長さからどう決まるかは[方向性結合器の記事](/blog/directional-couplers-cmt-fdtd/)で説明しています。アームはそれぞれの振幅に自分の位相因子を掛けるので、$\mathbf{A} = \mathrm{diag}(e^{-j\phi_1}, e^{-j\phi_2})$ です。ポート1から入った光は次のように出ていきます。
+$t$ と $\kappa$ がカプラのギャップと長さからどう決まるかは[方向性結合器の記事](/blog/directional-couplers-cmt-fdtd/)で説明しています。アームはそれぞれの振幅に自分の位相因子を掛けるので、$\mathbf{A} = \mathrm{diag}(e^{-j\phi_1}, e^{-j\phi_2})$ です。ポート1から入った光は次のように出ていきます。
 
 $$
 \begin{pmatrix} b_3 \\ b_4 \end{pmatrix} = \mathbf{C}\,\mathbf{A}\,\mathbf{C} \begin{pmatrix} 1 \\ 0 \end{pmatrix}
@@ -431,13 +431,13 @@ $$
 - **干渉するのはパワーではなく振幅。** $b_3$ と $b_4$ では、2本のアームの寄与が複素振幅として足し合わされ、その和を2乗することで $\cos^2$ が現れます。アームの*パワー*を足しても干渉は起こりません。
 - **不完全なカプラは2つの出力に異なる影響を与える。** クロス出力は大きさ $t\kappa$ の等しい2項の和なので、どんな $K$ でも $\Delta\phi=\pi$ で完全にゼロになり、下がるのは最大値($4K(1-K)$)だけです。バー出力は $t^2$ と $\kappa^2$ の差で、両者が打ち消し合うのは $K=1/2$ のときだけです。その下限は $(1-2K)^2$ なので、バー側の<Term id="ja-er" n={2}>消光比</Term>は $1/(1-2K)^2$ となり、45:55のカプラでもう20 dBに制限されます(図2)。分岐比の不均衡はMZIの消光比を制限する古典的な要因であり、大規模なMZIメッシュではその補償が中心的な課題になっています[^miller]。
 
-<Figure src={fig2} alt="アーム位相差0から4πに対するバー・クロス出力の2パネル。K = 0.5では両出力が0と1の間を振動する。K = 0.4ではクロス出力は0まで下がるが最大値は0.96、バー出力は0.04より下がらない。" caption="上の伝達行列から求めた理想的なMZI出力とアーム位相差の関係。左:50:50カプラ。右:40:60カプラ。クロス側は完全にゼロになるが、バー側は (1 − 2K)² = 0.04 より下がらない。" number={2} size="wide" />
-
 <Glossary title="用語">
 <Def id="ja-er" n={2} term="消光比">
 あるポートの出力パワーの最大値と最小値の比で、通常dBで表します。スイッチや変調器が光をどれだけ完全に消せるかを示します。
 </Def>
 </Glossary>
+
+<Figure src={fig2} alt="アーム位相差0から4πに対するバー・クロス出力の2パネル。K = 0.5では両出力が0と1の間を振動する。K = 0.4ではクロス出力は0まで下がるが最大値は0.96、バー出力は0.04より下がらない。" caption="上の伝達行列から求めた理想的なMZI出力とアーム位相差の関係。左:50:50カプラ。右:40:60カプラ。クロス側は完全にゼロになるが、バー側は (1 − 2K)² = 0.04 より下がらない。" number={2} size="wide" />
 
 <Callout kind="design" title="設計上の意味">
 
@@ -462,8 +462,6 @@ $$
 
 </Symbols>
 
-干渉縞の間隔を決めるのは、位相屈折率ではなく群屈折率 $n_g$ です[^chrostowski]。群屈折率は導波路の分散を含み、シリコン細線では通常 $n_\text{eff}$ よりかなり大きくなります。そのため、アーム長差の異なる複数のMZIは、作製した導波路の分散を測る標準的な方法になっています[^dwivedi]。
-
 <Glossary title="用語">
 <Def id="ja-fsr" n={3} term="自由スペクトル領域(FSR)">
 周期的なスペクトルが繰り返す間隔を、波長または周波数で表したものです。MZIでは隣り合う干渉縞の間隔、リング共振器では隣り合う共鳴の間隔です。
@@ -473,6 +471,8 @@ $$
 </Def>
 </Glossary>
 
+干渉縞の間隔を決めるのは、位相屈折率ではなく群屈折率 $n_g$ です[^chrostowski]。群屈折率は導波路の分散を含み、シリコン細線では通常 $n_\text{eff}$ よりかなり大きくなります。そのため、アーム長差の異なる複数のMZIは、作製した導波路の分散を測る標準的な方法になっています[^dwivedi]。
+
 <Callout kind="design" title="設計上の意味">
 
 決まったチャネル間隔のフィルタを作るには、$\Delta L = \lambda^2/(n_g\,\mathrm{FSR})$ を選びます。遅延アームを長くするほど周期は狭くなります。この式で $n_g$ の代わりに $n_\text{eff}$ を使うのはよくある誤りで、後でシミュレーションする導波路では20 %ずれてしまいます。
@@ -481,7 +481,7 @@ $$
 
 #### 小さな屈折率変化によるスイッチング
 
-変調器やスイッチでは、アームの長さを等しくしたまま電気的に位相を変えます。<Term id="ja-pushpull" n={5}>プッシュプル</Term>方式では、一方のアームに $+\Delta n/2$、もう一方に $-\Delta n/2$ を与えるので、アーム間の位相差は
+変調器やスイッチでは、アームの長さを等しくしたまま電気的に位相を変えます。<Term id="ja-pushpull" n={5}>プッシュプル</Term>方式では、一方のアームに $+\Delta n/2$、もう一方に $-\Delta n/2$ を与えるので、アーム間の位相差は次のようになります。
 
 $$
 \Delta\phi = \frac{2\pi}{\lambda}\,\Gamma\,\Delta n\,L
@@ -495,7 +495,7 @@ $$
 
 </Symbols>
 
-となります。光をクロス側からバー側へ切り替えるには $\Delta\phi=\pi$、つまり $L = \lambda/(2\Gamma\Delta n)$ が必要です。この位相を生む駆動電圧を<Term id="ja-vpi" n={6}>$V_\pi$</Term>と呼びます。$\Delta n$ は駆動とともに大きくなるので、効果が弱ければ位相シフタを長くして補う必要があり、積 $V_\pi L$ が変調器の一般的な性能指数になります。$\Gamma$ は1以下に限られる閉じ込め係数ではなく、高屈折率差の導波路ではモードソルバの値が1を超えることがあります。
+光をクロス側からバー側へ切り替えるには $\Delta\phi=\pi$、つまり $L = \lambda/(2\Gamma\Delta n)$ が必要です。この位相を生む駆動電圧を<Term id="ja-vpi" n={6}>$V_\pi$</Term>と呼びます。$\Delta n$ は駆動とともに大きくなるので、効果が弱ければ位相シフタを長くして補う必要があり、積 $V_\pi L$ が変調器の一般的な性能指数になります。$\Gamma$ は1以下に限られる閉じ込め係数ではなく、高屈折率差の導波路ではモードソルバの値が1を超えることがあります。
 
 シリコンでの実用的な機構は自由キャリアによる<Term id="ja-plasma" n={7}>プラズマ分散効果</Term>です。SorefとBennettの1.3 µmでの経験式によると、$10^{18}$ cm⁻³ の正孔で屈折率は約 $1.5\times10^{-3}$、同じ密度の電子で約 $0.6\times10^{-3}$ 変わります[^soref]。現実的な空乏型位相シフタで変えられるキャリア密度は約 $10^{17}$ cm⁻³ で、これは $\Delta n \sim 10^{-4}$ に相当し、しかもモードの一部の領域でしか変わりません。そのため、空乏型のMach–Zehnder変調器は通常、長さ数mmの位相シフタを必要とします[^rahim] [^reed]。1 GHzを超える帯域を初めて実験で示したシリコン導波路変調器もMZIで、両アームにMOSキャパシタ型(キャリア蓄積型)の位相シフタを備えていました[^liu]。
 
@@ -562,7 +562,7 @@ $$
 
 #### 干渉縞から群屈折率を測る
 
-このモデルの2次元導波路では、モードソルバの値は $n_\text{eff}=2.418$ に対して $n_g = 2.928$ で、20 %違います。図4は、$\Delta L$ を2.5 µmから15 µmへ増やすと干渉縞が詰まっていく様子です。100 nmの帯域に2つの極大が完全に入るのは $\Delta L \ge 10$ µmのときだけです。隣り合う極大の各組について、$n_g$ が一定のときの厳密な関係は
+このモデルの2次元導波路では、モードソルバの値は $n_\text{eff}=2.418$ に対して $n_g = 2.928$ で、20 %違います。図4は、$\Delta L$ を2.5 µmから15 µmへ増やすと干渉縞が詰まっていく様子です。100 nmの帯域に2つの極大が完全に入るのは $\Delta L \ge 10$ µmのときだけです。隣り合う極大の各組について、$n_g$ が一定のときの厳密な関係は次のとおりです。
 
 $$
 n_g = \frac{\lambda_1\lambda_2}{(\lambda_2-\lambda_1)\,\Delta L}
@@ -575,7 +575,7 @@ $$
 
 </Symbols>
 
-で、5組から $n_g = 2.91 \pm 0.04$ が得られ、モードソルバの値と0.7 %以内で一致します。(実際の干渉縞の波長ではなく1.35 µm固定の $\lambda^2$ を使うと、推定値が数%ずれます。ここでの干渉縞は1.31–1.40 µmにあります。)
+これを5組に当てはめると $n_g = 2.91 \pm 0.04$ が得られ、モードソルバの値と0.7 %以内で一致します。(実際の干渉縞の波長ではなく1.35 µm固定の $\lambda^2$ を使うと、推定値が数%ずれます。ここでの干渉縞は1.31–1.40 µmにあります。)
 
 <Figure src={fig4} alt="アーム長差2.5から15マイクロメートルの6本のクロス側スペクトルを縦にずらして並べた図。アーム長差が小さいと帯域内でゆっくり変化し、大きいと2–3周期の干渉縞が現れる。" caption="6通りのアーム長差に対するクロス側パワーの波長依存性(各曲線を1.1ずつ縦にずらして表示)。干渉縞の周期は1/ΔLで縮む。notebooks/07_mzi.ipynb、10節より。" number={4} />
 

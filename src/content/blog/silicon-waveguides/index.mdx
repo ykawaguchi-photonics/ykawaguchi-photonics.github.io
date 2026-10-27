@@ -1,0 +1,694 @@
+---
+title: "Silicon Waveguides"
+description: "A silicon waveguide confines light in a high-index core by total internal reflection. How width, thickness and wavelength set its modes and indices."
+date: 2026-10-23
+category: technical-notes
+tags: [silicon photonics, waveguide, effective index, group index, mode solver, Meep, FDTD]
+areas: [silicon-photonics]
+draft: false
+---
+
+import Figure from "@/components/Figure.astro";
+import Term from "@/components/Term.astro";
+import Glossary from "@/components/Glossary.astro";
+import Def from "@/components/Def.astro";
+import Symbols from "@/components/Symbols.astro";
+import Callout from "@/components/Callout.astro";
+import fig1 from "./fig1_cross_section.png";
+import fig2 from "./fig2_slab_dispersion.png";
+import fig3 from "./fig3_width_modes.png";
+import fig4 from "./fig4_dispersion.png";
+import fig5 from "./fig5_cutback.png";
+
+**Language:** [English](#english) · [日本語](#日本語)
+
+## English
+
+A **silicon waveguide** is a strip of silicon, surrounded by lower-index silica, that guides light along the chip by total internal reflection. It is the wire of a photonic integrated circuit: every coupler, interferometer, resonator and modulator is built from waveguides, and their behaviour is set by two numbers of the waveguide mode, the effective index and the group index.
+
+### Overview
+
+#### What a waveguide does
+
+A waveguide keeps light from spreading out as it travels. In free space a beam a few hundred nanometres wide would diffract away within a few micrometres. Inside a waveguide it travels centimetres with the same cross-section, because the high-index core keeps bending the light back towards itself.
+
+Silicon (refractive index about 3.48 at 1.35 µm) clad in silica (about 1.44) gives one of the largest index contrasts available in integrated optics. The large contrast confines light in a core only about half a micrometre wide and allows bends of a few micrometres radius. That is what makes silicon photonic circuits small; it also makes silicon waveguides sensitive to every nanometre of their geometry.
+
+#### Basic structure
+
+Silicon photonics is built on <Term id="en-soi" n={1}>silicon-on-insulator</Term> (SOI) wafers: a thin silicon film on a buried oxide (BOX) layer, on a silicon substrate (Fig. 1, left). The standard film is 220 nm thick. Waveguides are etched into the film and covered with oxide. Two shapes dominate:
+
+- a **strip** (or wire) waveguide, etched through the whole film, typically 400–500 nm wide. It confines light most tightly and allows the smallest bends;
+- a **rib** waveguide, etched only part-way, so that a thin slab remains on both sides. Its mode touches the etched sidewalls less, which lowers scattering loss, at the price of larger bends.[^chrostowski]
+
+This article uses the 500 × 220 nm strip as its example. The designer chooses the **width** (by lithography) and, through the choice of platform, the **thickness**, the **cladding** and the operating **wavelength**.
+
+<Glossary>
+<Def id="en-soi" n={1} term="Silicon-on-insulator (SOI)">
+A wafer with a thin crystalline silicon film on top of a buried silicon-dioxide layer. The oxide isolates the waveguide from the silicon substrate, so light in the film cannot leak into it. A 220 nm film on a 2–3 µm oxide is the common photonics standard.
+</Def>
+</Glossary>
+
+<Figure src={fig1} alt="Left: schematic cross-section of a silicon strip waveguide, a 500 by 220 nanometre silicon core on buried oxide, covered by silica cladding, on a silicon substrate. Middle: intensity of the TE-like mode, a single bright spot centred in the core. Right: intensity of the TM-like mode, with bright lines just above and below the core's top and bottom faces." caption="The 500 × 220 nm silicon strip waveguide. Left: cross-section (schematic). Middle and right: |E|² of the TE-like and TM-like modes at λ = 1.35 µm from a full-vector mode solver (MPB), with the core outlined. The TM-like mode's field jumps at the top and bottom faces, where its dominant component is normal to the interface. From data/blog_figures/silicon_waveguides_mpb.npz." number={1} size="wide" />
+
+### Theory
+
+#### Confinement by total internal reflection
+
+In the simplest picture, light travels in the core as a ray that bounces between the core boundaries. At each bounce, a ray that meets the boundary at an angle larger than the critical angle is reflected completely: it undergoes <Term id="en-tir" n={2}>total internal reflection</Term>. The critical angle, measured from the boundary normal, is:
+
+$$
+\sin\theta_c = \frac{n_\text{clad}}{n_\text{core}} .
+$$
+
+<Symbols>
+
+- $\theta_c$ — critical angle, measured from the normal to the core boundary (rad)
+- $n_\text{clad}$ — refractive index of the cladding (dimensionless)
+- $n_\text{core}$ — refractive index of the core (dimensionless)
+
+</Symbols>
+
+For silicon in silica, $\theta_c = 24.4°$, so rays over a wide range of angles stay trapped. A weakly guiding glass fibre, by contrast, traps rays only within a few degrees of grazing incidence. The larger this range, the more tightly the light can be confined and the more sharply the waveguide can bend.
+
+<Glossary>
+<Def id="en-tir" n={2} term="Total internal reflection">
+When light in a high-index medium meets a boundary with a lower-index medium at more than the critical angle, none of it is transmitted: all of the power is reflected. A field still extends a short distance into the low-index side, but it carries no power away.
+</Def>
+</Glossary>
+
+#### Modes and the effective index
+
+The ray picture is only a guide. Because the core is about as wide as the wavelength, the light forms a few discrete field patterns, the <Term id="en-mode" n={3}>guided modes</Term>. Each one travels along the waveguide with a fixed cross-section and a single propagation constant. With the time dependence $e^{j\omega t}$, a mode propagating along $z$ is:
+
+$$
+\begin{aligned}
+\mathbf{E}(x,y,z,t) &= \mathbf{E}_0(x,y)\, e^{\,j(\omega t - \beta z)} , \\
+\beta &= \frac{2\pi}{\lambda}\, n_\text{eff} .
+\end{aligned}
+$$
+
+<Symbols>
+
+- $\mathbf{E}_0(x,y)$ — mode profile in the cross-section (V/m)
+- $\omega$ — angular frequency (rad/s)
+- $\beta$ — propagation constant of the mode (µm⁻¹)
+- $\lambda$ — vacuum wavelength (µm)
+- $n_\text{eff}$ — effective index of the mode (dimensionless)
+
+</Symbols>
+
+The <Term id="en-neff" n={4}>effective index</Term> says how fast the phase of the mode advances: the mode behaves as a plane wave in a uniform material of index $n_\text{eff}$. In the ray picture, $n_\text{eff} = n_\text{core}\sin\theta$, with $\theta$ the ray's angle from the normal. It therefore always lies between the cladding and the core index, $n_\text{clad} < n_\text{eff} < n_\text{core}$. A mode with $n_\text{eff}$ close to $n_\text{core}$ is well confined; one close to $n_\text{clad}$ is barely guided and spreads far into the cladding.
+
+<Glossary>
+<Def id="en-mode" n={3} term="Guided mode">
+A field pattern that travels along a waveguide without changing shape, apart from a phase that advances uniformly. A waveguide supports a finite number of guided modes at a given wavelength; any guided light is a combination of them.
+</Def>
+<Def id="en-neff" n={4} term="Effective index (n_eff)">
+The phase velocity of a mode, expressed as an index: the mode's phase advances by $2\pi n_\text{eff}/\lambda$ per unit length. It lies between the cladding and core indices and depends on the waveguide geometry, the polarization and the wavelength.
+</Def>
+</Glossary>
+
+Outside the core the field does not stop abruptly. It decays exponentially, as an <Term id="en-evan" n={5}>evanescent field</Term>. Treating the cladding as uniform, the decay constant is:
+
+$$
+\gamma = \frac{2\pi}{\lambda}\sqrt{n_\text{eff}^2 - n_\text{clad}^2} .
+$$
+
+<Symbols>
+
+- $\gamma$ — decay constant of the field amplitude in the cladding (µm⁻¹)
+- $n_\text{eff}$ — effective index of the mode (dimensionless)
+- $n_\text{clad}$ — cladding index (dimensionless)
+
+</Symbols>
+
+For the 500 × 220 nm strip at 1.35 µm ($n_\text{eff} = 2.646$), the field falls to $1/e$ within $1/\gamma \approx 97$ nm of the core boundary; at 1.55 µm the distance grows to about 125 nm. This estimate explains the scales of many components. A second waveguide placed within a few hundred nanometres picks up the evanescent tail, which is how directional couplers work. Metal or absorbing layers must stay well outside it, and sidewall roughness scatters exactly this part of the field.
+
+<Glossary>
+<Def id="en-evan" n={5} term="Evanescent field">
+The part of a guided mode that extends outside the core. It decays exponentially with distance from the core and carries no power away from the waveguide, but it interacts with anything placed within its reach.
+</Def>
+</Glossary>
+
+#### The slab waveguide and the single-mode condition
+
+The simplest waveguide with exact solutions is a **slab**: a film of thickness $d$ between two identical claddings. The guided modes follow from requiring that the field bouncing across the film returns in phase with itself. For mode number $m$ this gives the dispersion relation:[^okamoto]
+
+$$
+\begin{aligned}
+k_x d &= 2\arctan\!\left(r\,\frac{\gamma}{k_x}\right) + m\pi , \\
+k_x &= \frac{2\pi}{\lambda}\sqrt{n_\text{core}^2 - n_\text{eff}^2} .
+\end{aligned}
+$$
+
+<Symbols>
+
+- $k_x$ — transverse wavenumber inside the film (µm⁻¹)
+- $d$ — film thickness (µm)
+- $\gamma$ — decay constant in the cladding, from the previous equation (µm⁻¹)
+- $m$ — mode number: 0 for the fundamental mode, 1 for the next (dimensionless)
+- $r$ — boundary factor: $1$ for TE, $(n_\text{core}/n_\text{clad})^2$ for TM (dimensionless)
+
+</Symbols>
+
+The two polarizations are named after the field direction. In a **TE** mode the electric field lies parallel to the film; in a **TM** mode it is mostly normal to it. A field normal to a high-contrast interface must jump in strength across it, by $(n_\text{core}/n_\text{clad})^2 \approx 5.8$ for silicon and silica, so less of the TM field sits inside the film. TE modes are therefore better confined and have the higher index. For a 220 nm silicon film at 1.35 µm the slab gives $n_\text{eff} = 2.947$ for TE0 and only $2.315$ for TM0 (Fig. 2).
+
+Each higher mode appears at a <Term id="en-cutoff" n={6}>cutoff</Term> thickness, where its index reaches the cladding index. For mode $m$:
+
+$$
+d_m = \frac{m\,\lambda}{2\sqrt{n_\text{core}^2 - n_\text{clad}^2}} .
+$$
+
+<Symbols>
+
+- $d_m$ — film thickness at which mode $m$ becomes guided (µm)
+- $m$ — mode number (dimensionless)
+- $\lambda$ — vacuum wavelength (µm)
+
+</Symbols>
+
+A film thinner than $d_1$ is single-mode. For silicon in silica, $d_1$ = 207 nm at 1.31 µm, 213 nm at 1.35 µm and 245 nm at 1.55 µm. The standard 220 nm film is therefore single-mode in the vertical direction across the C-band, and sits just above the second TE mode's cutoff in the O-band, where that mode is guided only very weakly. The film thickness is fixed by the wafer, so in practice designers control the number of modes through the **width**.
+
+<Glossary>
+<Def id="en-cutoff" n={6} term="Cutoff and single-mode condition">
+A higher-order mode exists only above a certain size or frequency, its cutoff, where its effective index rises above the cladding index. A waveguide that is smaller than the cutoff of its second mode carries only the fundamental mode: it is single-mode.
+</Def>
+</Glossary>
+
+<Figure src={fig2} alt="Effective index versus film thickness from 0 to 600 nanometres for the TE0, TE1, TM0 and TM1 modes of a silicon slab in silica at 1.35 micrometres. TE0 rises fastest and reaches about 2.95 at 220 nanometres; TM0 is lower, about 2.3 there. TE1 and TM1 start at the cladding index 1.44 near 213 nanometres and rise more slowly. A vertical line marks 220 nanometres." caption="Effective index of the guided modes of a silicon slab (n = 3.48) in silica (n = 1.44) versus film thickness, at λ = 1.35 µm, from the slab dispersion relation. TE modes lie above TM modes; the second TE and TM modes both appear at 213 nm. Computed analytically." number={2} />
+
+#### From slab to strip: the effective-index method
+
+A strip waveguide confines light in both directions, and its modes have no closed-form solution. A classical shortcut, the <Term id="en-eim" n={7}>effective-index method</Term> (EIM), splits the problem into two slabs.[^marcatili] First, the vertical slab (the 220 nm film) is solved, giving its TE index, 2.947. Then a lateral slab, as wide as the strip, with that index as its core and silica outside, is solved for a field that is normal to the sidewalls. The result for the 500 × 220 nm strip is $n_\text{eff} = 2.675$.
+
+A full-vector mode solver of the real cross-section (MPB[^mpb]) gives $2.646$. The EIM is 1.1 % high at 1.35 µm and 2.0 % high at 1.55 µm: close enough for estimates, too far for interferometric design. It also fails where it matters most: Fig. 3 shows that it misses the shape of the curve at narrow widths, where the mode spreads into the cladding. Its single-mode width (about 260 nm, from the lateral slab's cutoff) is far below the true value.
+
+<Glossary>
+<Def id="en-eim" n={7} term="Effective-index method (EIM)">
+An approximation that reduces a 2D cross-section to two 1D slab problems: solve the vertical layer stack first, then use its effective index as the core of a lateral slab. It is fast and intuitive but least accurate for high-contrast, nearly square cores and near cutoff.
+</Def>
+</Glossary>
+
+The mode solver also shows how width controls the number of modes (Fig. 3). With a 220 nm film, the second TE mode appears at a width of about 360 nm at 1.35 µm and about 446 nm at 1.55 µm. The familiar rule that a 220 nm strip is single-mode below roughly 450 nm is a C-band rule. At 1.35 µm the 500 nm strip carries a second TE mode ($n_\text{eff}$ = 1.71), weakly guided but able to carry power if a bend, taper or junction excites it. The TM0 mode ($n_\text{eff}$ = 2.07) is always present too; it is kept out by launching only TE light and by avoiding structures that convert one polarization into the other.
+
+<Figure src={fig3} alt="Two panels of effective index versus core width from 200 to 800 nanometres for a 220 nanometre thick silicon strip, at 1.35 and at 1.55 micrometres. In each, the TE0 curve rises from about 1.5 to 2.8 or 2.7; the TM0 curve rises more slowly; dashed TE1 and TM1 curves start at the cladding index at larger widths. A vertical line marks where TE1 appears: about 360 nanometres at 1.35 micrometres and about 446 nanometres at 1.55 micrometres. A dash-dotted gray curve of the effective-index method lies above the TE0 curve, most at narrow widths." caption="Guided modes of a 220 nm thick silicon strip in silica versus core width, at 1.35 µm (left) and 1.55 µm (right), from MPB (3D cross-section, 32 px/µm; at 500 nm and 64 px/µm, TE0 is 2.6460). Dash-dotted: TE0 from the effective-index method. Vertical line: where the second TE mode becomes guided. From data/blog_figures/silicon_waveguides_mpb.npz." number={3} size="wide" />
+
+#### Group index and dispersion
+
+The effective index sets the phase. A signal, a pulse or the envelope of a modulated carrier, travels at the group velocity instead, set by the <Term id="en-ng" n={8}>group index</Term>:
+
+$$
+\begin{aligned}
+n_g &= n_\text{eff} - \lambda\,\frac{dn_\text{eff}}{d\lambda} , \\
+v_g &= \frac{c}{n_g} .
+\end{aligned}
+$$
+
+<Symbols>
+
+- $n_g$ — group index of the mode (dimensionless)
+- $dn_\text{eff}/d\lambda$ — slope of the effective index versus wavelength (µm⁻¹)
+- $v_g$ — group velocity (m/s)
+- $c$ — speed of light in vacuum (m/s)
+
+</Symbols>
+
+In a silicon wire, $n_\text{eff}$ falls steeply with wavelength, because a longer wavelength pushes more of the mode into the cladding (Fig. 4, left). This **waveguide dispersion** makes $n_g$ much larger than $n_\text{eff}$. For the 500 × 220 nm strip at 1.35 µm, the mode solver gives $n_\text{eff} = 2.646$ but $n_g = 3.96$ with constant material indices. The dispersion of silicon itself[^li] adds about 0.2: with material dispersion, $n_g = 4.15$ at 1.35 µm and $4.18$ at 1.55 µm (Fig. 4, right). On a fabricated chip, $n_\text{eff}$ and $n_g$ are measured with interferometers of several arm lengths.[^dwivedi]
+
+The group index, not the effective index, sets every spacing in a spectrum: the free spectral range of an MZI or ring, $\lambda^2/(n_g L)$, and the time delay of a delay line. Using $n_\text{eff}$ instead would be wrong by about 50 % in this waveguide.
+
+<Glossary>
+<Def id="en-ng" n={8} term="Group index (n_g)">
+The index that sets the speed of a pulse or signal envelope, $v_g = c/n_g$, and how fast the phase changes with wavelength. It includes the dispersion of the waveguide and of the materials. Fringe and resonance spacings are set by $n_g$.
+</Def>
+</Glossary>
+
+<Figure src={fig4} alt="Left: effective index of the 500 by 220 nanometre strip falling from about 2.75 at 1.26 micrometres to about 2.37 at 1.62 micrometres, for constant indices and with material dispersion; the two curves nearly coincide. Right: group index; with constant indices it rises from 3.92 to 4.08, with material dispersion it stays near 4.15 to 4.19." caption="Effective index (left) and group index (right) of the TE-like mode of the 500 × 220 nm strip versus wavelength, from MPB. Solid: constant indices (Si 3.48, SiO₂ 1.44). Dashed: with Si (Li 1980) and SiO₂ (Malitson 1965) material dispersion, n_g from a central difference. From data/blog_figures/silicon_waveguides_mpb.npz." number={4} size="wide" />
+
+#### Propagation loss
+
+A real waveguide loses power along its length. The power decays exponentially:
+
+$$
+\begin{aligned}
+P(L) &= P_0\, e^{-\alpha L} , \\
+\alpha_\text{dB} &= 10\log_{10}(e)\,\alpha \approx 4.34\,\alpha .
+\end{aligned}
+$$
+
+<Symbols>
+
+- $P(L)$ — guided power after a length $L$ (W)
+- $P_0$ — guided power at the start (W)
+- $\alpha$ — power attenuation coefficient (cm⁻¹)
+- $L$ — propagation length (cm)
+- $\alpha_\text{dB}$ — the same loss in dB per unit length (dB/cm)
+
+</Symbols>
+
+In a silicon strip at telecom wavelengths, silicon itself is transparent; the dominant loss is **scattering at sidewall roughness** left by lithography and etching. Scattering grows with the index contrast and with the field intensity at the sidewalls.[^payne] Narrow strips, whose mode presses against the sidewalls, therefore lose more than wide ones, and rib waveguides lose less than strips. Single-mode strip waveguides from a CMOS line have shown 3.6 dB/cm for TE light at 1.5 µm, with bend losses below 0.1 dB per 90° bend at 1 µm radius.[^vlasov] Loss is measured by the <Term id="en-cutback" n={9}>cutback method</Term>, which separates the length-dependent loss from the fixed coupling loss at the ends.
+
+<Glossary>
+<Def id="en-cutback" n={9} term="Cutback method">
+Measuring several otherwise identical waveguides of different length and fitting how the output changes with length. The slope of the power in dB gives the propagation loss; the slope of the phase gives the effective index. Anything that does not depend on length, such as coupling at the ends, drops out.
+</Def>
+</Glossary>
+
+#### Design guide: what changes what
+
+<Callout kind="design" title="What changes what">
+
+| If you change… | …this happens | Why |
+|---|---|---|
+| width ↑ | $n_\text{eff}$ and confinement rise; the mode touches the sidewalls less | more of the mode inside the core |
+| width above ≈ 360 nm (1.35 µm) or ≈ 446 nm (1.55 µm) | a second TE mode becomes guided | lateral cutoff (Fig. 3) |
+| film thickness (set by the wafer) | sets the vertical confinement and the TE–TM index difference | slab dispersion relation |
+| wavelength ↑ | $n_\text{eff}$ falls, the evanescent tail grows | $\gamma \propto \sqrt{n_\text{eff}^2-n_\text{clad}^2}/\lambda$ |
+| polarization TE → TM | much lower $n_\text{eff}$, weaker confinement, more field at the top and bottom faces | field normal to the interface jumps |
+| cladding index ↑ (e.g. polymer instead of oxide) | weaker confinement, larger bends needed | smaller index contrast |
+| sidewall roughness ↑ | higher propagation loss, worst for narrow strips | scattering of the field at the sidewalls |
+
+</Callout>
+
+### Simulation
+
+#### The model used here
+
+Two kinds of simulation appear in this article. The mode solves (Figs. 1, 3, 4) use MPB on the real 3D cross-section: a silicon core ($n = 3.48$) fully clad in silica ($n = 1.44$), non-dispersive unless stated, at 32 px/µm for the sweeps and 64 px/µm at the 500 nm design point. The FDTD runs come from my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit). Most of its components use a **2D model** of the strip: a 500 nm wide core of index 2.7 in a 1.44 cladding, simulated in Meep with the TE field ($H_z$ out of plane).
+
+The 2D model is a simplification. A 220 nm silicon slab has a TE index of 2.947 at 1.35 µm; the core index 2.7 of the 2D model corresponds to a thinner, roughly 158 nm film. The 2D model therefore confines light less than the real strip: its mode has $n_\text{eff} = 2.418$ and $n_g = 2.928$, against 2.646 and 3.96 for the real cross-section with the same constant indices. It reproduces the physics of guiding, coupling and interference, but its numbers are its own, not those of a fabricated device.
+
+#### Effective index from a simulated cutback
+
+The toolkit measures the effective index the way it is measured on a chip: by cutback. Eleven straight waveguides from 10.0 to 11.0 µm long are simulated in 2D FDTD (20 px/µm), and the phase of the transmitted mode coefficient $S_{21}$ is recorded at each length. The phase that the mode accumulates grows linearly with length, so its slope gives the effective index:
+
+$$
+\begin{aligned}
+\Delta\phi(L) &= \beta\,(L - L_0) , \\
+n_\text{eff} &= \frac{\lambda}{2\pi}\,\frac{d\Delta\phi}{dL} .
+\end{aligned}
+$$
+
+<Symbols>
+
+- $\Delta\phi(L)$ — phase of $S_{21}$ accumulated relative to the shortest waveguide (rad)
+- $L$ — waveguide length (µm)
+- $L_0$ — length of the shortest waveguide (µm)
+- $\beta$ — propagation constant (µm⁻¹)
+- $\lambda$ — vacuum wavelength (µm)
+- $n_\text{eff}$ — effective index (dimensionless)
+
+</Symbols>
+
+Taking the phase relative to one of the waveguides removes everything that does not depend on length, such as the phase at the ports.
+
+Fig. 5 (left) shows the result at 1.35 µm: the points lie on a straight line to within $1.4\times10^{-6}$ rad, and the slope gives $n_\text{eff} = 2.4538$. Transmitted plus reflected power stays at 1 within $4\times10^{-4}$, as it must for a lossless straight guide.
+
+The mode solver, applied to exactly the same 2D model, gives 2.4184. The FDTD value is 1.46 % higher at 1.35 µm, and between 1.35 % and 1.58 % higher across the band (Fig. 5, right). This is <Term id="en-numdisp" n={10}>numerical dispersion</Term>: at 20 px/µm the guided wavelength, $\lambda/n_\text{eff} = 0.56$ µm, spans only about 11 grid cells, and on such a grid waves travel slightly too slowly. The error also grows with frequency, so it inflates the group index derived from the FDTD $n_\text{eff}(\lambda)$: 3.05 instead of 2.93.
+
+<Glossary>
+<Def id="en-numdisp" n={10} term="Numerical dispersion">
+On a finite-difference grid, waves travel at a speed that depends on how many cells cover one wavelength. With too few cells per wavelength, the phase velocity is too low, so the simulated effective index comes out too high. The error falls roughly with the square of the grid spacing.
+</Def>
+</Glossary>
+
+<Figure src={fig5} alt="Left: accumulated phase of the transmitted mode versus waveguide length from 10 to 11 micrometres at 1.35 micrometres; eleven FDTD points lie on a dashed straight line rising from 0 to about 11.4 radians. Right: effective index versus wavelength from 1.30 to 1.40 micrometres; the FDTD cutback points lie about 0.035 above the mode-solver line for the same 2D model." caption="Cutback in 2D FDTD (20 px/µm). Left: accumulated phase of S₂₁ versus waveguide length at λ = 1.35 µm, with a linear fit. Right: effective index from the phase slope at every wavelength, compared with a mode solver applied to the same 2D model. The constant offset of about 1.5 % is the FDTD grid's numerical dispersion. From notebooks/01_waveguide_baseline.ipynb, Sections 4.2b and 5." number={5} size="wide" />
+
+<Callout kind="design" title="What this means for design">
+
+A simulated phase is only as accurate as the grid. A 1.5 % error in $n_\text{eff}$ is about $0.17$ rad per micrometre of waveguide at 1.35 µm, so an interferometer arm a few tens of micrometres long accumulates a phase error of several radians. Phase-sensitive devices need a resolution study, or a calibration of the simulated phase against a mode solver, before their simulated spectra can be trusted.
+
+</Callout>
+
+#### The same check in 3D
+
+The toolkit's 3D notebook repeats the measurement on the real 500 × 220 nm cross-section with the 3D FDTD solver fdtdx, which has no subpixel averaging. Two lessons come out of it:
+
+| Grid | Core on the grid | FDTD $n_\text{eff}$ | Mode-solver $n_\text{eff}$ of that core | Excess |
+|---|---|---|---|---|
+| 20 px/µm | 500 × 200 nm | 2.6550 | 2.5802 | +2.90 % |
+| 50 px/µm | 500 × 220 nm | 2.6621 | 2.6460 | +0.61 % |
+
+At 20 px/µm, 220 nm is 4.4 cells and the staircased grid holds a 200 nm core. Its FDTD index happens to lie close to the nominal 2.6460, but only because two errors cancel: the thinner core lowers $n_\text{eff}$ and numerical dispersion raises it. Compared with the structure the grid actually holds, the error is 2.9 %. At 50 px/µm, 500 × 220 nm is an exact number of cells and the error drops to 0.61 %. In both runs the transmission along the guide stays at 1 within $2\times10^{-5}$.
+
+#### Theory versus simulation
+
+| Quantity | Theory / mode solver | Simulation |
+|---|---|---|
+| Slab TE0 index, 220 nm, 1.35 µm | 2.947 (dispersion relation) | — |
+| Strip TE0 index, 500 × 220 nm, 1.35 µm | EIM 2.675; MPB 2.6460 | 3D FDTD 2.6621 (+0.61 %) |
+| Second TE mode appears (220 nm film) | MPB: ≈ 360 nm (1.35 µm), ≈ 446 nm (1.55 µm) | — |
+| Group index, 500 × 220 nm | 3.96 (constant indices), 4.15 (dispersive), 1.35 µm | — |
+| 2D model $n_\text{eff}$, 1.35 µm | 2.4184 (mode solver) | 2.4538 by FDTD cutback (+1.46 %) |
+
+A silicon waveguide's behaviour comes down to its mode. Width and thickness set how strongly the mode is confined, which sets its effective index, how many modes exist, how far the evanescent tail reaches, how strongly it disperses and how much it scatters. Two neighbouring waveguides exchange power through those tails, the subject of [Directional Couplers](/blog/directional-couplers-cmt-fdtd/); two arms of different length turn the effective and group index into a filter, the subject of [Mach–Zehnder Interferometers](/blog/mach-zehnder-interferometers/).
+
+### Code and data
+
+- Straight waveguide in 2D FDTD (geometry, S-parameters, length sweep, cutback fit): [`notebooks/01_waveguide_baseline.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/01_waveguide_baseline.ipynb)
+- Straight waveguide in 3D FDTD (fdtdx, staircase and matched grids): [`3d/notebooks/01b_waveguide_3d_fdtdx.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/3d/notebooks/01b_waveguide_3d_fdtdx.ipynb)
+- The MPB mode solves of Figs. 1, 3 and 4 are run by `scripts/blog_figures/silicon_waveguides_data.py` and saved in `data/blog_figures/silicon_waveguides_mpb.npz`. The figures and all numbers are produced from the saved data by `scripts/blog_figures/silicon_waveguides.py` in the same repository. No new FDTD runs were needed.
+
+---
+
+## 日本語
+
+**シリコン導波路**は、屈折率の低いシリカに囲まれたシリコンの細線で、全反射によってチップ上で光を導きます。光集積回路の配線にあたり、カプラ、干渉計、共振器、変調器はすべて導波路から作られます。その振る舞いは、導波モードの2つの数、実効屈折率と群屈折率で決まります。
+
+### 概要
+
+#### 導波路は何をするか
+
+導波路は、進む光が広がらないように閉じ込めます。自由空間では幅数百nmのビームは数µmで回折して広がってしまいますが、導波路の中では同じ断面のまま数cm進みます。屈折率の高いコアが光を絶えず自分の方へ曲げ戻すからです。
+
+シリコン(1.35 µmで屈折率約3.48)をシリカ(約1.44)で覆った構造は、集積光学で得られる最大級の屈折率差をもちます。この大きな屈折率差のおかげで、幅わずか0.5 µm程度のコアに光を閉じ込め、半径数µmの曲げも可能になります。これがシリコン光回路を小さくしている理由であり、同時にシリコン導波路が形状の1 nm単位の違いに敏感な理由でもあります。
+
+#### 基本構造
+
+シリコンフォトニクスは<Term id="ja-soi" n={1}>SOI</Term>(silicon-on-insulator)ウェハの上に作られます。シリコン基板の上に埋め込み酸化膜(BOX)があり、その上に薄いシリコン膜が載っています(図1左)。標準的な膜厚は220 nmです。導波路はこの膜をエッチングして作り、酸化膜で覆います。主な形状は2つです。
+
+- **ストリップ**(細線)導波路:膜を完全にエッチングしたもので、幅は通常400–500 nm。光を最も強く閉じ込め、最も小さな曲げが可能です。
+- **リブ**導波路:途中までエッチングし、両側に薄いスラブを残したもの。モードがエッチング側壁に触れにくいので散乱損失が小さい代わりに、曲げは大きくなります[^chrostowski]。
+
+本記事では500 × 220 nmのストリップを例にします。設計者が選ぶのは、リソグラフィで決まる**幅**と、プラットフォームの選択を通じた**厚さ**、**クラッド**、使用する**波長**です。
+
+<Glossary title="用語">
+<Def id="ja-soi" n={1} term="SOI(silicon-on-insulator)">
+埋め込みシリコン酸化膜の上に薄い単結晶シリコン膜をもつウェハです。酸化膜が導波路をシリコン基板から隔てるので、膜の中の光は基板へ漏れません。厚さ2–3 µmの酸化膜上の220 nm膜が、フォトニクスで一般的な標準です。
+</Def>
+</Glossary>
+
+<Figure src={fig1} alt="左:シリコンストリップ導波路の断面模式図。埋め込み酸化膜の上に500 × 220ナノメートルのシリコンコアがあり、シリカのクラッドで覆われ、その下にシリコン基板がある。中央:TE的モードの強度で、コア中央に明るい1つのスポットがある。右:TM的モードの強度で、コアの上面と下面のすぐ外側に明るい線がある。" caption="500 × 220 nmのシリコンストリップ導波路。左:断面(模式図)。中央と右:完全ベクトルのモードソルバ(MPB)で求めたλ = 1.35 µmでのTE的モードとTM的モードの|E|²。白枠はコア。TM的モードの場は、主成分が界面に垂直になる上面と下面で跳ぶ。data/blog_figures/silicon_waveguides_mpb.npz より。" number={1} size="wide" />
+
+### 理論
+
+#### 全反射による閉じ込め
+
+最も単純な描像では、光はコアの境界の間で跳ね返る光線として進みます。境界に臨界角より大きな角度で当たった光線は、すべて反射されます。これが<Term id="ja-tir" n={2}>全反射</Term>です。境界の法線から測った臨界角は次のようになります。
+
+$$
+\sin\theta_c = \frac{n_\text{clad}}{n_\text{core}}
+$$
+
+<Symbols title="記号">
+
+- $\theta_c$ — コア境界の法線から測った臨界角(rad)
+- $n_\text{clad}$ — クラッドの屈折率(無次元)
+- $n_\text{core}$ — コアの屈折率(無次元)
+
+</Symbols>
+
+シリカ中のシリコンでは $\theta_c = 24.4°$ で、広い範囲の角度の光線が閉じ込められます。これに対し、屈折率差の小さいガラスファイバでは、すれすれの入射から数度以内の光線しか閉じ込められません。この範囲が広いほど光を強く閉じ込められ、導波路を急に曲げることができます。
+
+<Glossary title="用語">
+<Def id="ja-tir" n={2} term="全反射">
+高屈折率の媒質中の光が、低屈折率の媒質との境界に臨界角を超える角度で当たると、透過する光はなく、パワーはすべて反射されます。場は低屈折率側にもわずかに染み出しますが、パワーを運び去ることはありません。
+</Def>
+</Glossary>
+
+#### モードと実効屈折率
+
+光線の描像は目安にすぎません。コアの幅が波長と同程度なので、光はいくつかの離散的な場のパターン、<Term id="ja-mode" n={3}>導波モード</Term>をつくります。各モードは断面の形を変えずに、1つの伝搬定数で導波路に沿って進みます。時間依存性を $e^{j\omega t}$ とすると、$z$ 方向に進むモードは次のように書けます。
+
+$$
+\begin{aligned}
+\mathbf{E}(x,y,z,t) &= \mathbf{E}_0(x,y)\, e^{\,j(\omega t - \beta z)} \\
+\beta &= \frac{2\pi}{\lambda}\, n_\text{eff}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{E}_0(x,y)$ — 断面内のモード分布(V/m)
+- $\omega$ — 角周波数(rad/s)
+- $\beta$ — モードの伝搬定数(µm⁻¹)
+- $\lambda$ — 真空中の波長(µm)
+- $n_\text{eff}$ — モードの実効屈折率(無次元)
+
+</Symbols>
+
+<Term id="ja-neff" n={4}>実効屈折率</Term>は、モードの位相が進む速さを表します。モードは、屈折率 $n_\text{eff}$ の一様な物質中の平面波のように振る舞います。光線の描像では $n_\text{eff} = n_\text{core}\sin\theta$($\theta$ は法線から測った光線の角度)なので、実効屈折率は常にクラッドとコアの屈折率の間、$n_\text{clad} < n_\text{eff} < n_\text{core}$ にあります。$n_\text{eff}$ が $n_\text{core}$ に近いモードはよく閉じ込められ、$n_\text{clad}$ に近いモードはかろうじて導波され、クラッドへ大きく広がります。
+
+<Glossary title="用語">
+<Def id="ja-mode" n={3} term="導波モード">
+一様に進む位相を除いて形を変えずに導波路を伝わる場のパターンです。ある波長で導波路が支えられる導波モードの数は有限で、導波される光はすべてそれらの組み合わせです。
+</Def>
+<Def id="ja-neff" n={4} term="実効屈折率(n_eff)">
+モードの位相速度を屈折率で表したものです。モードの位相は単位長さあたり $2\pi n_\text{eff}/\lambda$ だけ進みます。値はクラッドとコアの屈折率の間にあり、導波路の形状、偏波、波長に依存します。
+</Def>
+</Glossary>
+
+コアの外で場が急に途切れるわけではありません。場は<Term id="ja-evan" n={5}>エバネッセント場</Term>として指数関数的に減衰します。クラッドを一様とみなすと、減衰定数は次のようになります。
+
+$$
+\gamma = \frac{2\pi}{\lambda}\sqrt{n_\text{eff}^2 - n_\text{clad}^2}
+$$
+
+<Symbols title="記号">
+
+- $\gamma$ — クラッド中の場の振幅の減衰定数(µm⁻¹)
+- $n_\text{eff}$ — モードの実効屈折率(無次元)
+- $n_\text{clad}$ — クラッドの屈折率(無次元)
+
+</Symbols>
+
+1.35 µmの500 × 220 nmストリップ($n_\text{eff} = 2.646$)では、場はコア境界から $1/\gamma \approx 97$ nm以内で $1/e$ に下がります。1.55 µmではこの距離が約125 nmに伸びます。この見積もりから、多くの部品の寸法の目安がわかります。数百nm以内に置いた2本目の導波路はエバネッセント場の裾を拾い、これが方向性結合器の原理です。金属や吸収層はこの範囲の十分外に置く必要があり、側壁の荒れが散乱させるのもまさにこの部分の場です。
+
+<Glossary title="用語">
+<Def id="ja-evan" n={5} term="エバネッセント場">
+導波モードのうちコアの外に広がる部分です。コアからの距離とともに指数関数的に減衰し、導波路からパワーを運び去ることはありませんが、その届く範囲に置いたものとは相互作用します。
+</Def>
+</Glossary>
+
+#### スラブ導波路と単一モード条件
+
+厳密解をもつ最も単純な導波路は**スラブ**、つまり同じクラッドに挟まれた厚さ $d$ の膜です。導波モードは、膜を横切って往復した場が自分自身と同位相で戻るという条件から求まります。モード番号 $m$ について、分散関係は次のようになります[^okamoto]。
+
+$$
+\begin{aligned}
+k_x d &= 2\arctan\!\left(r\,\frac{\gamma}{k_x}\right) + m\pi \\
+k_x &= \frac{2\pi}{\lambda}\sqrt{n_\text{core}^2 - n_\text{eff}^2}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $k_x$ — 膜の中での横方向の波数(µm⁻¹)
+- $d$ — 膜厚(µm)
+- $\gamma$ — 前の式のクラッド中の減衰定数(µm⁻¹)
+- $m$ — モード番号:基本モードは0、次が1(無次元)
+- $r$ — 境界の係数:TEでは $1$、TMでは $(n_\text{core}/n_\text{clad})^2$(無次元)
+
+</Symbols>
+
+2つの偏波は場の向きで呼び分けます。**TE**モードでは電場が膜に平行で、**TM**モードでは主に膜に垂直です。屈折率差の大きい界面に垂直な場は界面で強さが跳ばなければならず、シリコンとシリカではその比は $(n_\text{core}/n_\text{clad})^2 \approx 5.8$ です。そのためTMの場は膜の中に入る割合が小さくなります。TEモードの方が閉じ込めが強く、屈折率も高くなります。1.35 µmでの220 nmシリコン膜では、スラブの $n_\text{eff}$ はTE0で2.947、TM0ではわずか2.315です(図2)。
+
+高次モードはそれぞれ、屈折率がクラッドの屈折率に達する<Term id="ja-cutoff" n={6}>カットオフ</Term>厚さで現れます。モード $m$ のカットオフ厚さは次のようになります。
+
+$$
+d_m = \frac{m\,\lambda}{2\sqrt{n_\text{core}^2 - n_\text{clad}^2}}
+$$
+
+<Symbols title="記号">
+
+- $d_m$ — モード $m$ が導波され始める膜厚(µm)
+- $m$ — モード番号(無次元)
+- $\lambda$ — 真空中の波長(µm)
+
+</Symbols>
+
+$d_1$ より薄い膜は単一モードです。シリカ中のシリコンでは、$d_1$ は1.31 µmで207 nm、1.35 µmで213 nm、1.55 µmで245 nmです。したがって標準の220 nm膜は、Cバンド全体で縦方向に単一モードであり、Oバンドでは2番目のTEモードのカットオフをわずかに超えています。このモードはごく弱くしか導波されません。膜厚はウェハで決まっているので、実際には設計者はモードの数を**幅**で制御します。
+
+<Glossary title="用語">
+<Def id="ja-cutoff" n={6} term="カットオフと単一モード条件">
+高次モードは、ある寸法または周波数(カットオフ)以上でのみ存在し、そこで実効屈折率がクラッドの屈折率を上回ります。2番目のモードのカットオフより小さい導波路は基本モードだけを運び、単一モードになります。
+</Def>
+</Glossary>
+
+<Figure src={fig2} alt="1.35マイクロメートルにおけるシリカ中のシリコンスラブのTE0、TE1、TM0、TM1モードの実効屈折率と膜厚0から600ナノメートルの関係。TE0が最も速く立ち上がり220ナノメートルで約2.95、TM0はそこで約2.3と低い。TE1とTM1は約213ナノメートルでクラッド屈折率1.44から始まり、ゆっくり上がる。縦線は220ナノメートル。" caption="シリカ(n = 1.44)中のシリコンスラブ(n = 3.48)の導波モードの実効屈折率と膜厚の関係(λ = 1.35 µm、スラブの分散関係から計算)。TEモードはTMモードより上にあり、2番目のTEモードとTMモードはともに213 nmで現れる。解析的に計算。" number={2} />
+
+#### スラブからストリップへ:等価屈折率法
+
+ストリップ導波路は光を2方向に閉じ込めるので、そのモードには閉じた形の解がありません。古典的な近道である<Term id="ja-eim" n={7}>等価屈折率法</Term>(EIM)は、問題を2つのスラブに分けます[^marcatili]。まず縦方向のスラブ(220 nm膜)を解いてTEの屈折率2.947を得ます。次に、その屈折率をコアとし、外側をシリカとする、ストリップと同じ幅の横方向のスラブを、側壁に垂直な場について解きます。500 × 220 nmストリップでは $n_\text{eff} = 2.675$ になります。
+
+実際の断面を完全ベクトルのモードソルバ(MPB[^mpb])で解くと $2.646$ です。EIMは1.35 µmで1.1 %、1.55 µmで2.0 %高く、見積もりには十分ですが、干渉計の設計には遠すぎます。さらに、最も重要なところで破綻します。図3のとおり、モードがクラッドへ広がる細い幅では曲線の形を捉えられません。横方向スラブのカットオフから求めた単一モード幅(約260 nm)は、真の値をはるかに下回ります。
+
+<Glossary title="用語">
+<Def id="ja-eim" n={7} term="等価屈折率法(EIM)">
+2次元の断面を2つの1次元スラブ問題に還元する近似です。まず縦方向の積層を解き、その実効屈折率を横方向スラブのコアとして使います。速く直感的ですが、屈折率差が大きく正方形に近いコアやカットオフ付近では精度が最も低くなります。
+</Def>
+</Glossary>
+
+モードソルバは、幅がモードの数をどう決めるかも示します(図3)。220 nm膜では、2番目のTEモードは1.35 µmで幅約360 nm、1.55 µmで幅約446 nmから現れます。「220 nmストリップは幅約450 nm以下で単一モード」というよく知られた目安は、Cバンドの目安です。1.35 µmでは500 nmストリップは2番目のTEモード($n_\text{eff}$ = 1.71)を運びます。導波は弱いものの、曲げやテーパ、接合部で励振されればパワーを運べます。TM0モード($n_\text{eff}$ = 2.07)も常に存在します。TE光だけを入射し、偏波を変換する構造を避けることで、TM0の励振を防ぎます。
+
+<Figure src={fig3} alt="厚さ220ナノメートルのシリコンストリップについて、1.35と1.55マイクロメートルでの実効屈折率とコア幅200から800ナノメートルの関係を示す2パネル。どちらもTE0曲線は約1.5から2.8または2.7へ上がり、TM0曲線はゆっくり上がる。破線のTE1とTM1はより大きな幅でクラッド屈折率から始まる。縦線はTE1が現れる位置で、1.35マイクロメートルで約360ナノメートル、1.55マイクロメートルで約446ナノメートル。等価屈折率法の灰色の一点鎖線はTE0曲線の上にあり、細い幅ほど離れる。" caption="シリカ中の厚さ220 nmのシリコンストリップの導波モードとコア幅の関係。左:1.35 µm、右:1.55 µm。MPB(3次元断面、32 px/µm。幅500 nm・64 px/µmではTE0は2.6460)。一点鎖線:等価屈折率法によるTE0。縦線:2番目のTEモードが導波され始める幅。data/blog_figures/silicon_waveguides_mpb.npz より。" number={3} size="wide" />
+
+#### 群屈折率と分散
+
+実効屈折率が決めるのは位相です。信号、つまりパルスや変調された搬送波の包絡線は、群速度で進みます。群速度は<Term id="ja-ng" n={8}>群屈折率</Term>で決まり、群屈折率と群速度は次のように定義されます。
+
+$$
+\begin{aligned}
+n_g &= n_\text{eff} - \lambda\,\frac{dn_\text{eff}}{d\lambda} \\
+v_g &= \frac{c}{n_g}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $n_g$ — モードの群屈折率(無次元)
+- $dn_\text{eff}/d\lambda$ — 波長に対する実効屈折率の傾き(µm⁻¹)
+- $v_g$ — 群速度(m/s)
+- $c$ — 真空中の光速(m/s)
+
+</Symbols>
+
+シリコン細線では、波長が長いほどモードがクラッドへ押し出されるため、$n_\text{eff}$ は波長とともに急に下がります(図4左)。この**導波路分散**のために、$n_g$ は $n_\text{eff}$ よりずっと大きくなります。1.35 µmの500 × 220 nmストリップでは、材料の屈折率を一定とするとモードソルバの値は $n_\text{eff} = 2.646$、$n_g = 3.96$ です。シリコン自体の分散[^li]が約0.2を加え、材料分散を含めると1.35 µmで $n_g = 4.15$、1.55 µmで $4.18$ になります(図4右)。作製したチップでは、アーム長の異なる複数の干渉計で $n_\text{eff}$ と $n_g$ を測定します[^dwivedi]。
+
+スペクトルのあらゆる間隔を決めるのは、実効屈折率ではなく群屈折率です。MZIやリングの自由スペクトル領域 $\lambda^2/(n_g L)$ も、遅延線の遅延時間もそうです。この導波路で $n_\text{eff}$ を使うと約50 %ずれてしまいます。
+
+<Glossary title="用語">
+<Def id="ja-ng" n={8} term="群屈折率(n_g)">
+パルスや信号の包絡線が進む速さ $v_g = c/n_g$ と、波長に対して位相が変わる速さを決める屈折率です。導波路と材料の分散を含みます。干渉縞や共鳴の間隔は $n_g$ で決まります。
+</Def>
+</Glossary>
+
+<Figure src={fig4} alt="左:500 × 220ナノメートルストリップの実効屈折率が1.26マイクロメートルの約2.75から1.62マイクロメートルの約2.37へ下がる。屈折率一定の場合と材料分散を含む場合の2本はほぼ重なる。右:群屈折率。屈折率一定では3.92から4.08へ上がり、材料分散を含むと4.15から4.19付近にとどまる。" caption="500 × 220 nmストリップのTE的モードの実効屈折率(左)と群屈折率(右)の波長依存性(MPB)。実線:屈折率一定(Si 3.48、SiO₂ 1.44)。破線:Si(Li 1980)とSiO₂(Malitson 1965)の材料分散を含む。n_gは中心差分で求めた。data/blog_figures/silicon_waveguides_mpb.npz より。" number={4} size="wide" />
+
+#### 伝搬損失
+
+実際の導波路は長さに沿ってパワーを失います。パワーは次のように指数関数的に減衰します。
+
+$$
+\begin{aligned}
+P(L) &= P_0\, e^{-\alpha L} \\
+\alpha_\text{dB} &= 10\log_{10}(e)\,\alpha \approx 4.34\,\alpha
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $P(L)$ — 長さ $L$ を進んだ後の導波パワー(W)
+- $P_0$ — 始点での導波パワー(W)
+- $\alpha$ — パワーの減衰係数(cm⁻¹)
+- $L$ — 伝搬距離(cm)
+- $\alpha_\text{dB}$ — 同じ損失を単位長さあたりのdBで表したもの(dB/cm)
+
+</Symbols>
+
+通信波長のシリコンストリップでは、シリコン自体は透明で、主な損失はリソグラフィとエッチングで残る**側壁の荒れによる散乱**です。散乱は屈折率差と、側壁での場の強さとともに大きくなります[^payne]。そのため、モードが側壁に押し付けられる細いストリップは太いものより損失が大きく、リブ導波路はストリップより損失が小さくなります。CMOSラインで作製した単一モードのストリップ導波路では、1.5 µmのTE光で3.6 dB/cm、半径1 µmの90°曲げ1つあたり0.1 dB未満の曲げ損失が報告されています[^vlasov]。損失は<Term id="ja-cutback" n={9}>カットバック法</Term>で測定します。この方法では、長さに依存する損失と端での一定の結合損失を分離できます。
+
+<Glossary title="用語">
+<Def id="ja-cutback" n={9} term="カットバック法">
+長さだけが異なる複数の導波路を測定し、出力が長さとともにどう変わるかをフィットする方法です。dB表示のパワーの傾きから伝搬損失が、位相の傾きから実効屈折率が得られます。端での結合など長さに依存しないものは消えます。
+</Def>
+</Glossary>
+
+#### 設計の早見表:何を変えると何が変わるか
+
+<Callout kind="design" title="何を変えると何が変わるか">
+
+| 変えるもの | 起こること | 理由 |
+|---|---|---|
+| 幅 ↑ | $n_\text{eff}$ と閉じ込めが上がり、モードが側壁に触れにくくなる | モードのより多くがコア内に入る |
+| 幅が約360 nm(1.35 µm)または約446 nm(1.55 µm)を超える | 2番目のTEモードが導波される | 横方向のカットオフ(図3) |
+| 膜厚(ウェハで決まる) | 縦方向の閉じ込めとTE・TMの屈折率差を決める | スラブの分散関係 |
+| 波長 ↑ | $n_\text{eff}$ が下がり、エバネッセント場の裾が伸びる | $\gamma \propto \sqrt{n_\text{eff}^2-n_\text{clad}^2}/\lambda$ |
+| 偏波 TE → TM | $n_\text{eff}$ がずっと低く、閉じ込めが弱く、上下面の場が強くなる | 界面に垂直な場は跳ぶ |
+| クラッドの屈折率 ↑(酸化膜の代わりにポリマーなど) | 閉じ込めが弱くなり、大きな曲げが必要になる | 屈折率差が小さくなる |
+| 側壁の荒れ ↑ | 伝搬損失が増え、細いストリップほど悪化する | 側壁での場の散乱 |
+
+</Callout>
+
+### シミュレーション
+
+#### 本記事のモデル
+
+本記事には2種類のシミュレーションが出てきます。モード計算(図1、3、4)は、実際の3次元断面をMPBで解いたものです。シリコンコア($n = 3.48$)をシリカ($n = 1.44$)で完全に覆い、断りのない限り材料分散なしとし、掃引は32 px/µm、幅500 nmの設計点は64 px/µmで解いています。FDTD計算は[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)によるものです。その部品の多くはストリップの**2次元モデル**を使っています。屈折率1.44のクラッド中の、幅500 nm、屈折率2.7のコアで、MeepでTEの場($H_z$ が面外)を計算します。
+
+2次元モデルは実際の構造を単純化したものです。220 nmのシリコンスラブのTE屈折率は1.35 µmで2.947で、2次元モデルのコア屈折率2.7は、もっと薄い約158 nmの膜に相当します。そのため2次元モデルは実際のストリップより光の閉じ込めが弱く、モードは $n_\text{eff} = 2.418$、$n_g = 2.928$ です。同じ一定の屈折率で実際の断面を解いた値は2.646と3.96です。2次元モデルは導波、結合、干渉の物理を再現しますが、その数値はモデル固有のもので、作製したデバイスの値ではありません。
+
+#### シミュレーションによるカットバックで実効屈折率を求める
+
+ツールキットでは、チップ上と同じ方法、つまりカットバックで実効屈折率を測ります。長さ10.0 µmから11.0 µmまでの11本の直線導波路を2次元FDTD(20 px/µm)で計算し、各長さで透過モード係数 $S_{21}$ の位相を記録します。モードが蓄積する位相は長さに比例して増えるので、その傾きから実効屈折率が次のように求まります。
+
+$$
+\begin{aligned}
+\Delta\phi(L) &= \beta\,(L - L_0) \\
+n_\text{eff} &= \frac{\lambda}{2\pi}\,\frac{d\Delta\phi}{dL}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $\Delta\phi(L)$ — 最も短い導波路を基準にした $S_{21}$ の蓄積位相(rad)
+- $L$ — 導波路長(µm)
+- $L_0$ — 最も短い導波路の長さ(µm)
+- $\beta$ — 伝搬定数(µm⁻¹)
+- $\lambda$ — 真空中の波長(µm)
+- $n_\text{eff}$ — 実効屈折率(無次元)
+
+</Symbols>
+
+1本の導波路を基準に位相をとることで、ポートでの位相など長さに依存しないものがすべて消えます。
+
+1.35 µmでの結果を図5左に示します。点は $1.4\times10^{-6}$ radの精度で直線に乗り、傾きから $n_\text{eff} = 2.4538$ が得られます。透過と反射のパワーの和は $4\times10^{-4}$ 以内で1に保たれ、損失のない直線導波路として当然の結果です。
+
+まったく同じ2次元モデルにモードソルバを適用すると2.4184です。FDTDの値は1.35 µmで1.46 %高く、帯域全体では1.35 %から1.58 %高くなります(図5右)。これは<Term id="ja-numdisp" n={10}>数値分散</Term>です。20 px/µmでは導波波長 $\lambda/n_\text{eff} = 0.56$ µmが約11セルにしかならず、このような格子では波がわずかに遅く進みます。誤差は周波数とともに大きくなるので、FDTDの $n_\text{eff}(\lambda)$ から求めた群屈折率も2.93ではなく3.05と過大になります。
+
+<Glossary title="用語">
+<Def id="ja-numdisp" n={10} term="数値分散">
+差分格子の上では、波の速さが1波長あたりのセル数に依存します。1波長あたりのセルが少なすぎると位相速度が低くなり、シミュレーションの実効屈折率が高く出ます。誤差はおおよそ格子間隔の2乗で小さくなります。
+</Def>
+</Glossary>
+
+<Figure src={fig5} alt="左:1.35マイクロメートルにおける透過モードの蓄積位相と導波路長10から11マイクロメートルの関係。11個のFDTD点が0から約11.4ラジアンまで上がる破線の直線に乗る。右:1.30から1.40マイクロメートルでの実効屈折率。FDTDのカットバックの点は、同じ2次元モデルのモードソルバの線より約0.035上にある。" caption="2次元FDTD(20 px/µm)によるカットバック。左:λ = 1.35 µmでのS₂₁の蓄積位相と導波路長の関係、および直線フィット。右:各波長の位相の傾きから求めた実効屈折率と、同じ2次元モデルに適用したモードソルバの比較。約1.5 %の一定のずれはFDTD格子の数値分散である。notebooks/01_waveguide_baseline.ipynb、4.2b節と5節より。" number={5} size="wide" />
+
+<Callout kind="design" title="設計上の意味">
+
+シミュレーションの位相の精度は格子で決まります。$n_\text{eff}$ の1.5 %の誤差は、1.35 µmで導波路1 µmあたり約 $0.17$ radにあたるので、長さ数十µmの干渉計のアームには数radの位相誤差がたまります。位相に敏感な素子では、シミュレーションのスペクトルを信頼する前に、解像度の検討か、モードソルバに対するシミュレーション位相の較正が必要です。
+
+</Callout>
+
+#### 3次元での同じ確認
+
+ツールキットの3次元ノートブックは、サブピクセル平均をもたない3次元FDTDソルバfdtdxで、実際の500 × 220 nm断面について同じ測定を繰り返しています。ここから2つの教訓が得られます。
+
+| 格子 | 格子上のコア | FDTDの $n_\text{eff}$ | そのコアのモードソルバ値 | 超過 |
+|---|---|---|---|---|
+| 20 px/µm | 500 × 200 nm | 2.6550 | 2.5802 | +2.90 % |
+| 50 px/µm | 500 × 220 nm | 2.6621 | 2.6460 | +0.61 % |
+
+20 px/µmでは220 nmは4.4セルになり、階段状の格子には200 nmのコアしか入りません。そのFDTDの屈折率は公称値2.6460にたまたま近くなりますが、それは2つの誤差が打ち消し合っているからにすぎません。薄いコアは $n_\text{eff}$ を下げ、数値分散は上げます。格子が実際に保持している構造と比べると、誤差は2.9 %です。50 px/µmでは500 × 220 nmがちょうど整数個のセルになり、誤差は0.61 %まで下がります。どちらの計算でも、導波路に沿った透過率は $2\times10^{-5}$ 以内で1に保たれています。
+
+#### 理論とシミュレーションの比較
+
+| 量 | 理論・モードソルバ | シミュレーション |
+|---|---|---|
+| スラブTE0の屈折率(220 nm、1.35 µm) | 2.947(分散関係) | — |
+| ストリップTE0の屈折率(500 × 220 nm、1.35 µm) | EIM 2.675、MPB 2.6460 | 3次元FDTD 2.6621(+0.61 %) |
+| 2番目のTEモードが現れる幅(220 nm膜) | MPB:約360 nm(1.35 µm)、約446 nm(1.55 µm) | — |
+| 群屈折率(500 × 220 nm、1.35 µm) | 3.96(屈折率一定)、4.15(分散を含む) | — |
+| 2次元モデルの $n_\text{eff}$(1.35 µm) | 2.4184(モードソルバ) | FDTDカットバックで2.4538(+1.46 %) |
+
+シリコン導波路の振る舞いは、そのモードに帰着します。幅と厚さがモードの閉じ込めの強さを決め、それが実効屈折率、モードの数、エバネッセント場の届く範囲、分散の強さ、散乱の大きさを決めます。隣り合う2本の導波路はその裾を通じてパワーをやり取りし、これが[方向性結合器](/blog/directional-couplers-cmt-fdtd/)の主題です。長さの異なる2本のアームは実効屈折率と群屈折率をフィルタに変え、これが[Mach–Zehnder干渉計](/blog/mach-zehnder-interferometers/)の主題です。
+
+### コードとデータ
+
+- 2次元FDTDによる直線導波路(形状、Sパラメータ、長さ掃引、カットバックのフィット):[`notebooks/01_waveguide_baseline.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/01_waveguide_baseline.ipynb)
+- 3次元FDTDによる直線導波路(fdtdx、階段近似の格子と構造に合わせた格子):[`3d/notebooks/01b_waveguide_3d_fdtdx.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/3d/notebooks/01b_waveguide_3d_fdtdx.ipynb)
+- 図1、3、4のMPBによるモード計算は `scripts/blog_figures/silicon_waveguides_data.py` で実行し、`data/blog_figures/silicon_waveguides_mpb.npz` に保存しました。図とすべての数値は、保存済みデータから同リポジトリの `scripts/blog_figures/silicon_waveguides.py` で作成しました。新たなFDTD計算は行っていません。
+
+---
+
+## References / 参考文献
+
+[^chrostowski]: L. Chrostowski and M. Hochberg, *Silicon Photonics Design: From Devices to Systems* (Cambridge University Press, 2015). [doi:10.1017/CBO9781316084168](https://doi.org/10.1017/CBO9781316084168)
+[^okamoto]: K. Okamoto, *Fundamentals of Optical Waveguides*, 2nd ed. (Academic Press, 2006). [doi:10.1016/B978-0-12-525096-2.X5000-4](https://doi.org/10.1016/B978-0-12-525096-2.X5000-4)
+[^marcatili]: E. A. J. Marcatili, "Dielectric rectangular waveguide and directional coupler for integrated optics," *Bell System Technical Journal* **48**, 2071–2102 (1969). [doi:10.1002/j.1538-7305.1969.tb01166.x](https://doi.org/10.1002/j.1538-7305.1969.tb01166.x)
+[^mpb]: S. G. Johnson and J. D. Joannopoulos, "Block-iterative frequency-domain methods for Maxwell's equations in a planewave basis," *Optics Express* **8**, 173–190 (2001). [doi:10.1364/OE.8.000173](https://doi.org/10.1364/OE.8.000173)
+[^li]: H. H. Li, "Refractive index of silicon and germanium and its wavelength and temperature derivatives," *Journal of Physical and Chemical Reference Data* **9**, 561–658 (1980). [doi:10.1063/1.555624](https://doi.org/10.1063/1.555624)
+[^dwivedi]: S. Dwivedi, A. Ruocco, M. Vanslembrouck, T. Spuesens, P. Bienstman, P. Dumon, T. Van Vaerenbergh and W. Bogaerts, "Experimental extraction of effective refractive index and thermo-optic coefficients of silicon-on-insulator waveguides using interferometers," *Journal of Lightwave Technology* **33**, 4471–4477 (2015). [doi:10.1109/JLT.2015.2476603](https://doi.org/10.1109/JLT.2015.2476603)
+[^payne]: F. P. Payne and J. P. R. Lacey, "A theoretical analysis of scattering loss from planar optical waveguides," *Optical and Quantum Electronics* **26**, 977–986 (1994). [doi:10.1007/BF00708339](https://doi.org/10.1007/BF00708339)
+[^vlasov]: Y. A. Vlasov and S. J. McNab, "Losses in single-mode silicon-on-insulator strip waveguides and bends," *Optics Express* **12**, 1622–1631 (2004). [doi:10.1364/OPEX.12.001622](https://doi.org/10.1364/OPEX.12.001622)

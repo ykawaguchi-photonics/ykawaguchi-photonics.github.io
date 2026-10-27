@@ -2,7 +2,7 @@
 title: "Ring Resonators"
 description: "A ring resonator is a waveguide loop beside a bus that removes or drops light at resonant wavelengths. Resonance, Q, critical coupling and how to design them."
 date: 2026-10-20
-updated: 2026-10-22
+updated: 2026-10-23
 category: technical-notes
 tags: [silicon photonics, ring resonator, critical coupling, Q factor, Meep, FDTD]
 areas: [silicon-photonics]
@@ -285,7 +285,7 @@ The through port now vanishes on resonance when $t_1 = a\,t_2$: seen from the in
 
 #### The model used here
 
-The simulations are **2D** and use an effective-index description of a silicon strip waveguide: core index $n_\text{core}=2.7$ (the effective index of a 220 nm silicon slab), cladding $n_\text{clad}=1.44$, 500 nm wide, TE polarization, non-dispersive materials, O-band. They use the finite-difference time-domain (FDTD) method in Meep with my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit). The racetracks (Fig. 1) have half-circles of radius $R=5$ µm and a 200 nm gap to the bus along one straight section. Changing $L_c$ changes the coupling strength while the gap stays fixed. The round-trip length is $L = 2\pi R + 2L_c$.
+The simulations are **2D** and use an effective-index description of a silicon strip waveguide: core index $n_\text{core}=2.7$ (a simplified core index, lower than the TE effective index of a 220 nm silicon slab, about 2.95 at 1.35 µm, so the 2D mode is somewhat less confined than in a real strip), cladding $n_\text{clad}=1.44$, 500 nm wide, TE polarization, non-dispersive materials, O-band. They use the finite-difference time-domain (FDTD) method in Meep with my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit). The racetracks (Fig. 1) have half-circles of radius $R=5$ µm and a 200 nm gap to the bus along one straight section. Changing $L_c$ changes the coupling strength while the gap stays fixed. The round-trip length is $L = 2\pi R + 2L_c$.
 
 A small electrical conductivity is added to the ring material only, as a controlled stand-in for propagation loss. Its absorption alone, from a mode-solver perturbation calculation, is $\alpha_\text{abs} = 2.8\times10^{-3}$ µm⁻¹ (about 120 dB/cm), much larger than in a real silicon ring and chosen so that the loss is clearly visible. The simulations use a coarse grid (25 pixels/µm), so the numbers are best read as illustrations of the physics rather than converged design values.
 
@@ -607,7 +607,7 @@ $$
 
 #### 本記事のモデル
 
-シミュレーションは**2次元**で、シリコン細線導波路を等価屈折率で表しています。コアの屈折率 $n_\text{core}=2.7$(厚さ220 nmのシリコンスラブの実効屈折率)、クラッド $n_\text{clad}=1.44$、幅500 nm、TE偏波、材料分散なし、Oバンドです。計算はMeepによる時間領域差分(FDTD)法で、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)を使っています。レーストラック(図1)は半径 $R=5$ µmの半円からなり、一方の直線部に沿ってバスとのギャップを200 nmに保っています。ギャップを固定したまま $L_c$ を変えると、結合の強さを変えられます。1周の長さは $L = 2\pi R + 2L_c$ です。
+シミュレーションは**2次元**で、シリコン細線導波路を等価屈折率で表しています。コアの屈折率 $n_\text{core}=2.7$(簡略化したコア屈折率で、厚さ220 nmのシリコンスラブのTE実効屈折率(1.35 µmで約2.95)より低いため、2次元モードの閉じ込めは実際の細線よりやや弱くなります)、クラッド $n_\text{clad}=1.44$、幅500 nm、TE偏波、材料分散なし、Oバンドです。計算はMeepによる時間領域差分(FDTD)法で、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)を使っています。レーストラック(図1)は半径 $R=5$ µmの半円からなり、一方の直線部に沿ってバスとのギャップを200 nmに保っています。ギャップを固定したまま $L_c$ を変えると、結合の強さを変えられます。1周の長さは $L = 2\pi R + 2L_c$ です。
 
 伝搬損失を制御された形で再現するため、リングの材料にだけ小さな導電率を加えています。この吸収だけによる損失は、モードソルバの摂動計算から $\alpha_\text{abs} = 2.8\times10^{-3}$ µm⁻¹(約120 dB/cm)です。実際のシリコンリングよりはるかに大きく、損失がはっきり見えるように選んだ値です。また、シミュレーションは粗い格子(25 pixels/µm)で行っているので、数値は収束した設計値ではなく、物理を示す例として読んでください。
 

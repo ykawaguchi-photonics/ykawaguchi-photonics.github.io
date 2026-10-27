@@ -2,7 +2,7 @@
 title: "Directional Couplers"
 description: "A directional coupler moves light between two nearby waveguides by evanescent coupling. How gap, length and wavelength set its split ratio, in theory and FDTD."
 date: 2026-10-20
-updated: 2026-10-22
+updated: 2026-10-23
 category: technical-notes
 tags: [silicon photonics, directional coupler, coupled-mode theory, Meep, FDTD]
 areas: [silicon-photonics]
@@ -239,13 +239,13 @@ A practical design sequence follows: choose the cross-section, choose a gap that
 
 #### The model used here
 
-All simulations in this article are **2D** and use an <Term id="en-eim" n={6}>effective-index</Term> description of a silicon strip waveguide.[^eim] The core index is $n_\text{core}=2.7$ (an effective index for a 220 nm silicon layer, not bulk silicon's ≈3.45), the cladding is silica-like $n_\text{clad}=1.44$, the waveguides are 500 nm wide, and the materials are non-dispersive. The effective-index reduction is an approximation, and it is known to be less accurate for high-contrast silicon wires than for weakly guiding structures. The band is 1.30–1.40 µm (O-band) with a design wavelength of $\lambda_0=1.35$ µm. The polarization is Meep's 2D TE family ($H_z$ out of plane, $\mathbf{E}$ in plane), forced explicitly at every source and monitor.
+All simulations in this article are **2D** and use an <Term id="en-eim" n={6}>effective-index</Term> description of a silicon strip waveguide.[^eim] The core index is $n_\text{core}=2.7$ (a simplified core index, lower than the TE effective index of a 220 nm silicon slab, about 2.95 at 1.35 µm, and far below bulk silicon's ≈3.45, so the 2D mode is somewhat less confined than in a real strip), the cladding is silica-like $n_\text{clad}=1.44$, the waveguides are 500 nm wide, and the materials are non-dispersive. The effective-index reduction is an approximation, and it is known to be less accurate for high-contrast silicon wires than for weakly guiding structures. The band is 1.30–1.40 µm (O-band) with a design wavelength of $\lambda_0=1.35$ µm. The polarization is Meep's 2D TE family ($H_z$ out of plane, $\mathbf{E}$ in plane), forced explicitly at every source and monitor.
 
 So the numbers below are specific to this model. They are not predictions for a fabricated 3D device. The physics and the method, however, carry over directly. All runs use the <Term id="en-fdtd" n={7}>finite-difference time-domain (FDTD)</Term> method in Meep[^meep], with my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit).
 
 <Glossary>
 <Def id="en-eim" n={6} term="Effective-index method">
-A way to reduce a 3D waveguide to a 2D model: the vertical structure (here a 220 nm silicon layer) is first replaced by the effective index of its slab mode, and that index is then used as the core index of a 2D simulation. It is fast but approximate.
+A way to reduce a 3D waveguide to a 2D model: the vertical structure (for example a 220 nm silicon layer) is first replaced by the effective index of its slab mode, and that index is then used as the core index of a 2D simulation. It is fast but approximate.
 </Def>
 <Def id="en-fdtd" n={7} term="FDTD (finite-difference time-domain)">
 A simulation method that solves Maxwell's equations directly on a grid, stepping the electric and magnetic fields forward in time. A single run with a short pulse gives the response over a whole wavelength band. How it compares with FEM and RCWA is explained in [FDTD, FEM and RCWA](/blog/em-simulation-methods-fdtd-fem-rcwa/).
@@ -558,13 +558,13 @@ $\gamma = 9.04\ \mu\text{m}^{-1}$ では、ギャップが10 nmずれると $\ka
 
 #### 本記事のモデル
 
-本記事のシミュレーションはすべて**2次元**で、シリコン細線導波路を<Term id="ja-eim" n={6}>等価屈折率法</Term>で近似しています[^eim]。コアの屈折率は $n_\text{core}=2.7$(厚さ220 nmのシリコン層の等価屈折率で、バルクシリコンの約3.45ではありません)、クラッドはシリカ相当の $n_\text{clad}=1.44$、導波路幅は500 nm、材料分散は無視しています。等価屈折率法は近似であり、弱導波構造に比べて高屈折率差のシリコン細線では精度が落ちることが知られています。波長帯は1.30–1.40 µm(Oバンド)、設計波長は $\lambda_0=1.35$ µmです。偏波はMeepの2次元TE($H_z$ が面外、$\mathbf{E}$ が面内)で、すべての光源とモニタで明示的に指定しています。
+本記事のシミュレーションはすべて**2次元**で、シリコン細線導波路を<Term id="ja-eim" n={6}>等価屈折率法</Term>で近似しています[^eim]。コアの屈折率は $n_\text{core}=2.7$(簡略化したコア屈折率で、厚さ220 nmのシリコンスラブのTE実効屈折率(1.35 µmで約2.95)より低く、バルクシリコンの約3.45よりはるかに低いため、2次元モードの閉じ込めは実際の細線よりやや弱くなります)、クラッドはシリカ相当の $n_\text{clad}=1.44$、導波路幅は500 nm、材料分散は無視しています。等価屈折率法は近似であり、弱導波構造に比べて高屈折率差のシリコン細線では精度が落ちることが知られています。波長帯は1.30–1.40 µm(Oバンド)、設計波長は $\lambda_0=1.35$ µmです。偏波はMeepの2次元TE($H_z$ が面外、$\mathbf{E}$ が面内)で、すべての光源とモニタで明示的に指定しています。
 
 したがって、以下の数値はこのモデル固有のもので、実際に作製する3次元デバイスの予測値ではありません。ただし、物理と手法はそのまま実デバイスに通用します。計算はすべてMeep[^meep]による<Term id="ja-fdtd" n={7}>時間領域差分(FDTD)法</Term>で、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)を使っています。
 
 <Glossary title="用語">
 <Def id="ja-eim" n={6} term="等価屈折率法">
-3次元の導波路を2次元モデルに縮約する方法です。まず縦方向の構造(ここでは厚さ220 nmのシリコン層)をそのスラブモードの実効屈折率で置き換え、その値を2次元シミュレーションのコアの屈折率として使います。高速ですが近似です。
+3次元の導波路を2次元モデルに縮約する方法です。まず縦方向の構造(たとえば厚さ220 nmのシリコン層)をそのスラブモードの実効屈折率で置き換え、その値を2次元シミュレーションのコアの屈折率として使います。高速ですが近似です。
 </Def>
 <Def id="ja-fdtd" n={7} term="FDTD(時間領域差分法)">
 格子上でMaxwell方程式を直接解き、電場と磁場を時間方向に少しずつ進めていくシミュレーション手法です。短いパルスで1回計算すれば、波長帯全体の応答が得られます。FEMやRCWAとの比較は[FDTD、FEM、RCWA](/blog/em-simulation-methods-fdtd-fem-rcwa/)の記事で説明しています。

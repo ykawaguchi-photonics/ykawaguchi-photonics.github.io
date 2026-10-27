@@ -2,7 +2,7 @@
 title: "Mach–Zehnder Interferometers"
 description: "A Mach–Zehnder interferometer splits and recombines light so that the arm phase difference picks the output. Transfer function, FSR, extinction, switching."
 date: 2026-10-20
-updated: 2026-10-22
+updated: 2026-10-23
 category: technical-notes
 tags: [silicon photonics, Mach-Zehnder interferometer, modulator, interference, Meep, FDTD]
 areas: [silicon-photonics]
@@ -238,7 +238,7 @@ In silicon, free electrons and holes lower the refractive index and add absorpti
 
 #### The model used here
 
-The simulations are **2D** and use an effective-index description of a silicon strip waveguide: core index $n_\text{core}=2.7$ (the effective index of a 220 nm silicon slab), cladding $n_\text{clad}=1.44$, 500 nm wide, non-dispersive materials, TE polarization ($H_z$ out of plane), 1.30–1.40 µm with $\lambda_0=1.35$ µm. Both couplers are a saved 50:50 directional-coupler design (gap 200 nm, coupling length 13.71 µm). The simulations use the finite-difference time-domain (FDTD) method in Meep, run with my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit). The numbers are specific to this model, not to a fabricated device.
+The simulations are **2D** and use an effective-index description of a silicon strip waveguide: core index $n_\text{core}=2.7$ (a simplified core index, lower than the TE effective index of a 220 nm silicon slab, about 2.95 at 1.35 µm, so the 2D mode is somewhat less confined than in a real strip), cladding $n_\text{clad}=1.44$, 500 nm wide, non-dispersive materials, TE polarization ($H_z$ out of plane), 1.30–1.40 µm with $\lambda_0=1.35$ µm. Both couplers are a saved 50:50 directional-coupler design (gap 200 nm, coupling length 13.71 µm). The simulations use the finite-difference time-domain (FDTD) method in Meep, run with my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit). The numbers are specific to this model, not to a fabricated device.
 
 #### A passive MZI in FDTD
 
@@ -531,7 +531,7 @@ $$
 
 #### 本記事のモデル
 
-シミュレーションは**2次元**で、シリコン細線導波路を等価屈折率で表しています。コアの屈折率 $n_\text{core}=2.7$(厚さ220 nmのシリコンスラブの実効屈折率)、クラッド $n_\text{clad}=1.44$、幅500 nm、材料分散なし、TE偏波($H_z$ が面外)、波長1.30–1.40 µm、$\lambda_0=1.35$ µmです。2つのカプラはどちらも保存済みの50:50方向性結合器の設計(ギャップ200 nm、結合長13.71 µm)です。シミュレーションはMeepによる時間領域差分(FDTD)法で、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)を使っています。数値はこのモデル固有のもので、作製したデバイスの予測値ではありません。
+シミュレーションは**2次元**で、シリコン細線導波路を等価屈折率で表しています。コアの屈折率 $n_\text{core}=2.7$(簡略化したコア屈折率で、厚さ220 nmのシリコンスラブのTE実効屈折率(1.35 µmで約2.95)より低いため、2次元モードの閉じ込めは実際の細線よりやや弱くなります)、クラッド $n_\text{clad}=1.44$、幅500 nm、材料分散なし、TE偏波($H_z$ が面外)、波長1.30–1.40 µm、$\lambda_0=1.35$ µmです。2つのカプラはどちらも保存済みの50:50方向性結合器の設計(ギャップ200 nm、結合長13.71 µm)です。シミュレーションはMeepによる時間領域差分(FDTD)法で、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)を使っています。数値はこのモデル固有のもので、作製したデバイスの予測値ではありません。
 
 #### FDTDでみる受動MZI
 

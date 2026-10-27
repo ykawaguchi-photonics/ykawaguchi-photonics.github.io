@@ -1,0 +1,592 @@
+---
+title: "WDM Demultiplexers"
+description: "A WDM demultiplexer sends each wavelength channel to its own waveguide. How cascaded Mach–Zehnder lattice filters set channel spacing, passband and crosstalk."
+date: 2026-10-25
+category: technical-notes
+tags: [silicon photonics, WDM, demultiplexer, lattice filter, Mach-Zehnder interferometer, directional coupler, circuit simulation, FDTD]
+areas: [silicon-photonics]
+draft: false
+---
+
+import Figure from "@/components/Figure.astro";
+import Term from "@/components/Term.astro";
+import Glossary from "@/components/Glossary.astro";
+import Def from "@/components/Def.astro";
+import Symbols from "@/components/Symbols.astro";
+import Callout from "@/components/Callout.astro";
+import fig1 from "./fig1_layout.png";
+import fig2 from "./fig2_stage.png";
+import fig3 from "./fig3_validation.png";
+import fig4 from "./fig4_tree.png";
+import fig5 from "./fig5_detuning.png";
+
+**Language:** [English](#english) · [日本語](#日本語)
+
+## English
+
+A **WDM demultiplexer** is a passive optical circuit that separates light of several wavelengths, arriving together in one waveguide, so that each wavelength channel leaves through its own output. Its mirror image, the multiplexer, combines them again. Together they let one fibre carry several independent signals, which is how optical transceivers multiply their data rate without faster electronics.
+
+### Overview
+
+#### What a demultiplexer does
+
+<Term id="en-wdm" n={1}>Wavelength-division multiplexing</Term> (WDM) sends several signals through one fibre on different wavelengths, the channels, placed on a regular grid. A four-channel transceiver, for example, uses four lasers on a 20 nm grid. At the receiver, a demultiplexer must send each channel to its own photodetector with three properties:
+
+- **low insertion loss**: little of each channel's power is lost on the way;
+- **low crosstalk**: little of the other channels leaks into each output;
+- **a flat passband**: the loss and crosstalk stay low when a laser drifts a few nanometres from its nominal wavelength, as uncooled lasers do with temperature.
+
+<Glossary>
+<Def id="en-wdm" n={1} term="Wavelength-division multiplexing (WDM)">
+Transmitting several signals at once on different wavelengths in one waveguide or fibre. Coarse WDM (CWDM) uses a wide grid, 20 nm between channels, so that low-cost lasers without temperature control can be used.
+</Def>
+</Glossary>
+
+#### Basic structure
+
+Integrated demultiplexers come in several families: arrayed-waveguide gratings, echelle gratings, ring filters and cascaded Mach–Zehnder interferometers (MZIs).[^chrostowski] This article treats the last family, which is built entirely from two components, directional couplers and waveguide delay lines. Fig. 1 shows the two levels of the design.
+
+- A **lattice filter** (left) is a chain of couplers joined by pairs of arms with a fixed length difference. It splits the input between its two outputs periodically in wavelength. One stage separates odd from even channels.
+- A **binary tree** (right) cascades such stages. A first stage separates channels 1, 3 from 2, 4; two second stages, with half the arm-length difference, separate each pair.[^horst]
+
+The designer chooses the channel grid, the arm-length differences, the number of couplers per stage and their split ratios, and the phase offsets that put each stage's passbands on the grid.
+
+<Figure src={fig1} alt="Left: one lattice stage made of three directional couplers labelled K1, K3 and K4; between the first two the lower arm makes a long detour labelled plus 2 delta L, and between the last two a shorter one labelled plus delta L; the outputs are labelled bar and cross. Right: a binary tree: stage 1 with free spectral range 2 delta lambda receives lambda 1 to 4 and sends lambda 1 and 3 to an upper stage 2 and lambda 2 and 4 to a lower stage 2, both with free spectral range 4 delta lambda, the lower one shifted by delta lambda; each stage 2 has two single-wavelength outputs." caption="The demultiplexer of this article (schematic). Left: one flat-top lattice stage, three couplers with power coupling ratios K₁, K₃, K₄ and arm-length differences 2ΔL and ΔL (the N = 4 design of the Theory section; K₂ = 0 removed). Right: a 4-channel binary tree of such stages for a channel spacing Δλ." number={1} size="wide" />
+
+### Theory
+
+#### One MZI as a wavelength filter
+
+A single MZI with two 50:50 couplers and arms differing in length by $\Delta L$ is the simplest filter. Its arm phase difference grows with frequency, at a rate set by the <Term id="en-neff" n={2}>effective index</Term> of the arms, so its outputs alternate between the two ports as the wavelength changes. One output carries the fraction:
+
+$$
+\begin{aligned}
+P_\text{bar}(\lambda) &= \sin^2\!\frac{\varphi(\lambda)}{2} , \\
+\varphi(\lambda) &= \frac{2\pi\, n_\text{eff}(\lambda)\,\Delta L}{\lambda} + \theta .
+\end{aligned}
+$$
+
+<Symbols>
+
+- $P_\text{bar}$ — fraction of the input power leaving the bar output (dimensionless)
+- $\varphi$ — arm phase difference (rad)
+- $n_\text{eff}(\lambda)$ — effective index of the arm waveguide (dimensionless)
+- $\Delta L$ — arm-length difference (µm)
+- $\theta$ — constant phase offset from the layout or a heater (rad)
+
+</Symbols>
+
+The other output carries the rest. The response repeats every time $\varphi$ grows by $2\pi$. In wavelength, that period is the <Term id="en-fsr" n={3}>free spectral range</Term>, set by the <Term id="en-ng" n={4}>group index</Term> of the arms:
+
+$$
+\mathrm{FSR} = \frac{\lambda^2}{n_g\,\Delta L} .
+$$
+
+<Symbols>
+
+- $\mathrm{FSR}$ — free spectral range of the stage (nm)
+- $n_g$ — group index of the arm waveguide (dimensionless)
+- $\lambda$ — vacuum wavelength (µm)
+
+</Symbols>
+
+To separate odd from even channels on a grid with spacing $\Delta\lambda$, the stage needs $\mathrm{FSR} = 2\Delta\lambda$: neighbouring channels then fall half a period apart, one at a maximum of each output. The group index, not the effective index, must be used here; in a silicon wire the two differ by 20–50 %. Which wavelengths land on the maxima is set by the offset $\theta$, so each stage is aligned to the grid with a phase, either by layout or by a heater on one arm.
+
+<Glossary>
+<Def id="en-neff" n={2} term="Effective index (n_eff)">
+The phase velocity of a guided mode, expressed as an index: the phase advances by $2\pi n_\text{eff}/\lambda$ per unit length.
+</Def>
+<Def id="en-fsr" n={3} term="Free spectral range (FSR)">
+The wavelength period of a periodic filter response: the spacing between neighbouring transmission maxima.
+</Def>
+<Def id="en-ng" n={4} term="Group index (n_g)">
+$n_g = n_\text{eff} - \lambda\, dn_\text{eff}/d\lambda$. It includes the waveguide's dispersion and sets every spacing in a spectrum, including the FSR.
+</Def>
+</Glossary>
+
+#### Lattice filters: shaping the passband
+
+A single MZI has a sinusoidal response: its passband is rounded, and only the exact centre of each channel is perfectly separated. A <Term id="en-lattice" n={5}>lattice filter</Term> adds more couplers, joined by arm pairs with the same length difference. Every path through the lattice crosses some number $k$ of delay sections, so the output amplitude is a finite sum of delayed copies of the input:
+
+$$
+H(\varphi) = \sum_{k=0}^{N-1} h_k\, e^{-jk\varphi} .
+$$
+
+<Symbols>
+
+- $H(\varphi)$ — complex amplitude transmission to one output (dimensionless)
+- $N$ — number of couplers, so $N-1$ delay sections (dimensionless)
+- $h_k$ — complex weight of all paths that cross $k$ delay sections, set by the coupler ratios (dimensionless)
+
+</Symbols>
+
+This is exactly a <Term id="en-fir" n={6}>finite-impulse-response</Term> (FIR) digital filter with $\varphi$ in the role of frequency.[^madsen] Digital filter design can therefore choose the weights $h_k$ for a target response, and a recursive "layer-peeling" synthesis turns them back into coupler ratios.[^jinguji] A widely used target is the **maximally flat** (halfband) response, as flat as possible at both the passband centre and the stopband centre. For $N = 2K$ couplers it is:
+
+$$
+\begin{aligned}
+|H|^2 &= P_K(x), \qquad x = \sin^2\frac{\varphi}{2} , \\
+P_K(x) &= \sum_{k=K}^{2K-1} \binom{2K-1}{k} x^k (1-x)^{2K-1-k} .
+\end{aligned}
+$$
+
+<Symbols>
+
+- $P_K$ — maximally flat polynomial of order $K$ (dimensionless)
+- $K$ — half the number of couplers, $N = 2K$ (dimensionless)
+- $x$ — the single-MZI response $\sin^2(\varphi/2)$ (dimensionless)
+
+</Symbols>
+
+For $K = 1$ this is the plain MZI, $P_1 = x$. For $N = 4$ ($K = 2$), $P_2 = 3x^2 - 2x^3$, the familiar "smoothstep". The synthesis gives power coupling ratios of 0.933, 0, 0.750 and 0.501. The second coupler vanishes, so the two delay sections around it merge: the stage is three couplers with arm-length differences $2\Delta L$ and $\Delta L$, as drawn in Fig. 1.
+
+Fig. 2 compares the two responses. Both cross 50 % at the same phase, so the channel edges stay where they were. But the $N = 4$ passband is flatter and its edges are steeper: the range within 1 dB of the peak grows from 30 % to 36 % of the period, and the range more than 20 dB down from 6 % to 16 %. More couplers give flatter tops still, at the cost of length and sensitivity to every coupler ratio.
+
+<Glossary>
+<Def id="en-lattice" n={5} term="Lattice filter">
+A chain of couplers joined by arm pairs with equal length differences. Choosing the coupler ratios shapes the periodic response, for example into a flat-top passband.
+</Def>
+<Def id="en-fir" n={6} term="FIR filter">
+A filter whose output is a finite weighted sum of delayed copies of its input. Its response has zeros but no poles; optical lattices of MZIs are FIR filters, while ring resonators add feedback (poles).
+</Def>
+</Glossary>
+
+<Figure src={fig2} alt="Bar-port power of one lattice stage versus arm phase from 0 to 2 pi, linear (left) and in dB (right). The N equals 2 curve is a sine squared; the N equals 4 curve is flat near phase pi and falls more steeply, crossing the same 0.5 level at phase 0.5 pi and 1.5 pi, and has a wider deep stopband near 0 and 2 pi." caption="Ideal bar-port response of one stage over one period: a single MZI (N = 2) and the maximally flat N = 4 lattice (K = 0.933, 0, 0.750, 0.501). Both cross 0.5 at the same phases; the N = 4 response is flatter in the passband and deeper over a wider stopband. Synthesis of circuits/mzi_lattice.py." number={2} size="wide" />
+
+#### Coupler phases and the sign of a coupler
+
+A lossless coupler's cross output always carries a 90° phase relative to its through output, with a sign $s = \pm 1$ that depends on the convention and the geometry. Its matrix, for power coupling $K$, is:
+
+$$
+\mathbf{C}(K) = \begin{pmatrix} \sqrt{1-K} & s\,j\sqrt{K} \\ s\,j\sqrt{K} & \sqrt{1-K} \end{pmatrix} .
+$$
+
+<Symbols>
+
+- $\mathbf{C}(K)$ — transfer matrix of a coupler with power cross-coupling $K$ (dimensionless)
+- $K$ — fraction of the power that crosses to the other waveguide (dimensionless)
+- $s$ — sign of the cross-coupling phase (dimensionless)
+
+</Symbols>
+
+The synthesis may ask for $s = -1$ on some coupler (for $N = 4$, on the last one), while a fabricated directional coupler has a fixed sign. This is not an obstacle. Flipping the sign is the same as adding $\pi$ to the lower arm just before the coupler, because $\mathbf{C}$ with $s = -1$ equals $\mathrm{diag}(1,-1)\,\mathbf{C}\,\mathrm{diag}(1,-1)$, and the outer factor only changes the sign of an output amplitude. In layout, the delay arm becomes longer by half a guided wavelength, $\lambda/(2n_\text{eff}) \approx 0.28$ µm here. In the $N = 4$ stage with its $2\Delta L$, $\Delta L$ arms, it is even simpler: shifting the stage offset $\theta$ by $\pi$ produces the same result, so the channel alignment absorbs it.
+
+#### The binary tree
+
+Four channels need two levels (Fig. 1, right). Stage 1 has $\mathrm{FSR}_1 = 2\Delta\lambda$ and sends channels 1, 3 to one output and 2, 4 to the other. Each stage 2 must separate two channels $2\Delta\lambda$ apart, so it needs $\mathrm{FSR}_2 = 4\Delta\lambda$, half the arm-length difference of stage 1:
+
+$$
+\Delta L_1 = \frac{\lambda_0^2}{n_g\,2\Delta\lambda}, \qquad \Delta L_2 = \frac{\Delta L_1}{2} .
+$$
+
+<Symbols>
+
+- $\Delta L_1$ — arm-length difference of stage 1 (µm)
+- $\Delta L_2$ — arm-length difference of the second-level stages (µm)
+- $\lambda_0$ — centre wavelength of the grid (µm)
+- $\Delta\lambda$ — channel spacing (nm)
+
+</Symbols>
+
+The two second-level stages are not identical. The upper one must pass channels 1 and 3, the lower one channels 2 and 4, one channel spacing further. A shift of $\Delta\lambda$ is a quarter of $\mathrm{FSR}_2$, so the two stages differ by a phase offset of $\pi/2$. In layout this is an extra length of $\lambda_0/(4 n_\text{eff})$, 140 nm here, or a heater setting. The path to each output crosses one stage of each level, and the light takes only one route to each channel, so the channel powers simply multiply along the path. The tree has no interference between levels.
+
+Two numbers judge the result, <Term id="en-xt" n={7}>insertion loss and crosstalk</Term>, both taken over a window around each channel centre, since a laser is never exactly on the grid. Light at a wavelength $\lambda$ inside the window of channel $k$ should leave through output $k$. Its crosstalk compares the strongest leak into any other output with what reaches output $k$:
+
+$$
+\mathrm{XT}_k(\lambda) = 10\log_{10} \max_{j \neq k} \frac{P_j(\lambda)}{P_k(\lambda)} .
+$$
+
+<Symbols>
+
+- $\mathrm{XT}_k$ — crosstalk of channel $k$ (dB)
+- $P_k(\lambda)$ — fraction of the input power leaving output $k$ (dimensionless)
+- $P_j(\lambda)$ — fraction of the input power leaving another output $j$ (dimensionless)
+
+</Symbols>
+
+The insertion loss of the channel is $-10\log_{10} P_k(\lambda)$. Both are quoted below as their worst value over a ±3 nm window around each channel centre.
+
+<Glossary>
+<Def id="en-xt" n={7} term="Crosstalk and insertion loss">
+Insertion loss is the power a channel loses on its way to its own output, in dB. Crosstalk compares the power that a channel's light leaks into the strongest other output with the power it delivers to its own output, in dB; −20 dB means the leak is 100 times weaker.
+</Def>
+</Glossary>
+
+#### Design guide: what changes what
+
+<Callout kind="design" title="What changes what">
+
+- **Arm-length difference $\Delta L$ ↑** → closer channels. *Why:* $\mathrm{FSR} = \lambda^2/(n_g\Delta L)$, and the stage needs $\mathrm{FSR} = 2\Delta\lambda$.
+- **Couplers per stage ↑ (with synthesized ratios)** → flatter passband, deeper stopband, more tolerance to laser drift. *Why:* a higher-order FIR filter; the 50 % crossing stays fixed.
+- **Phase offset $\theta$ of a stage** → moves its passbands along the wavelength axis. *Why:* $\varphi = 2\pi n_\text{eff}\Delta L/\lambda + \theta$; heaters set it on a chip.
+- **Second-level stages: quarter-period shift** → one passes channels 1, 3, the other 2, 4. *Why:* $\Delta\lambda = \mathrm{FSR}_2/4$, a phase of $\pi/2$.
+- **Coupler ratio away from its target** → shallower nulls, more crosstalk. *Why:* the paths no longer cancel at the stopband.
+- **Coupler ratio that changes with wavelength** → the filter shape degrades towards the band edges. *Why:* the synthesis assumes the same ratio at every channel.
+- **Uniform change of $n_\text{eff}$ (width, thickness, temperature)** → all passbands shift together. *Why:* every stage phase scales with $n_\text{eff}$; heaters or a flat passband absorb it.
+
+</Callout>
+
+### Simulation
+
+#### The model used here
+
+The circuits are built from components of my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit), in its 2D model of a silicon strip: a 500 nm wide core of index 2.7 in a 1.44 cladding, non-dispersive materials, TE polarization, 1.30–1.40 µm. The mode solver gives $n_\text{eff} = 2.418$ and $n_g = 2.928$ at 1.35 µm. The channel grid has four channels 20 nm apart, like CWDM, but placed at 1320–1380 nm inside the band of the simulations. Hence $\Delta L_1 = 15.56$ µm ($\mathrm{FSR}_1$ = 40 nm) and $\Delta L_2 = 7.78$ µm.
+
+Each stage is a <Term id="en-circuit" n={8}>circuit model</Term>: the product of 2×2 transfer matrices of the couplers and arm pairs, in the forward direction (reflections, below −30 dB in these components, are neglected). Two kinds of coupler are compared:
+
+- **ideal couplers**, lossless, with exactly the synthesized ratio at every wavelength;
+- **FDTD couplers**, the complex S-parameters of directional couplers simulated in 2D FDTD (200 nm gap), whose ratio and phase change with wavelength. The 50:50 design is used for $N = 2$; for $N = 4$, the sweep lengths closest to the targets (24, 20 and 14 µm, ratios 0.919, 0.786 and 0.514 at 1.35 µm).
+
+The arms carry the phase $2\pi n_\text{eff}(\lambda)\Delta L/\lambda$ of the mode solver. Each stage gets one constant offset $\theta$ that puts its passbands on the grid, as a heater would on a chip.
+
+<Glossary>
+<Def id="en-circuit" n={8} term="Circuit model">
+A description of a circuit by the S-matrices or transfer matrices of its components, connected by matrix products, instead of by simulating the fields of the whole circuit. It is fast enough to explore many designs.
+</Def>
+</Glossary>
+
+#### Checking the circuit model against a full FDTD simulation
+
+The circuit model is only useful if it reproduces the real device. Fig. 3 compares it with an MZI ($\Delta L = 15$ µm) simulated whole in 2D FDTD, couplers, bends and arms together. With one fitted constant offset, the model follows both outputs to an rms difference of 0.015 in power. It reproduces the shallow bar-port minima near 1300 and 1383 nm, where the coupler is far from 50:50. Only the deepest nulls, which are sensitive to tiny errors, differ visibly.
+
+<Figure src={fig3} alt="Bar and cross transmission in dB from 1300 to 1400 nanometres of an MZI with a 15 micrometre arm difference, from a full-device FDTD simulation, with dashed gray curves of the circuit model on top. The curves overlap closely; the bar minima near 1300 and 1383 nanometres are shallow, around minus 12 and minus 16 dB, and the cross nulls near 1321 and 1362 nanometres are deep." caption="Circuit model (FDTD coupler S-parameters plus mode-solver arm phase, one fitted constant offset) versus a full-device 2D FDTD simulation of the same MZI (ΔL = 15 µm); rms difference 0.015 in power. From notebooks/07_mzi.ipynb, Section 10 (full device) and notebooks/06_directional_coupler.ipynb (coupler)." number={3} />
+
+#### The four-channel tree
+
+Fig. 4 shows the four outputs of the tree. With ideal couplers both designs work as intended. The phase offsets of the two second-level stages come out 90.5° ($N = 2$) and 92.5° ($N = 4$) apart, the quarter period of the Theory section. Within ±3 nm of each channel centre:
+
+| Design | Worst insertion loss | Worst crosstalk |
+|---|---|---|
+| $N = 2$, ideal couplers | 0.38 dB | −13.2 dB |
+| $N = 4$, ideal couplers | 0.06 dB | −20.1 dB |
+| $N = 2$, FDTD couplers | 0.53 dB | −12.7 dB |
+| $N = 4$, FDTD couplers | 0.70 dB | −9.7 dB |
+
+The flat-top design is clearly better with ideal couplers. With the FDTD couplers, the $N = 2$ tree hardly changes, but the $N = 4$ tree loses its advantage and becomes the worse of the two. The long-wavelength channels (1360 and 1380 nm), where the couplers drift furthest from their design ratios, suffer most (Fig. 4, lower right).
+
+The cause is the wavelength dependence of the directional couplers. Their power coupling changes strongly across the band: the 50:50 design goes from 0.39 at 1300 nm to 0.63 at 1400 nm, and the 24 µm coupler from 0.79 to 0.99. The synthesis assumes the same ratio at every channel. A diagnostic separates the two possible culprits. The same $N = 4$ tree with each FDTD coupler frozen at its 1.35 µm ratio, so that only the mismatch to the target remains, reaches −18.1 dB worst crosstalk and 0.11 dB worst loss, close to the ideal design. The small mismatch of the coupler ratios costs about 2 dB; their wavelength dependence costs the rest. A single MZI is less affected, because its cross output nulls for any split ratio and its passband never relied on a precise ratio.
+
+<Figure src={fig4} alt="Four panels of channel transmission in dB versus wavelength from 1300 to 1400 nanometres for the four outputs of the tree. Top row, ideal couplers: N equals 2 shows rounded passbands with crosstalk side lobes near minus 11 dB; N equals 4 shows flat-topped passbands with side lobes near minus 15 dB and wide deep stopbands. Bottom row, FDTD couplers: N equals 2 looks nearly the same as the ideal one but with shallower nulls; N equals 4 has flat passbands near 1320 and 1340 nanometres but distorted, shallow stopbands and higher leakage near 1360 to 1400 nanometres. Gray bands mark plus and minus 3 nanometres around each channel centre." caption="Transmission of the four outputs of the binary-tree demultiplexer (20 nm grid at 1320–1380 nm). Columns: N = 2 and N = 4 couplers per stage. Rows: ideal couplers and FDTD-simulated directional couplers. Gray bands: the ±3 nm windows used for the metrics. Circuit models built from the coupler data of notebooks/06_directional_coupler.ipynb." number={4} size="wide" />
+
+#### Tolerance to laser drift
+
+The reason for a flat passband is tolerance. Fig. 5 shifts every laser by the same offset $\pm d$ from its channel centre and records the worst channel over both directions. With ideal couplers, $N = 4$ keeps the crosstalk near −20 dB out to 3 nm of offset and the loss below 0.2 dB out to 4 nm, while $N = 2$ already reaches −17 dB and 0.19 dB at 2 nm. With FDTD couplers, both start from a worse floor ($N = 2$: −16 dB, $N = 4$: −15 dB at zero offset), and the $N = 4$ tree now degrades faster: at ±3 nm it reaches −9.7 dB and 0.70 dB, against −12.7 dB and 0.53 dB for $N = 2$, the values of the table above.
+
+<Figure src={fig5} alt="Worst-channel insertion loss (left) and crosstalk (right) versus laser offset from 0 to 8 nanometres for four cases. Ideal N equals 4 has the lowest loss and crosstalk, about minus 20 dB at 3 nanometres. Ideal N equals 2 degrades faster. With FDTD couplers, both start near minus 15 dB crosstalk, and the N equals 4 curve rises faster than N equals 2." caption="Worst-channel insertion loss and crosstalk when all lasers are offset by ±d from their channel centres (worst of both directions). Dashed: ideal couplers; solid: FDTD-simulated couplers. Circuit models built from the coupler data of notebooks/06_directional_coupler.ipynb." number={5} size="wide" />
+
+<Callout kind="design" title="What this means for design">
+
+A flat-top lattice is only as good as its couplers across the whole band. With ordinary directional couplers, whose split ratio changes by tens of percent over 100 nm, higher-order synthesis can make things worse rather than better. Flat-top cascaded-MZI demultiplexers therefore use couplers whose ratio depends little on wavelength (for example multimode-interference, adiabatic or curved directional couplers), or synthesize the filter with the measured $K(\lambda)$ of each coupler. Heaters on the arms set the phase offsets after fabrication.
+
+</Callout>
+
+#### Theory versus simulation
+
+The main numbers of the model, next to the relations they test:
+
+| Quantity | Theory | This model |
+|---|---|---|
+| Stage arm difference for 20 nm spacing | $\lambda_0^2/(n_g\,2\Delta\lambda)$ = 15.56 µm | FSR 40 nm |
+| Second-level offset | $\pi/2$ (quarter period) | 90.5° ($N=2$), 92.5° ($N=4$) |
+| 1 dB passband, one stage | 30 % ($N=2$), 36 % ($N=4$) of the FSR | — |
+| Sign flip of a coupler | $\pi$ in the preceding arm | same tree with or without the flip |
+| Circuit model vs full-device FDTD MZI | — | rms 0.015 in power |
+| Worst crosstalk, ±3 nm, $N = 4$ | −20.1 dB (ideal couplers) | −9.7 dB (FDTD couplers); −18.1 dB (couplers frozen at their 1.35 µm ratio) |
+
+A cascaded-MZI demultiplexer is built from two components and one idea: each stage separates alternate channels by interference, and the tree halves the arm-length difference at every level. Lattice synthesis turns the rounded MZI response into a flat-top one, but only if every coupler keeps its designed split ratio across all channels. The underlying device is described in [Mach–Zehnder Interferometers](/blog/mach-zehnder-interferometers/), its coupler in [Directional Couplers](/blog/directional-couplers-cmt-fdtd/), and the comparison with resonant filters in [Coupling, Interference, and Resonance](/blog/coupling-interference-resonance-pic/).
+
+### Code and data
+
+- Lattice-filter and binary-tree notebooks (SAX circuits, GDS layouts): [`circuits/wdm_sax.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/circuits/wdm_sax.ipynb), [`circuits/wdm_mux4_sax.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/circuits/wdm_mux4_sax.ipynb)
+- Coupler sweep (FDTD S-parameters): [`notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/06_directional_coupler.ipynb); full-device MZI: [`notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/07_mzi.ipynb)
+- Lattice synthesis: [`circuits/mzi_lattice.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/circuits/mzi_lattice.py)
+- The circuit models, figures and all numbers in this article are produced from the saved component data by `scripts/blog_figures/wdm_demultiplexers.py` in the same repository (transfer matrices in the forward direction). No new FDTD runs were needed.
+
+---
+
+## 日本語
+
+**WDM分波器**は、1本の導波路に一緒に届いた複数の波長の光を分け、各波長チャネルをそれぞれの出力から出す受動光回路です。その逆の合波器は、チャネルを再びまとめます。両者を組み合わせると1本のファイバで独立な信号を複数運べるので、光トランシーバは電子回路を速くせずにデータレートを何倍にもできます。
+
+### 概要
+
+#### 分波器は何をするか
+
+<Term id="ja-wdm" n={1}>波長分割多重</Term>(WDM)は、複数の信号を異なる波長(チャネル)に載せ、1本のファイバで送る方式です。チャネルは規則的なグリッド上に置かれ、たとえば4チャネルのトランシーバは20 nm間隔の4つのレーザーを使います。受信側の分波器は、各チャネルをそれぞれのフォトディテクタへ、次の3つの性質をもって送らなければなりません。
+
+- **低い挿入損失**:各チャネルのパワーが途中でほとんど失われない。
+- **低いクロストーク**:他のチャネルが各出力にほとんど漏れ込まない。
+- **平坦な通過帯域**:温度で波長が変わる非温調レーザーのように、レーザーが公称波長から数nmずれても、損失とクロストークが低いまま保たれる。
+
+<Glossary title="用語">
+<Def id="ja-wdm" n={1} term="波長分割多重(WDM)">
+1本の導波路やファイバで、異なる波長に載せた複数の信号を同時に送ることです。CWDM(粗い波長分割多重)はチャネル間隔20 nmの広いグリッドを使い、温度制御のない低コストのレーザーを使えるようにしています。
+</Def>
+</Glossary>
+
+#### 基本構造
+
+集積分波器にはいくつかの種類があります。アレイ導波路格子、エシェル格子、リングフィルタ、多段のMach–Zehnder干渉計(MZI)です[^chrostowski]。本記事で扱うのは最後の種類で、方向性結合器と導波路遅延線の2つの部品だけで作られます。図1は設計の2つの階層を示しています。
+
+- **ラティスフィルタ**(左):一定の長さの差をもつアームの対でつないだカプラの列です。入力を2つの出力へ、波長に対して周期的に振り分けます。1段で奇数チャネルと偶数チャネルを分けます。
+- **バイナリツリー**(右):このような段を多段につないだものです。1段目がチャネル1、3とチャネル2、4を分け、アーム長差が半分の2段目の2つの段がそれぞれの対を分けます[^horst]。
+
+設計者が選ぶのは、チャネルグリッド、アーム長差、1段あたりのカプラの数とその分岐比、そして各段の通過帯域をグリッドに合わせる位相オフセットです。
+
+<Figure src={fig1} alt="左:K1、K3、K4と記された3つの方向性結合器からなるラティスの1段。最初の2つの間では下側のアームが「+2ΔL」の長い迂回をし、最後の2つの間では「+ΔL」の短い迂回をする。出力はbarとcross。右:バイナリツリー。自由スペクトル領域2Δλの1段目がλ1からλ4を受け取り、λ1とλ3を上側の2段目へ、λ2とλ4を下側の2段目へ送る。2段目はどちらも自由スペクトル領域4Δλで、下側はΔλだけずれている。各2段目には単一波長の出力が2つある。" caption="本記事の分波器(模式図)。左:平坦な通過帯域をもつラティスの1段。パワー結合比K₁、K₃、K₄の3つのカプラと、アーム長差2ΔLとΔL(理論の節のN = 4設計。K₂ = 0のカプラは除いた)。右:チャネル間隔Δλのための、このような段からなる4チャネルのバイナリツリー。" number={1} size="wide" />
+
+### 理論
+
+#### 波長フィルタとしての1つのMZI
+
+50:50カプラ2つと、長さが $\Delta L$ だけ違うアームをもつ1つのMZIが、最も単純なフィルタです。アーム位相差はアームの<Term id="ja-neff" n={2}>実効屈折率</Term>で決まる割合で周波数とともに増えるので、波長が変わると出力は2つのポートの間で交互に入れ替わります。一方の出力は次の割合を運びます。
+
+$$
+\begin{aligned}
+P_\text{bar}(\lambda) &= \sin^2\!\frac{\varphi(\lambda)}{2} \\
+\varphi(\lambda) &= \frac{2\pi\, n_\text{eff}(\lambda)\,\Delta L}{\lambda} + \theta
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $P_\text{bar}$ — バー出力から出る入力パワーの割合(無次元)
+- $\varphi$ — アーム位相差(rad)
+- $n_\text{eff}(\lambda)$ — アーム導波路の実効屈折率(無次元)
+- $\Delta L$ — アーム長差(µm)
+- $\theta$ — レイアウトやヒータによる一定の位相オフセット(rad)
+
+</Symbols>
+
+もう一方の出力が残りを運びます。応答は $\varphi$ が $2\pi$ 増えるごとに繰り返します。波長で表したこの周期が<Term id="ja-fsr" n={3}>自由スペクトル領域</Term>で、アームの<Term id="ja-ng" n={4}>群屈折率</Term>によって次のように決まります。
+
+$$
+\mathrm{FSR} = \frac{\lambda^2}{n_g\,\Delta L}
+$$
+
+<Symbols title="記号">
+
+- $\mathrm{FSR}$ — 段の自由スペクトル領域(nm)
+- $n_g$ — アーム導波路の群屈折率(無次元)
+- $\lambda$ — 真空中の波長(µm)
+
+</Symbols>
+
+間隔 $\Delta\lambda$ のグリッドで奇数チャネルと偶数チャネルを分けるには、段に $\mathrm{FSR} = 2\Delta\lambda$ が必要です。そうすれば隣り合うチャネルは半周期離れ、それぞれがどちらかの出力の極大に来ます。ここでは実効屈折率ではなく群屈折率を使わなければなりません。シリコン細線では両者は20–50 %違います。どの波長が極大に来るかはオフセット $\theta$ で決まるので、各段は位相によって、つまりレイアウトか一方のアームのヒータによってグリッドに合わせます。
+
+<Glossary title="用語">
+<Def id="ja-neff" n={2} term="実効屈折率(n_eff)">
+導波モードの位相速度を屈折率で表したもので、位相は単位長さあたり $2\pi n_\text{eff}/\lambda$ 進みます。
+</Def>
+<Def id="ja-fsr" n={3} term="自由スペクトル領域(FSR)">
+周期的なフィルタ応答の波長周期で、隣り合う透過極大の間隔です。
+</Def>
+<Def id="ja-ng" n={4} term="群屈折率(n_g)">
+$n_g = n_\text{eff} - \lambda\, dn_\text{eff}/d\lambda$。導波路の分散を含み、FSRを含むスペクトルのあらゆる間隔を決めます。
+</Def>
+</Glossary>
+
+#### ラティスフィルタ:通過帯域の形を整える
+
+1つのMZIの応答は正弦波的で、通過帯域は丸く、完全に分離できるのは各チャネルのちょうど中心だけです。<Term id="ja-lattice" n={5}>ラティスフィルタ</Term>は、同じ長さの差をもつアームの対でつないだカプラを追加します。ラティスを通る各経路はある数 $k$ の遅延区間を通るので、出力振幅は入力を遅延させたコピーの有限和になります。
+
+$$
+H(\varphi) = \sum_{k=0}^{N-1} h_k\, e^{-jk\varphi}
+$$
+
+<Symbols title="記号">
+
+- $H(\varphi)$ — 一方の出力への複素振幅透過率(無次元)
+- $N$ — カプラの数。遅延区間は $N-1$ 個(無次元)
+- $h_k$ — $k$ 個の遅延区間を通るすべての経路の複素重みで、カプラの結合比で決まる(無次元)
+
+</Symbols>
+
+これは、$\varphi$ を周波数とみなした<Term id="ja-fir" n={6}>有限インパルス応答</Term>(FIR)ディジタルフィルタそのものです[^madsen]。したがってディジタルフィルタの設計法で目標応答に合う重み $h_k$ を選べ、再帰的な「レイヤーピーリング」合成でそれをカプラの結合比に戻せます[^jinguji]。よく使われる目標は**最大平坦**(ハーフバンド)応答で、通過帯域の中心と阻止帯域の中心の両方でできるだけ平坦です。カプラ $N = 2K$ 個に対して次のようになります。
+
+$$
+\begin{aligned}
+|H|^2 &= P_K(x), \qquad x = \sin^2\frac{\varphi}{2} , \\
+P_K(x) &= \sum_{k=K}^{2K-1} \binom{2K-1}{k} x^k (1-x)^{2K-1-k}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $P_K$ — 次数 $K$ の最大平坦多項式(無次元)
+- $K$ — カプラの数の半分、$N = 2K$(無次元)
+- $x$ — 1つのMZIの応答 $\sin^2(\varphi/2)$(無次元)
+
+</Symbols>
+
+$K = 1$ では通常のMZIで、$P_1 = x$ です。$N = 4$($K = 2$)では $P_2 = 3x^2 - 2x^3$ で、よく知られた「スムーズステップ」です。合成から得られるパワー結合比は0.933、0、0.750、0.501です。2番目のカプラが消えるので、その前後の2つの遅延区間が合わさります。つまりこの段は、アーム長差 $2\Delta L$ と $\Delta L$ をもつ3つのカプラになり、図1に描いた形になります。
+
+図2は2つの応答の比較です。どちらも同じ位相で50 %を横切るので、チャネルの境界は変わりません。しかし $N = 4$ の通過帯域はより平坦で、縁はより急峻です。ピークから1 dB以内の範囲は周期の30 %から36 %へ、20 dB以上下がる範囲は6 %から16 %へ広がります。カプラを増やせばさらに平坦になりますが、その分長くなり、すべての結合比に敏感になります。
+
+<Glossary title="用語">
+<Def id="ja-lattice" n={5} term="ラティスフィルタ">
+長さの差が等しいアームの対でつないだカプラの列です。カプラの結合比を選ぶことで、周期的な応答の形を、たとえば平坦な通過帯域に整えます。
+</Def>
+<Def id="ja-fir" n={6} term="FIRフィルタ">
+出力が入力を遅延させたコピーの有限の重み付き和になるフィルタです。応答は零点をもちますが極をもちません。MZIの光ラティスはFIRフィルタで、リング共振器はフィードバック(極)を加えます。
+</Def>
+</Glossary>
+
+<Figure src={fig2} alt="ラティスの1段のバー側パワーとアーム位相0から2πの関係。左は線形、右はdB。N = 2の曲線はsin²。N = 4の曲線は位相π付近で平坦で、より急に下がり、位相0.5πと1.5πで同じ0.5の値を横切り、0と2π付近により広く深い阻止帯域をもつ。" caption="1段の理想的なバー側応答の1周期分。1つのMZI(N = 2)と最大平坦なN = 4ラティス(K = 0.933、0、0.750、0.501)。どちらも同じ位相で0.5を横切る。N = 4の応答は通過帯域がより平坦で、より広い範囲でより深い阻止帯域をもつ。circuits/mzi_lattice.py の合成より。" number={2} size="wide" />
+
+#### カプラの位相とカプラの符号
+
+損失のないカプラのクロス出力は、スルー出力に対して常に90°の位相をもち、その符号 $s = \pm 1$ は慣習と形状で決まります。パワー結合 $K$ のカプラの行列は次のようになります。
+
+$$
+\mathbf{C}(K) = \begin{pmatrix} \sqrt{1-K} & s\,j\sqrt{K} \\ s\,j\sqrt{K} & \sqrt{1-K} \end{pmatrix}
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{C}(K)$ — パワーの交差結合 $K$ をもつカプラの伝達行列(無次元)
+- $K$ — 隣の導波路へ移るパワーの割合(無次元)
+- $s$ — 交差結合の位相の符号(無次元)
+
+</Symbols>
+
+合成では、あるカプラ($N = 4$ では最後のカプラ)に $s = -1$ が求められることがありますが、作製した方向性結合器の符号は固定です。これは障害ではありません。$s = -1$ の $\mathbf{C}$ は $\mathrm{diag}(1,-1)\,\mathbf{C}\,\mathrm{diag}(1,-1)$ に等しく、外側の因子は出力振幅の符号を変えるだけなので、符号の反転はカプラ直前の下側アームに $\pi$ を加えることと同じです。レイアウトでは遅延アームを導波波長の半分、ここでは $\lambda/(2n_\text{eff}) \approx 0.28$ µmだけ長くします。アームが $2\Delta L$、$\Delta L$ の $N = 4$ 段ではさらに簡単で、段のオフセット $\theta$ を $\pi$ ずらすと同じ結果になるので、チャネル合わせがこれを吸収します。
+
+#### バイナリツリー
+
+4チャネルには2階層が必要です(図1右)。1段目は $\mathrm{FSR}_1 = 2\Delta\lambda$ で、チャネル1、3を一方の出力へ、2、4をもう一方へ送ります。2段目はそれぞれ $2\Delta\lambda$ 離れた2つのチャネルを分けなければならないので、$\mathrm{FSR}_2 = 4\Delta\lambda$、つまり1段目の半分のアーム長差が必要で、次のようになります。
+
+$$
+\Delta L_1 = \frac{\lambda_0^2}{n_g\,2\Delta\lambda}, \qquad \Delta L_2 = \frac{\Delta L_1}{2}
+$$
+
+<Symbols title="記号">
+
+- $\Delta L_1$ — 1段目のアーム長差(µm)
+- $\Delta L_2$ — 2段目の各段のアーム長差(µm)
+- $\lambda_0$ — グリッドの中心波長(µm)
+- $\Delta\lambda$ — チャネル間隔(nm)
+
+</Symbols>
+
+2段目の2つの段は同一ではありません。上側の段はチャネル1と3を、下側の段はチャネル1つ分ずれたチャネル2と4を通さなければなりません。$\Delta\lambda$ のずれは $\mathrm{FSR}_2$ の1/4なので、2つの段は位相オフセットで $\pi/2$ 違います。レイアウトでは $\lambda_0/(4 n_\text{eff})$、ここでは140 nmの追加長か、ヒータの設定にあたります。各出力への経路は各階層の段を1つずつ通り、光が各チャネルへ至る経路は1つだけなので、チャネルのパワーは経路に沿って単純に掛け合わされます。ツリーでは階層の間で干渉は起こりません。
+
+結果は<Term id="ja-xt" n={7}>挿入損失とクロストーク</Term>の2つの数で評価します。レーザーがグリッドにぴったり乗ることはないので、どちらも各チャネル中心の周りの窓内で評価します。チャネル $k$ の窓内の波長 $\lambda$ の光は出力 $k$ から出るべきです。そのクロストークは、他の出力への最大の漏れを出力 $k$ に届くパワーと比べたもので、次のように定義します。
+
+$$
+\mathrm{XT}_k(\lambda) = 10\log_{10} \max_{j \neq k} \frac{P_j(\lambda)}{P_k(\lambda)}
+$$
+
+<Symbols title="記号">
+
+- $\mathrm{XT}_k$ — チャネル $k$ のクロストーク(dB)
+- $P_k(\lambda)$ — 出力 $k$ から出る入力パワーの割合(無次元)
+- $P_j(\lambda)$ — 他の出力 $j$ から出る入力パワーの割合(無次元)
+
+</Symbols>
+
+チャネルの挿入損失は $-10\log_{10} P_k(\lambda)$ です。以下では、どちらも各チャネル中心の±3 nmの窓内での最悪値で示します。
+
+<Glossary title="用語">
+<Def id="ja-xt" n={7} term="クロストークと挿入損失">
+挿入損失は、チャネルが自分の出力へ届くまでに失うパワーをdBで表したものです。クロストークは、あるチャネルの光が最も強く漏れる他の出力へのパワーを、自分の出力に届くパワーと比べたものをdBで表します。−20 dBは、漏れが100倍弱いことを意味します。
+</Def>
+</Glossary>
+
+#### 設計の早見表:何を変えると何が変わるか
+
+<Callout kind="design" title="何を変えると何が変わるか">
+
+- **アーム長差 $\Delta L$ ↑** → チャネル間隔が狭くなる。*理由:* $\mathrm{FSR} = \lambda^2/(n_g\Delta L)$ で、段には $\mathrm{FSR} = 2\Delta\lambda$ が必要。
+- **1段あたりのカプラ数 ↑(合成した結合比で)** → 通過帯域が平坦になり、阻止帯域が深くなり、レーザーのずれに強くなる。*理由:* 高次のFIRフィルタになる。50 %の交点は変わらない。
+- **段の位相オフセット $\theta$** → その段の通過帯域が波長軸に沿って動く。*理由:* $\varphi = 2\pi n_\text{eff}\Delta L/\lambda + \theta$。チップ上ではヒータで設定する。
+- **2段目の段:1/4周期のずれ** → 一方がチャネル1、3を、もう一方が2、4を通す。*理由:* $\Delta\lambda = \mathrm{FSR}_2/4$、位相で $\pi/2$。
+- **カプラの結合比が目標からずれる** → ゼロが浅くなり、クロストークが増える。*理由:* 阻止帯域で経路が打ち消し合わなくなる。
+- **カプラの結合比が波長で変わる** → 帯域の端に向かってフィルタの形が崩れる。*理由:* 合成はすべてのチャネルで同じ結合比を仮定している。
+- **$n_\text{eff}$ の一様な変化(幅、厚さ、温度)** → すべての通過帯域が一緒にずれる。*理由:* どの段の位相も $n_\text{eff}$ に比例する。ヒータか平坦な通過帯域で吸収する。
+
+</Callout>
+
+### シミュレーション
+
+#### 本記事のモデル
+
+回路は[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)の部品から、シリコンストリップの2次元モデルで組み立てています。屈折率1.44のクラッド中の幅500 nm、屈折率2.7のコア、材料分散なし、TE偏波、1.30–1.40 µmです。モードソルバの値は1.35 µmで $n_\text{eff} = 2.418$、$n_g = 2.928$ です。チャネルグリッドはCWDMと同じく20 nm間隔の4チャネルですが、シミュレーションの帯域内の1320–1380 nmに置いています。したがって $\Delta L_1 = 15.56$ µm($\mathrm{FSR}_1$ = 40 nm)、$\Delta L_2 = 7.78$ µmです。
+
+各段は<Term id="ja-circuit" n={8}>回路モデル</Term>で、カプラとアーム対の2×2伝達行列の積を順方向に計算します(これらの部品で−30 dB以下の反射は無視します)。2種類のカプラを比べます。
+
+- **理想カプラ**:損失がなく、どの波長でも合成した結合比をちょうどもつ。
+- **FDTDカプラ**:2次元FDTDで計算した方向性結合器(ギャップ200 nm)の複素Sパラメータで、結合比と位相が波長とともに変わる。$N = 2$ には50:50設計を使い、$N = 4$ には目標に最も近い掃引長(24、20、14 µm、1.35 µmでの結合比0.919、0.786、0.514)を使う。
+
+アームにはモードソルバによる位相 $2\pi n_\text{eff}(\lambda)\Delta L/\lambda$ を与えます。各段には、チップ上のヒータと同じように通過帯域をグリッドに合わせる一定のオフセット $\theta$ を1つ与えます。
+
+<Glossary title="用語">
+<Def id="ja-circuit" n={8} term="回路モデル">
+回路全体の場を計算する代わりに、部品のSマトリクスや伝達行列を行列積でつないで回路を記述する方法です。多くの設計を探索できるほど高速です。
+</Def>
+</Glossary>
+
+#### 回路モデルをFDTDの全体計算で確かめる
+
+回路モデルが役に立つのは、実際のデバイスを再現できる場合だけです。図3では、カプラ、曲げ、アームをまとめて2次元FDTDで計算したMZI($\Delta L = 15$ µm)と比べています。一定のオフセットを1つフィットするだけで、モデルは両方の出力をパワーのrms差0.015で再現します。カプラが50:50から大きくずれる1300 nmと1383 nm付近の浅いバー側の極小も再現しています。目に見えて違うのは、わずかな誤差に敏感な最も深いゼロだけです。
+
+<Figure src={fig3} alt="アーム長差15マイクロメートルのMZIの1300から1400ナノメートルでのバーとクロスの透過率(dB)。全体FDTD計算の曲線の上に回路モデルの灰色破線が重なる。曲線はよく一致し、1300と1383ナノメートル付近のバーの極小は約−12と−16 dBと浅く、1321と1362ナノメートル付近のクロスのゼロは深い。" caption="回路モデル(FDTDカプラのSパラメータとモードソルバのアーム位相、一定オフセット1つをフィット)と、同じMZI(ΔL = 15 µm)の2次元FDTD全体計算の比較。パワーのrms差は0.015。notebooks/07_mzi.ipynb、10節(全体計算)とnotebooks/06_directional_coupler.ipynb(カプラ)より。" number={3} />
+
+#### 4チャネルのツリー
+
+図4はツリーの4つの出力です。理想カプラでは、どちらの設計も意図どおりに動作します。2段目の2つの段の位相オフセットの差は90.5°($N = 2$)と92.5°($N = 4$)で、理論の節の1/4周期になっています。各チャネル中心の±3 nm以内での結果は次のとおりです。
+
+| 設計 | 最悪の挿入損失 | 最悪のクロストーク |
+|---|---|---|
+| $N = 2$、理想カプラ | 0.38 dB | −13.2 dB |
+| $N = 4$、理想カプラ | 0.06 dB | −20.1 dB |
+| $N = 2$、FDTDカプラ | 0.53 dB | −12.7 dB |
+| $N = 4$、FDTDカプラ | 0.70 dB | −9.7 dB |
+
+理想カプラでは平坦な通過帯域の設計が明らかに優れています。FDTDカプラでは、$N = 2$ のツリーはほとんど変わりませんが、$N = 4$ のツリーは利点を失い、2つのうち悪い方になります。最も影響を受けるのは、カプラが設計の結合比から最も離れる長波長側のチャネル(1360 nmと1380 nm)です(図4右下)。
+
+原因は方向性結合器の波長依存性です。そのパワー結合は帯域内で大きく変わり、50:50設計は1300 nmの0.39から1400 nmの0.63へ、24 µmのカプラは0.79から0.99へ変わります。合成はすべてのチャネルで同じ結合比を仮定しています。診断計算で2つの原因候補を切り分けられます。各FDTDカプラを1.35 µmでの結合比に固定し、目標とのずれだけを残した同じ $N = 4$ ツリーでは、最悪のクロストークは−18.1 dB、最悪の損失は0.11 dBで、理想設計に近くなります。結合比のわずかなずれのコストは約2 dBで、残りは波長依存性によるものです。1つのMZIは影響を受けにくくなっています。クロス出力はどんな分岐比でもゼロになり、その通過帯域はもともと正確な結合比に頼っていないからです。
+
+<Figure src={fig4} alt="ツリーの4つの出力について、1300から1400ナノメートルでのチャネル透過率(dB)を示す4パネル。上段は理想カプラ。N = 2は丸い通過帯域と約−11 dBのクロストークの側帯をもち、N = 4は平坦な通過帯域と約−15 dBの側帯、広く深い阻止帯域をもつ。下段はFDTDカプラ。N = 2は理想とほぼ同じだがゼロが浅い。N = 4は1320と1340ナノメートル付近で平坦な通過帯域をもつが、阻止帯域は歪んで浅く、1360から1400ナノメートル付近で漏れが大きい。灰色の帯は各チャネル中心の±3ナノメートル。" caption="バイナリツリー分波器の4つの出力の透過率(1320–1380 nmの20 nmグリッド)。列:1段あたりのカプラ数N = 2とN = 4。行:理想カプラとFDTDで計算した方向性結合器。灰色の帯:評価に使った±3 nmの窓。notebooks/06_directional_coupler.ipynb のカプラデータから組んだ回路モデル。" number={4} size="wide" />
+
+#### レーザーのずれへの耐性
+
+平坦な通過帯域の目的は耐性です。図5では、すべてのレーザーをチャネル中心から同じだけ($\pm d$)ずらし、両方向のうち最悪のチャネルを記録しています。理想カプラでは、$N = 4$ は3 nmのずれまでクロストークを約−20 dBに、4 nmまで損失を0.2 dB以下に保ちますが、$N = 2$ は2 nmですでに−17 dB、0.19 dBに達します。FDTDカプラでは、どちらもずれゼロの時点で悪い下限($N = 2$:−16 dB、$N = 4$:−15 dB)から始まり、今度は $N = 4$ のツリーの方が速く悪化します。±3 nmでは−9.7 dB、0.70 dBに達し、$N = 2$ の−12.7 dB、0.53 dBより悪くなります。これは上の表の値と同じです。
+
+<Figure src={fig5} alt="4つの場合について、レーザーのずれ0から8ナノメートルに対する最悪チャネルの挿入損失(左)とクロストーク(右)。理想カプラのN = 4は損失もクロストークも最も低く、3ナノメートルで約−20 dB。理想カプラのN = 2はより速く悪化する。FDTDカプラでは、どちらもクロストーク約−15 dBから始まり、N = 4の曲線の方がN = 2より速く上がる。" caption="すべてのレーザーをチャネル中心から±dずらしたときの最悪チャネルの挿入損失とクロストーク(両方向のうち最悪)。破線:理想カプラ。実線:FDTDで計算したカプラ。notebooks/06_directional_coupler.ipynb のカプラデータから組んだ回路モデル。" number={5} size="wide" />
+
+<Callout kind="design" title="設計上の意味">
+
+平坦な通過帯域のラティスの良し悪しは、帯域全体でのカプラの性能で決まります。分岐比が100 nmで数十%変わる通常の方向性結合器では、高次の合成はかえって性能を悪くすることがあります。そのため平坦な通過帯域の多段MZI分波器では、結合比の波長依存性が小さいカプラ(たとえば多モード干渉型、断熱型、曲がった方向性結合器)を使うか、各カプラの実測した $K(\lambda)$ でフィルタを合成します。作製後の位相オフセットはアームのヒータで設定します。
+
+</Callout>
+
+#### 理論とシミュレーションの比較
+
+モデルの主な数値を、それが確かめる関係と並べると次のとおりです。
+
+| 量 | 理論 | 本記事のモデル |
+|---|---|---|
+| 20 nm間隔のための段のアーム長差 | $\lambda_0^2/(n_g\,2\Delta\lambda)$ = 15.56 µm | FSR 40 nm |
+| 2段目のオフセット | $\pi/2$(1/4周期) | 90.5°($N=2$)、92.5°($N=4$) |
+| 1段の1 dB通過帯域 | FSRの30 %($N=2$)、36 %($N=4$) | — |
+| カプラの符号の反転 | 直前のアームに $\pi$ | 反転の有無で同じツリー |
+| 回路モデルとMZIのFDTD全体計算 | — | パワーのrms 0.015 |
+| ±3 nmでの最悪クロストーク、$N = 4$ | −20.1 dB(理想カプラ) | −9.7 dB(FDTDカプラ)、−18.1 dB(1.35 µmの結合比に固定したカプラ) |
+
+多段MZI分波器は、2つの部品と1つの考え方でできています。各段は干渉によって1つおきのチャネルを分け、ツリーは階層ごとにアーム長差を半分にします。ラティス合成はMZIの丸い応答を平坦な通過帯域に変えますが、それはすべてのカプラが全チャネルで設計どおりの分岐比を保つ場合に限られます。基になる素子は[Mach–Zehnder干渉計](/blog/mach-zehnder-interferometers/)、そのカプラは[方向性結合器](/blog/directional-couplers-cmt-fdtd/)、共振型フィルタとの比較は[結合・干渉・共鳴](/blog/coupling-interference-resonance-pic/)の記事で扱っています。
+
+### コードとデータ
+
+- ラティスフィルタとバイナリツリーのノートブック(SAX回路、GDSレイアウト):[`circuits/wdm_sax.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/circuits/wdm_sax.ipynb)、[`circuits/wdm_mux4_sax.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/circuits/wdm_mux4_sax.ipynb)
+- カプラの掃引(FDTDのSパラメータ):[`notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/06_directional_coupler.ipynb)、MZIの全体計算:[`notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/07_mzi.ipynb)
+- ラティスの合成:[`circuits/mzi_lattice.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/circuits/mzi_lattice.py)
+- 本記事の回路モデル、図、すべての数値は、保存済みの部品データから同リポジトリの `scripts/blog_figures/wdm_demultiplexers.py` で作成しました(順方向の伝達行列)。新たなFDTD計算は行っていません。
+
+---
+
+## References / 参考文献
+
+[^chrostowski]: L. Chrostowski and M. Hochberg, *Silicon Photonics Design: From Devices to Systems* (Cambridge University Press, 2015). [doi:10.1017/CBO9781316084168](https://doi.org/10.1017/CBO9781316084168)
+[^horst]: F. Horst, W. M. J. Green, S. Assefa, S. M. Shank, Y. A. Vlasov and B. J. Offrein, "Cascaded Mach-Zehnder wavelength filters in silicon photonics for low loss and flat pass-band WDM (de-)multiplexing," *Optics Express* **21**, 11652 (2013). [doi:10.1364/OE.21.011652](https://doi.org/10.1364/OE.21.011652)
+[^madsen]: C. K. Madsen and J. H. Zhao, *Optical Filter Design and Analysis: A Signal Processing Approach* (Wiley, 1999). [doi:10.1002/0471213756](https://doi.org/10.1002/0471213756)
+[^jinguji]: K. Jinguji and M. Kawachi, "Synthesis of coherent two-port lattice-form optical delay-line circuit," *Journal of Lightwave Technology* **13**, 73–82 (1995). [doi:10.1109/50.350643](https://doi.org/10.1109/50.350643)

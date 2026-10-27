@@ -1,0 +1,640 @@
+---
+title: "Mach–Zehnder Modulators"
+description: "A Mach–Zehnder modulator turns a drive voltage into an arm phase difference and then into light intensity. Pockels effect, voltage–length product, bandwidth."
+date: 2026-10-24
+category: technical-notes
+tags: [silicon photonics, thin-film lithium niobate, modulator, Mach-Zehnder interferometer, electro-optics, traveling-wave electrode, Meep, FDTD]
+areas: [silicon-photonics]
+draft: false
+---
+
+import Figure from "@/components/Figure.astro";
+import Term from "@/components/Term.astro";
+import Glossary from "@/components/Glossary.astro";
+import Def from "@/components/Def.astro";
+import Symbols from "@/components/Symbols.astro";
+import Callout from "@/components/Callout.astro";
+import fig1 from "./fig1_layout.png";
+import fig2 from "./fig2_transfer.png";
+import fig3 from "./fig3_overlap.png";
+import fig4 from "./fig4_gap_tradeoff.png";
+import fig5 from "./fig5_fdtd_switching.png";
+import fig6 from "./fig6_bandwidth.png";
+
+**Language:** [English](#english) · [日本語](#日本語)
+
+## English
+
+A **Mach–Zehnder modulator** (MZM) is an interferometer whose arm phase difference is set by a drive voltage, so that an electrical signal is written onto the intensity of light. It is the transmitter of most coherent and high-speed optical links: a laser supplies constant light, and the MZM imprints the data on it at tens to hundreds of gigabaud.
+
+### Overview
+
+#### What a modulator does
+
+A modulator takes two inputs, continuous light and an electrical signal, and returns light whose power (or phase) follows the signal. An MZM does this in three steps:
+
+1. the voltage changes the refractive index of the arm waveguides, through an electro-optic effect;
+2. the index change shifts the phase of the light in the arms, in opposite directions in the two arms;
+3. the interferometer converts the phase difference into output power.
+
+The design questions follow the same chain. How much index change does one volt give? How much of it does the guided mode feel? How long must the arms be to reach a phase difference of $\pi$, and how fast can the voltage change before the electrodes stop following it?
+
+#### Basic structure
+
+An MZM is a [Mach–Zehnder interferometer](/blog/mach-zehnder-interferometers/) with electrodes along its arms (Fig. 1). A splitter divides the light between two equal arms, and a combiner recombines it. A <Term id="en-gsg" n={1}>ground–signal–ground</Term> (GSG) electrode runs alongside the arms: the signal conductor sits between them, so its field points in opposite directions across the two arms. The electrode is a transmission line, fed at the input end and terminated at the far end, so the electrical wave travels with the light.
+
+The example in this article is a **thin-film lithium niobate** (TFLN) modulator: a 1 µm wide rib waveguide etched into a 600 nm lithium niobate film on oxide, with gold electrodes on both sides of each rib, which sits in the middle of a 5 µm gap. The designer chooses the electro-optic material and its crystal orientation, the waveguide cross-section, the electrode gap, the electrode length and the layer stack under the electrodes.
+
+<Glossary>
+<Def id="en-gsg" n={1} term="Ground–signal–ground (GSG) electrode">
+Three parallel metal strips: a signal conductor in the middle and a grounded conductor on each side. It forms a coplanar transmission line. In a modulator, the two gaps between the conductors carry fields of opposite direction, one over each arm.
+</Def>
+</Glossary>
+
+<Figure src={fig1} alt="Top: top view of a Mach–Zehnder modulator. Light enters on the left, splits into two waveguide arms and recombines on the right. A gold signal electrode S lies between the arms and two gold ground electrodes G lie outside them. The RF drive is applied between S and G at the input end of the electrodes and a 50 ohm termination connects S and G at the output end. Bottom: cross-section with the drive circuit: a voltage source V(t) connects the signal electrode (+V) to both ground electrodes (0 V). Each lithium niobate rib waveguide sits in one of the two gaps; arrows show that the electric field points from S towards G, to the left in the gap over arm 1 and to the right in the gap over arm 2." caption="The thin-film lithium niobate MZM of this article (schematic). Top: top view: the two waveguide arms run in the gaps of a ground–signal–ground (GSG) electrode, which is driven at the input end and terminated in 50 Ω at the output end. Bottom: cross-section with the drive circuit, not to scale: the voltage V(t) between the signal electrode and the grounds creates fields of opposite direction in the two gaps, so the index of one arm rises while the other falls (push-pull). Modelled stack: 600 nm LN film etched 300 nm into 1 µm ribs, 1 µm gold electrodes on the slab, 5 µm gaps, 2 µm buried oxide. Drawn from data/design_points/tfln_mzm.yaml." number={1} size="wide" />
+
+### Theory
+
+#### From phase to intensity: the transfer curve
+
+With ideal 50:50 couplers, an MZM with arm phase difference $\Delta\phi$ sends the fraction $\cos^2(\Delta\phi/2)$ of the input power to one output and $\sin^2(\Delta\phi/2)$ to the other. In a modulator the phase difference has a fixed part and a part proportional to the drive voltage, scaled by the <Term id="en-vpi" n={2}>half-wave voltage</Term> $V_\pi$, so one output is:
+
+$$
+\frac{P_\text{out}}{P_\text{in}} = \cos^2\!\left(\frac{\Delta\phi_0}{2} + \frac{\pi V}{2V_\pi}\right) .
+$$
+
+<Symbols>
+
+- $P_\text{out}$ — optical power at the output port (W)
+- $P_\text{in}$ — optical power at the input (W)
+- $\Delta\phi_0$ — arm phase difference without drive, the bias (rad)
+- $V$ — drive voltage (V)
+- $V_\pi$ — half-wave voltage (V)
+
+</Symbols>
+
+The bias $\Delta\phi_0$ is set by a small DC voltage or a heater. For intensity modulation it is set to <Term id="en-quad" n={3}>quadrature</Term>, $\Delta\phi_0 = \pi/2$, where the output is half the input and the curve is steepest and most nearly straight (Fig. 2). Small voltages around that point change the output in proportion, with slope $\pi/(2V_\pi)$ per volt. A four-level <Term id="en-pam4" n={4}>PAM4</Term> signal uses four drive levels around quadrature. A drive that reaches $\pm V_\pi/2$ swings the output between full and zero, and its outer levels are compressed by the curvature.
+
+The smaller $V_\pi$, the less electrical power the driver must deliver for the same optical swing. That is why $V_\pi$ and the bandwidth are the two numbers that define a modulator. The depth of the zero, the <Term id="en-er" n={5}>extinction ratio</Term>, is set by how close the couplers are to 50:50, as in any MZI.
+
+<Glossary>
+<Def id="en-vpi" n={2} term="Half-wave voltage (V_π)">
+The voltage that changes the arm phase difference by $\pi$, which moves the output from fully on to fully off. The product $V_\pi L$ with the electrode length $L$ compares modulators of different length.
+</Def>
+<Def id="en-quad" n={3} term="Quadrature">
+The bias point halfway between maximum and minimum transmission, where the arm phase difference is $\pi/2$. The transfer curve is steepest and most linear there.
+</Def>
+<Def id="en-pam4" n={4} term="PAM4">
+Four-level pulse-amplitude modulation: each symbol is one of four intensity levels, carrying two bits. A 106 GBd PAM4 signal carries about 200 Gbit/s.
+</Def>
+<Def id="en-er" n={5} term="Extinction ratio">
+The ratio of the maximum to the minimum output power, usually in dB. It measures how completely the modulator turns the light off.
+</Def>
+</Glossary>
+
+<Figure src={fig2} alt="Output power versus drive voltage normalized to V pi from minus 1.5 to 1.5: a cosine-squared curve that passes through 0.5 at zero drive. A dashed line shows the slope at that point, a dot marks the quadrature bias, and four squares mark PAM4 drive levels at plus and minus 0.05 and 0.15 V pi, all on the nearly straight part of the curve." caption="Ideal MZM transfer curve biased at quadrature (Δφ₀ = π/2). Around the bias point the output follows the drive almost linearly, with slope π/(2V_π); four PAM4 drive levels are shown. Computed analytically." number={2} />
+
+#### Electro-optic effects: how a voltage changes the index
+
+Two mechanisms dominate integrated modulators.
+
+The <Term id="en-pockels" n={6}>Pockels effect</Term> is a change of refractive index proportional to an applied field, present in crystals without inversion symmetry such as lithium niobate (LN). For light polarized along the crystal's optic axis $Z$ and a field along the same axis, the extraordinary index changes by:[^weis]
+
+$$
+\Delta n_e = -\tfrac{1}{2}\, n_e^3\, r_{33}\, E_Z .
+$$
+
+<Symbols>
+
+- $\Delta n_e$ — change of the extraordinary refractive index (dimensionless)
+- $n_e$ — extraordinary refractive index of LN (dimensionless)
+- $r_{33}$ — largest electro-optic coefficient of LN (m/V)
+- $E_Z$ — applied electric field along the optic axis (V/m)
+
+</Symbols>
+
+For LN, $n_e = 2.144$ at 1.35 µm[^zelmon] and $r_{33} \approx 31$ pm/V. The effect is small: one volt across a 5 µm gap gives $E_Z = 2\times10^5$ V/m and $|\Delta n_e| \approx 3\times10^{-5}$. But it is linear, it involves no moving charge carriers, so it follows the field essentially instantly, and it adds no absorption. Materials are compared by $n^3 r$, which is about 304 pm/V for LN.
+
+To use $r_{33}$, both the light and the electrode field must point along $Z$. In **x-cut** LN, $Z$ lies in the chip plane. A TE mode, whose field is mostly lateral, and electrodes on either side of the rib, whose field is also lateral, then both line up with $Z$ (Fig. 1, bottom).
+
+Silicon has no Pockels effect, because its crystal is centrosymmetric. Silicon modulators use <Term id="en-plasma" n={7}>plasma dispersion</Term> instead. Free electrons and holes lower the refractive index: at 1.3 µm, a density of $10^{18}$ cm⁻³ changes it by about $1.5\times10^{-3}$ for holes and $0.6\times10^{-3}$ for electrons.[^soref] A reverse-biased PN junction in the waveguide sweeps carriers out of a depletion region as the voltage rises. The density change is about $10^{17}$ cm⁻³ in only part of the mode, so $\Delta n$ is of order $10^{-4}$. Depletion-mode silicon phase shifters are therefore millimetres long. The carriers also absorb light, and the response is nonlinear in voltage.[^reed] [^rahim] In exchange, silicon modulators are made in CMOS foundries alongside the rest of the circuit.
+
+<Glossary>
+<Def id="en-pockels" n={6} term="Pockels effect (linear electro-optic effect)">
+A change in refractive index proportional to an applied electric field, present in crystals that lack inversion symmetry. Its strength is given by the electro-optic tensor $r_{ij}$; it responds to fields up to very high frequencies.
+</Def>
+<Def id="en-plasma" n={7} term="Plasma dispersion effect">
+In a semiconductor, free electrons and holes reduce the refractive index and absorb light. Changing their density with a diode or capacitor is how silicon modulators change the index electrically.
+</Def>
+</Glossary>
+
+#### From material index to mode index: the overlap factor
+
+The electrode field is not uniform, and the optical mode is not entirely inside the LN. The mode's effective index therefore changes by a weighted average of the local index change. Design papers write this with an <Term id="en-overlap" n={8}>overlap factor</Term> $\Gamma$, comparing the real structure with an ideal parallel-plate field $V/g$ that fills the whole mode:
+
+$$
+\frac{\partial n_\text{eff}}{\partial V} = \frac{1}{2}\, n_e^3\, r_{33}\, \frac{\Gamma}{g} .
+$$
+
+<Symbols>
+
+- $\partial n_\text{eff}/\partial V$ — change of the mode's effective index per volt (V⁻¹)
+- $\Gamma$ — electro-optic overlap factor (dimensionless)
+- $g$ — electrode gap, edge to edge (m)
+
+</Symbols>
+
+$\Gamma$ is well below 1, for two reasons. Part of the optical mode sits in oxide and air, which have no Pockels effect. And LN's permittivity at microwave frequencies is large ($\varepsilon \approx 27$ along $Z$, against about 4.6 at optical frequencies), so the field inside the rib is weaker than in the surrounding air (Fig. 3).
+
+<Glossary>
+<Def id="en-overlap" n={8} term="Overlap factor (Γ)">
+The fraction of the ideal electro-optic effect that the optical mode actually experiences: the electrode field weighted by the optical intensity in the electro-optic material, relative to a uniform field $V/g$ over the whole mode.
+</Def>
+</Glossary>
+
+<Figure src={fig3} alt="Map of the magnitude of the lateral electrode field across one 5 micrometre gap, with the ground electrode (0 V) on the left and the signal electrode (+V) on the right, both labelled above the plot. The field is strongest at the electrode edges and weaker inside the lithium niobate rib in the middle, which is labelled LN rib waveguide. White contour lines of the optical mode intensity sit inside and just below the rib. An arrow above the plot shows that the field points from the signal electrode towards the ground electrode." caption="Magnitude of the lateral electrode field |E_x| for 1 V across one gap (colour), with contours of the TE optical mode intensity at 10 %, 40 % and 80 % of its peak (white); dashed outline: the rib. The field inside the high-permittivity LN rib is weaker than in the air beside it, one reason why Γ = 0.53 here. From notebooks/11_tfln_mzm.ipynb, Sections 3 and 5." number={3} size="wide" />
+
+#### Push-pull and the voltage–length product
+
+In the GSG layout the two gaps carry opposite fields, so one arm's index rises while the other's falls: <Term id="en-pushpull" n={9}>push-pull</Term> operation. Over an electrode length $L$ the arm phase difference grows by $(2\pi/\lambda)\,2\,(\partial n_\text{eff}/\partial V)\,V L$. Setting it to $\pi$ gives the figure of merit of the modulator:
+
+$$
+V_\pi L = \frac{\lambda\, g}{2\, n_e^3\, r_{33}\, \Gamma} .
+$$
+
+<Symbols>
+
+- $V_\pi L$ — voltage–length product, push-pull (V·m, usually quoted in V·cm)
+- $\lambda$ — vacuum wavelength (m)
+- $g$ — electrode gap (m)
+- $\Gamma$ — overlap factor (dimensionless)
+
+</Symbols>
+
+A modulator with $V_\pi L = 2$ V·cm needs 2 V over 1 cm or 4 V over 5 mm. Driving only one arm would double $V_\pi L$.
+
+The formula shows the levers. A narrower gap raises the field and lowers $V_\pi L$ in proportion. But a narrower gap also brings the metal closer to the optical mode, and metal absorbs light. In TFLN the intensity of the mode falls by orders of magnitude per micrometre away from the rib, so the gap is chosen as the narrowest one that keeps the metal in the far tail of the mode (Fig. 4).
+
+<Glossary>
+<Def id="en-pushpull" n={9} term="Push-pull">
+Driving the two arms in opposite directions, so that one arm's index rises while the other's falls. The phase difference doubles for the same voltage, and in an ideal symmetric device the output carries no residual phase modulation (no chirp).
+</Def>
+</Glossary>
+
+#### Traveling-wave electrodes
+
+Why not simply treat the electrode as a capacitor? A 1 cm electrode of this design has a capacitance of 1.7 pF. Charged through a 50 Ω driver, it reaches a bandwidth of only $1/(2\pi R C) \approx 1.8$ GHz. Moreover, at tens of gigahertz the electrical wavelength is a few millimetres, shorter than the electrode, so the voltage is not even uniform along it.
+
+The solution is a <Term id="en-tw" n={10}>traveling-wave electrode</Term>. The electrode is designed as a transmission line, fed at the end where the light enters and terminated in a matched load at the other end, so the microwave and the light travel together. A transmission line is characterized by two numbers, its microwave index and its <Term id="en-z0" n={11}>characteristic impedance</Term>. In a quasi-TEM line both follow from the capacitance per unit length with and without the dielectrics:
+
+$$
+\begin{aligned}
+n_\text{RF} &= \sqrt{\frac{C}{C_\text{air}}} , \\
+Z_0 &= \frac{1}{c\sqrt{C\, C_\text{air}}} .
+\end{aligned}
+$$
+
+<Symbols>
+
+- $n_\text{RF}$ — microwave index of the electrode line (dimensionless)
+- $Z_0$ — characteristic impedance of the line (Ω)
+- $C$ — capacitance per unit length with all dielectrics present (F/m)
+- $C_\text{air}$ — capacitance per unit length with all dielectrics replaced by vacuum (F/m)
+- $c$ — speed of light in vacuum (m/s)
+
+</Symbols>
+
+Three effects then limit how fast the modulator responds.
+
+**Velocity mismatch.** If $n_\text{RF}$ differs from the optical group index $n_g$, the light slowly slips relative to the voltage wave and averages over a changing voltage. For a lossless, matched line the normalized electro-optic response is:
+
+$$
+\begin{aligned}
+m(f) &= \left|\frac{\sin u}{u}\right| , \\
+u &= \frac{\pi f L\,\lvert n_\text{RF} - n_g\rvert}{c} .
+\end{aligned}
+$$
+
+<Symbols>
+
+- $m(f)$ — electro-optic response at modulation frequency $f$, normalized to its low-frequency value (dimensionless)
+- $f$ — modulation frequency (Hz)
+- $L$ — electrode length (m)
+- $n_g$ — optical group index of the arm waveguide (dimensionless)
+
+</Symbols>
+
+The response falls to −3 dB (in the electrical convention, $20\log_{10} m = -3$) at $u = 1.39$, that is at $f_\text{3dB} \approx 1.39\,c/(\pi L \lvert n_\text{RF}-n_g\rvert)$. In bulk LN modulators the microwave index is far above the optical group index, and velocity matching needs special electrode designs.[^wooten] In thin film, most of the microwave field runs in air and oxide, which brings $n_\text{RF}$ close to $n_g$. This is one of the main reasons TFLN modulators are fast.
+
+**Conductor loss.** Microwave current flows in a thin layer at the metal surface, the skin, whose depth shrinks as $1/\sqrt{f}$. The line resistance and the voltage attenuation therefore grow as $\sqrt{f}$. With good velocity matching, this is usually the dominant limit in TFLN.
+
+**Impedance mismatch.** If $Z_0$ differs from the 50 Ω of the driver and load, less voltage enters the line. On its own this costs a nearly constant offset of about 0.9 dB, but it shifts the slowly falling loss-limited response down, and with it the −3 dB point.
+
+Every one of these limits gets worse as the electrode gets longer, while $V_\pi = (V_\pi L)/L$ gets better. The electrode length is therefore the central trade-off: the design point is the longest electrode, and thus the lowest $V_\pi$, that still meets the bandwidth target. TFLN modulators engineered this way have reached CMOS-compatible drive voltages together with data rates up to 210 Gbit/s and on-chip optical loss below 0.5 dB.[^wang]
+
+<Glossary>
+<Def id="en-tw" n={10} term="Traveling-wave electrode">
+A modulator electrode designed as a transmission line terminated in a matched load, so that the electrical signal travels along the arms together with the light, instead of charging the whole electrode as one capacitor.
+</Def>
+<Def id="en-z0" n={11} term="Characteristic impedance (Z₀)">
+The ratio of voltage to current in a single wave on a transmission line. A line terminated in an impedance equal to $Z_0$ reflects nothing; drivers and loads are usually 50 Ω.
+</Def>
+</Glossary>
+
+#### Design guide: what changes what
+
+<Callout kind="design" title="What changes what">
+
+- **Electrode gap ↓** → lower $V_\pi L$, but more optical loss from the metal. *Why:* field $\propto 1/g$; the mode's tail reaches the electrode edge.
+- **Electrode length ↑** → lower $V_\pi$, lower bandwidth. *Why:* $V_\pi = (V_\pi L)/L$; velocity mismatch, conductor and impedance effects all grow with $L$.
+- **Overlap $\Gamma$ ↑** (rib shape, film thickness, electrode position) → lower $V_\pi L$. *Why:* more of the mode sits in LN where the field is strong.
+- **Crystal orientation and polarization** → only x-cut with TE light and lateral electrodes uses $r_{33}$. *Why:* $r_{33}$ couples a field along $Z$ to light polarized along $Z$.
+- **Layer stack under the electrode** (oxide thickness, substrate) → shifts $n_\text{RF}$ and $Z_0$. *Why:* the microwave field reaches far below the film.
+- **Bias point** → quadrature for intensity modulation, the null for phase-coherent formats. *Why:* slope and linearity of $\cos^2$.
+- **Coupler split ratio** → extinction ratio. *Why:* the null is perfect only for 50:50 couplers.
+- **Material** (TFLN vs silicon) → linear, fast, low-loss Pockels modulation versus CMOS integration with lossy, nonlinear plasma dispersion. *Why:* the physics of the index change.
+
+</Callout>
+
+### Simulation
+
+#### The model used here
+
+The device is the x-cut TFLN modulator of Fig. 1: 600 nm LN film, etched 300 nm into a 1.0 µm rib, on 2 µm of buried oxide and a silicon handle, with air above; gold GSG electrodes 1 µm thick on the slab, 5 µm gaps and a 20 µm signal strip. The optical wavelength is 1.35 µm. LN's indices come from a Sellmeier fit[^zelmon] evaluated at that wavelength ($n_o = 2.218$, $n_e = 2.144$), and $r_{33} = 30.9$ pm/V. The simulations use my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit) and four solvers, each for the part of the problem it suits:
+
+| Part of the problem | Solver |
+|---|---|
+| optical mode of the rib (LN anisotropy included) | MPB, full-vector mode solver |
+| electrode field, $C$, $n_\text{RF}$, $Z_0$, conductor loss | finite-volume electrostatics on the cross-section |
+| couplers and the complete interferometer | 2D FDTD (Meep) with effective indices |
+| frequency response | closed-form traveling-wave model |
+
+The results are those of this model, not of a fabricated device. The sidewalls are vertical, the metal's optical absorption is estimated from the mode's intensity at the electrode rather than computed, and microwave loss in the dielectrics is omitted.
+
+#### Optical mode and overlap
+
+The TE mode of the rib has $n_\text{eff} = 1.926$ and a group index of 2.251, or 2.297 when the material dispersion of LN and silica is included. In x-cut TFLN the TE and TM modes are nearly degenerate (the TM index differs by only $1.6\times10^{-3}$), so every solve forces the TE symmetry and checks that the lateral field carries 95 % of the mode.
+
+Combining this mode with the electrode field of Fig. 3 by first-order perturbation theory gives $\Gamma = 0.528$ and $\partial n_\text{eff}/\partial V = 1.61\times10^{-5}$ V⁻¹. An independent check, re-solving the mode with the field-induced index change inserted directly into the permittivity, agrees to 0.18 %. The push-pull voltage–length product of the modelled device is therefore $V_\pi L = 2.10$ V·cm. With $r_{33} = 26.9$ pm/V, a lower value sometimes used for microwave drive, it would be 2.41 V·cm. Sweeping the gap (Fig. 4) shows the trade-off of the Theory section: from 3 to 8 µm, $V_\pi L$ rises from 1.17 to 3.72 V·cm, nearly in proportion to $g$ ($\Gamma$ falls only from 0.57 to 0.48). Meanwhile, the mode's intensity at the electrode corner falls from $1.1\times10^{-4}$ to $4.7\times10^{-9}$ of its peak. At the chosen 5 µm it is $2.4\times10^{-7}$, so the metal sits in the far tail of the mode.
+
+<Figure src={fig4} alt="Left: push-pull V pi L rising almost linearly from 1.17 volt centimetres at a 3 micrometre gap to 3.72 at 8 micrometres. Right: on a log scale, the optical mode intensity at the electrode corner falling from about 1e-4 at 3 micrometres to about 5e-9 at 8 micrometres. A vertical line marks the design gap of 5 micrometres." caption="Electrode-gap trade-off. Left: push-pull V_πL. Right: optical intensity at the electrode's bottom corner relative to the mode peak, a proxy for metal absorption. Vertical line: the chosen 5 µm gap. From notebooks/11_tfln_mzm.ipynb, Section 6.5." number={4} size="wide" />
+
+#### The interferometer in 2D FDTD
+
+A real arm is millimetres long, far beyond a 2D FDTD cell. The interferometer is therefore checked on a phase-equivalent model. The cross-section is reduced to 2D by the effective-index method (core 1.995, cladding 1.794; the resulting 2D mode index is within 0.63 % of the MPB value). The arm is shortened to 188 µm and the index change exaggerated to $\Delta n = \pm 0.002$ per arm, so that the arm phase difference, which is all the interferometer sees, is the same. The 50:50 couplers were designed in the same model: a 0.6 µm gap and a 33.4 µm coupling length, with 0.500 cross power and 0.7 % loss at 1.35 µm.
+
+Fig. 5 shows the result. Without drive, all the light leaves the cross port (bar $5\times10^{-5}$, −43 dB). At the $V_\pi$ point, 98.8 % leaves the bar port and the cross port drops to $5\times10^{-4}$ (−33 dB). The intermediate points follow $\sin^2$ and $\cos^2$. The realized phase at the $V_\pi$ point is $1.015\pi$: the ratio of the two outputs changes sign there, which shows that the phase has just passed $\pi$. The interferometer thus converts phase into intensity as the transfer function assumes. What the 2D model cannot do is the volts-to-phase step, which only exists in the real cross-section and comes from the overlap calculation above.
+
+<Figure src={fig5} alt="Bar and cross output power versus equivalent drive from 0 to 1.1 V pi. Four FDTD points per output, at 0, one third, two thirds and one V pi, lie on gray sine-squared and cosine-squared curves; the bar output rises from 0 to 0.99 and the cross output falls from 0.99 to near 0." caption="Switching of the TFLN interferometer in 2D FDTD (phase-equivalent 188 µm arm, λ = 1.35 µm). Points: FDTD bar and cross outputs. Gray: ideal sin² and cos² of πV/(2V_π). From notebooks/11_tfln_mzm.ipynb, Section 8." number={5} />
+
+#### Bandwidth of the traveling-wave electrode
+
+The electrostatic solves give $C = 173$ pF/m and $C_\text{air} = 37.8$ pF/m, hence $n_\text{RF} = 2.141$ and $Z_0 = 41.2$ Ω. The microwave index lies close to the optical group index of 2.297. The conductor loss, from the change of inductance when the metal surfaces recede by a skin depth (Wheeler's incremental-inductance rule), is 8.7 dB/cm at 100 GHz.
+
+Fig. 6 (left) separates the three limits for a 1 cm electrode. Velocity mismatch alone would allow 85 GHz, and impedance mismatch alone never reaches −3 dB. Conductor loss alone gives 54 GHz. All three together give only 22 GHz, because the 0.9 dB offset from the impedance mismatch moves the slowly falling loss curve across −3 dB much earlier. The microwave index also depends on the oxide under the electrodes. A thinner oxide pulls $n_\text{RF}$ up towards $n_g$, because the silicon handle has a high permittivity: from 4.7 µm to 1.0 µm of oxide, $n_\text{RF}$ rises from 1.97 to 2.27, and the velocity-limited bandwidth of a 1 cm electrode rises from 40 to 565 GHz.
+
+Fig. 6 (right) is the design trade-off. Shortening the electrode from 20 mm to 2 mm raises the bandwidth from 6 GHz to over 200 GHz, while $V_\pi$ rises from 1.05 V to 10.5 V. For a 67 GHz target, a class suited to about 200 Gbit/s per lane, the longest electrode that meets it is 4.5 mm, with $V_\pi = 4.67$ V and a bandwidth of 79 GHz.
+
+<Figure src={fig6} alt="Left: electro-optic response in dB versus frequency to 200 gigahertz for a 1 centimetre electrode: velocity mismatch alone falls to minus 3 dB at 85 gigahertz; conductor loss alone at 54; impedance mismatch alone stays within about 0.9 dB; all three together reach minus 3 dB at 22 gigahertz. Right: V pi versus 3 dB bandwidth as the electrode length varies from 2 to 20 millimetres; a dashed line marks 67 gigahertz and a dot marks the design point at 4.5 millimetres, 4.67 volts and 79 gigahertz." caption="Traveling-wave bandwidth. Left: EO response of a 1 cm electrode with each limit alone and all three together (n_RF = 2.141, n_g = 2.297, Z₀ = 41.2 Ω, conductor loss ∝ √f). Right: V_π versus EO 3 dB bandwidth for electrode lengths of 2–20 mm, with the 67 GHz target and the chosen design point. Closed-form traveling-wave model; line constants from notebooks/11_tfln_mzm.ipynb, Section 9." number={6} size="wide" />
+
+<Callout kind="design" title="What this means for design">
+
+In thin-film LN the microwave index is already close to the optical group index, so conductor loss and impedance, not velocity mismatch, set the bandwidth. The electrode metal (thickness, width, conductivity) and $Z_0$ are therefore as important as the optical design. Because every limit worsens with length, the electrode length is chosen last: the longest that still meets the bandwidth target.
+
+</Callout>
+
+#### Theory versus simulation
+
+The main numbers of the model, next to the formulas they test:
+
+| Quantity | Theory | This model |
+|---|---|---|
+| Index change for 1 V across 5 µm | $\tfrac12 n_e^3 r_{33} V/g = 3.0\times10^{-5}$ | modal: $1.61\times10^{-5}$ per V ($\Gamma = 0.528$) |
+| $V_\pi L$, push-pull | $\lambda g/(2 n_e^3 r_{33} \Gamma)$ | 2.10 V·cm (direct re-solve agrees to 0.18 %) |
+| Transfer curve | $\cos^2$, $\sin^2$ | FDTD follows it; $1.015\pi$ at the $V_\pi$ point |
+| Lumped bandwidth, 1 cm | $1/(2\pi R C)$ | 1.8 GHz |
+| Velocity-limited bandwidth, 1 cm | $1.39c/(\pi L\lvert n_\text{RF}-n_g\rvert)$ | 85 GHz |
+| Design point | longest $L$ meeting 67 GHz | 4.5 mm, $V_\pi$ = 4.67 V, 79 GHz |
+
+An MZM is a chain: an electro-optic effect turns volts into a material index change, the overlap with the mode turns it into a phase, and the interferometer turns the phase into intensity, all while the electrode carries the signal along the arms as a microwave. The optical design sets $V_\pi L$; the electrode design sets how much of it survives at high frequency.
+
+### Code and data
+
+- TFLN modulator notebook (Pockels primer, MPB cross-section, electrostatics, overlap, $V_\pi L$, coupler and interferometer FDTD, traveling-wave bandwidth): [`notebooks/11_tfln_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/11_tfln_mzm.ipynb)
+- Simulation modules: [`tfln_waveguide.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_waveguide.py), [`tfln_electrostatics.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_electrostatics.py), [`tfln_mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_mzm.py); compact (SAX) model: [`models/tfln_mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/tfln_mzm.py)
+- The mode, electrode, gap and RF solves are re-run by `scripts/blog_figures/mach_zehnder_modulators_data.py` (MPB and electrostatics only; the numbers reproduce the notebook's saved outputs) and saved in `data/blog_figures/mach_zehnder_modulators.npz`. The figures and all numbers are produced by `scripts/blog_figures/mach_zehnder_modulators.py` from that file and the notebook's saved FDTD data. No new FDTD runs were needed.
+
+---
+
+## 日本語
+
+**Mach–Zehnder変調器**(MZM)は、アーム間の位相差を駆動電圧で決める干渉計で、電気信号を光の強度に書き込みます。コヒーレント通信や高速光リンクの大半で送信器として使われており、レーザーが一定の光を供給し、MZMが数十から数百ギガボーでデータを刻み込みます。
+
+### 概要
+
+#### 変調器は何をするか
+
+変調器には、連続光と電気信号の2つの入力があり、パワー(または位相)が信号に従う光を返します。MZMはこれを3段階で行います。
+
+1. 電圧が電気光学効果によってアーム導波路の屈折率を変える。
+2. 屈折率の変化がアーム内の光の位相をずらす。2本のアームでは逆向きにずれる。
+3. 干渉計が位相差を出力パワーに変換する。
+
+設計上の問いも同じ連鎖をたどります。1 Vでどれだけ屈折率が変わるか。そのうち導波モードが感じるのはどれだけか。位相差 $\pi$ に達するにはアームの長さがどれだけ必要か。そして、電極が追従できなくなるまでに電圧をどれだけ速く変えられるか。
+
+#### 基本構造
+
+MZMは、アームに沿って電極を備えた[Mach–Zehnder干渉計](/blog/mach-zehnder-interferometers/)です(図1)。分岐器が光を等しい長さの2本のアームに分け、合波器が再び合わせます。アームに沿って<Term id="ja-gsg" n={1}>グラウンド–信号–グラウンド</Term>(GSG)電極が走っています。信号導体が2本のアームの間にあるので、その電界は2本のアームを逆向きに横切ります。電極は伝送線路で、入力側の端から給電され、反対側の端で終端されているので、電気の波は光と一緒に進みます。
+
+本記事の例は**薄膜ニオブ酸リチウム**(TFLN)変調器です。酸化膜上の厚さ600 nmのニオブ酸リチウム膜に幅1 µmのリブ導波路を作り、各リブの両側に金の電極を置いています。リブは幅5 µmのギャップの中央にあります。設計者が選ぶのは、電気光学材料とその結晶方位、導波路の断面、電極ギャップ、電極長、電極の下の積層です。
+
+<Glossary title="用語">
+<Def id="ja-gsg" n={1} term="グラウンド–信号–グラウンド(GSG)電極">
+平行な3本の金属帯で、中央が信号導体、両側が接地導体です。コプレーナ伝送線路を構成します。変調器では、導体間の2つのギャップに逆向きの電界が生じ、それぞれが1本のアームの上にかかります。
+</Def>
+</Glossary>
+
+<Figure src={fig1} alt="上:Mach–Zehnder変調器の上面図。光は左から入り、2本の導波路アームに分かれ、右で再び合わさる。金の信号電極Sがアームの間に、2本の金の接地電極Gがアームの外側にある。RF駆動は電極の入力側の端でSとGの間に加えられ、出力側の端では50オームの終端がSとGをつなぐ。下:駆動回路を含む断面図。電圧源V(t)が信号電極(+V)と両側の接地電極(0 V)をつなぐ。ニオブ酸リチウムのリブ導波路は2つのギャップに1本ずつあり、矢印は電界がSからGへ向かうこと、つまりアーム1上のギャップでは左向き、アーム2上のギャップでは右向きであることを示す。" caption="本記事の薄膜ニオブ酸リチウムMZM(模式図)。上:上面図。2本の導波路アームはグラウンド–信号–グラウンド(GSG)電極のギャップを通り、電極は入力側の端で駆動され、出力側の端で50 Ωで終端される。下:駆動回路を含む断面図(縮尺は正確でない)。信号電極と接地電極の間の電圧V(t)が2つのギャップに逆向きの電界をつくるので、一方のアームの屈折率が上がり、もう一方は下がる(プッシュプル)。モデルの積層:厚さ600 nmのLN膜を300 nmエッチングした幅1 µmのリブ、スラブ上の厚さ1 µmの金電極、5 µmのギャップ、厚さ2 µmの埋め込み酸化膜。data/design_points/tfln_mzm.yaml から描画。" number={1} size="wide" />
+
+### 理論
+
+#### 位相から強度へ:伝達曲線
+
+理想的な50:50カプラでは、アーム位相差 $\Delta\phi$ のMZMは入力パワーのうち $\cos^2(\Delta\phi/2)$ を一方の出力へ、$\sin^2(\Delta\phi/2)$ をもう一方へ送ります。変調器では位相差が固定部分と、<Term id="ja-vpi" n={2}>半波長電圧</Term> $V_\pi$ で規格化した駆動電圧に比例する部分からなるので、一方の出力は次のようになります。
+
+$$
+\frac{P_\text{out}}{P_\text{in}} = \cos^2\!\left(\frac{\Delta\phi_0}{2} + \frac{\pi V}{2V_\pi}\right)
+$$
+
+<Symbols title="記号">
+
+- $P_\text{out}$ — 出力ポートの光パワー(W)
+- $P_\text{in}$ — 入力の光パワー(W)
+- $\Delta\phi_0$ — 駆動がないときのアーム位相差、つまりバイアス(rad)
+- $V$ — 駆動電圧(V)
+- $V_\pi$ — 半波長電圧(V)
+
+</Symbols>
+
+バイアス $\Delta\phi_0$ は小さな直流電圧かヒータで設定します。強度変調では<Term id="ja-quad" n={3}>クアドラチャ</Term>、つまり $\Delta\phi_0 = \pi/2$ に設定します。そこでは出力が入力の半分で、曲線が最も急で最も直線に近くなります(図2)。その点の周りの小さな電圧は出力を比例して変え、傾きは1 Vあたり $\pi/(2V_\pi)$ です。4値の<Term id="ja-pam4" n={4}>PAM4</Term>信号は、クアドラチャの周りの4つの駆動レベルを使います。駆動が $\pm V_\pi/2$ に達すると出力は最大からゼロまで振れ、外側のレベルは曲線の曲がりで圧縮されます。
+
+$V_\pi$ が小さいほど、同じ光の振れに必要な電気パワーは小さくなります。そのため、$V_\pi$ と帯域が変調器を特徴づける2つの数になります。ゼロの深さ、つまり<Term id="ja-er" n={5}>消光比</Term>は、どのMZIとも同じく、カプラがどれだけ50:50に近いかで決まります。
+
+<Glossary title="用語">
+<Def id="ja-vpi" n={2} term="半波長電圧(V_π)">
+アーム位相差を $\pi$ だけ変え、出力を完全なオンから完全なオフへ動かす電圧です。電極長 $L$ との積 $V_\pi L$ で、長さの異なる変調器を比較します。
+</Def>
+<Def id="ja-quad" n={3} term="クアドラチャ">
+透過の最大と最小のちょうど中間のバイアス点で、アーム位相差が $\pi/2$ のところです。伝達曲線はそこで最も急で、最も直線的です。
+</Def>
+<Def id="ja-pam4" n={4} term="PAM4">
+4値パルス振幅変調です。各シンボルは4つの強度レベルのいずれかで、2ビットを運びます。106 GBdのPAM4信号は約200 Gbit/sを運びます。
+</Def>
+<Def id="ja-er" n={5} term="消光比">
+出力パワーの最大値と最小値の比で、通常dBで表します。変調器が光をどれだけ完全に消せるかを示します。
+</Def>
+</Glossary>
+
+<Figure src={fig2} alt="V_πで規格化した駆動電圧−1.5から1.5に対する出力パワー。余弦2乗の曲線が駆動ゼロで0.5を通る。破線はその点での傾き、点はクアドラチャバイアス、4つの四角は±0.05と±0.15 V_πのPAM4駆動レベルで、いずれも曲線のほぼ直線の部分にある。" caption="クアドラチャ(Δφ₀ = π/2)にバイアスした理想的なMZMの伝達曲線。バイアス点の周りでは出力は駆動にほぼ比例し、傾きはπ/(2V_π)。4つのPAM4駆動レベルを示す。解析的に計算。" number={2} />
+
+#### 電気光学効果:電圧はどう屈折率を変えるか
+
+集積変調器では2つの機構が主流です。
+
+<Term id="ja-pockels" n={6}>Pockels効果</Term>は、加えた電界に比例する屈折率の変化で、ニオブ酸リチウム(LN)のような反転対称性をもたない結晶に現れます。結晶の光学軸 $Z$ に沿って偏光した光と、同じ軸に沿った電界に対して、異常光屈折率は次のように変わります[^weis]。
+
+$$
+\Delta n_e = -\tfrac{1}{2}\, n_e^3\, r_{33}\, E_Z
+$$
+
+<Symbols title="記号">
+
+- $\Delta n_e$ — 異常光屈折率の変化(無次元)
+- $n_e$ — LNの異常光屈折率(無次元)
+- $r_{33}$ — LNの最大の電気光学係数(m/V)
+- $E_Z$ — 光学軸に沿って加えた電界(V/m)
+
+</Symbols>
+
+LNでは1.35 µmで $n_e = 2.144$[^zelmon]、$r_{33} \approx 31$ pm/Vです。効果は小さく、5 µmのギャップに1 Vをかけると $E_Z = 2\times10^5$ V/mで、$|\Delta n_e| \approx 3\times10^{-5}$ です。しかし直線的で、動くキャリアを伴わないので電界にほぼ瞬時に追従し、吸収も加えません。材料は $n^3 r$ で比較し、LNでは約304 pm/Vです。
+
+$r_{33}$ を使うには、光と電極の電界の両方が $Z$ を向いていなければなりません。**xカット**LNでは $Z$ がチップ面内にあります。場が主に横方向のTEモードと、リブの両側に置いた電極の横方向の電界が、どちらも $Z$ にそろいます(図1下)。
+
+シリコンは結晶が中心対称なので、Pockels効果をもちません。シリコン変調器は代わりに<Term id="ja-plasma" n={7}>プラズマ分散効果</Term>を使います。自由電子と正孔は屈折率を下げ、1.3 µmでは密度 $10^{18}$ cm⁻³ で正孔は約 $1.5\times10^{-3}$、電子は約 $0.6\times10^{-3}$ だけ屈折率を変えます[^soref]。導波路中の逆バイアスPN接合では、電圧を上げるにつれて空乏領域からキャリアが掃き出されます。密度の変化は約 $10^{17}$ cm⁻³ で、しかもモードの一部でしか起こらないので、$\Delta n$ は $10^{-4}$ 程度です。そのため空乏型のシリコン位相シフタは長さ数mmになります。キャリアは光も吸収し、応答は電圧に対して非線形です[^reed] [^rahim]。その代わり、シリコン変調器は回路の他の部分と一緒にCMOSファウンドリで作れます。
+
+<Glossary title="用語">
+<Def id="ja-pockels" n={6} term="Pockels効果(線形電気光学効果)">
+加えた電界に比例する屈折率の変化で、反転対称性をもたない結晶に現れます。強さは電気光学テンソル $r_{ij}$ で表され、非常に高い周波数の電界まで応答します。
+</Def>
+<Def id="ja-plasma" n={7} term="プラズマ分散効果">
+半導体中の自由電子と正孔は、屈折率を下げ、光を吸収します。ダイオードやキャパシタでその密度を変えることが、シリコン変調器で屈折率を電気的に変える方法です。
+</Def>
+</Glossary>
+
+#### 材料の屈折率からモードの屈折率へ:重なり係数
+
+電極の電界は一様ではなく、光モードもすべてがLNの中にあるわけではありません。そのため、モードの実効屈折率は局所的な屈折率変化の重み付き平均だけ変わります。設計の論文では、モード全体を満たす理想的な平行平板電界 $V/g$ と実際の構造を比べる<Term id="ja-overlap" n={8}>重なり係数</Term> $\Gamma$ を使い、次のように書きます。
+
+$$
+\frac{\partial n_\text{eff}}{\partial V} = \frac{1}{2}\, n_e^3\, r_{33}\, \frac{\Gamma}{g}
+$$
+
+<Symbols title="記号">
+
+- $\partial n_\text{eff}/\partial V$ — 1 Vあたりのモードの実効屈折率の変化(V⁻¹)
+- $\Gamma$ — 電気光学的な重なり係数(無次元)
+- $g$ — 電極ギャップ(端から端まで)(m)
+
+</Symbols>
+
+$\Gamma$ が1を大きく下回る理由は2つあります。光モードの一部はPockels効果をもたない酸化膜と空気の中にあります。また、マイクロ波周波数でのLNの誘電率は大きく($Z$ 方向で $\varepsilon \approx 27$、光周波数では約4.6)、リブの中の電界は周りの空気中より弱くなります(図3)。
+
+<Glossary title="用語">
+<Def id="ja-overlap" n={8} term="重なり係数(Γ)">
+理想的な電気光学効果のうち、光モードが実際に感じる割合です。電気光学材料中の光強度で重み付けした電極の電界を、モード全体にわたる一様な電界 $V/g$ と比べたものです。
+</Def>
+</Glossary>
+
+<Figure src={fig3} alt="5マイクロメートルのギャップ1つにわたる横方向の電極電界の大きさの分布。左に接地電極(0 V)、右に信号電極(+V)があり、どちらも図の上にラベルがある。電界は電極の縁で最も強く、中央のニオブ酸リチウムのリブ(LN rib waveguide)の中では弱い。光モード強度の白い等高線がリブの中とそのすぐ下にある。図の上の矢印は、電界が信号電極から接地電極へ向かうことを示す。" caption="ギャップ1つに1 Vをかけたときの横方向の電極電界の大きさ|E_x|(色)と、TE光モード強度のピークの10 %、40 %、80 %の等高線(白)。破線はリブ。高誘電率のLNリブの中の電界は横の空気中より弱く、ここでΓ = 0.53となる理由の1つである。notebooks/11_tfln_mzm.ipynb、3節と5節より。" number={3} size="wide" />
+
+#### プッシュプルと電圧–長さ積
+
+GSG配置では2つのギャップの電界が逆向きなので、一方のアームの屈折率が上がり、もう一方は下がります。これが<Term id="ja-pushpull" n={9}>プッシュプル</Term>動作です。電極長 $L$ にわたって、アーム位相差は $(2\pi/\lambda)\,2\,(\partial n_\text{eff}/\partial V)\,V L$ だけ増えます。これを $\pi$ とおくと、変調器の性能指数が次のように得られます。
+
+$$
+V_\pi L = \frac{\lambda\, g}{2\, n_e^3\, r_{33}\, \Gamma}
+$$
+
+<Symbols title="記号">
+
+- $V_\pi L$ — プッシュプルの電圧–長さ積(V·m、通常V·cmで表す)
+- $\lambda$ — 真空中の波長(m)
+- $g$ — 電極ギャップ(m)
+- $\Gamma$ — 重なり係数(無次元)
+
+</Symbols>
+
+$V_\pi L = 2$ V·cmの変調器は、1 cmで2 V、5 mmなら4 Vを必要とします。一方のアームだけを駆動すると $V_\pi L$ は2倍になります。
+
+この式から設計の手段がわかります。ギャップを狭くすると電界が強まり、$V_\pi L$ は比例して下がります。しかしギャップを狭くすると金属が光モードに近づき、金属は光を吸収します。TFLNではモードの強度はリブから1 µm離れるごとに桁で下がるので、ギャップは、金属をモードの遠い裾に保てる最も狭い値に選びます(図4)。
+
+<Glossary title="用語">
+<Def id="ja-pushpull" n={9} term="プッシュプル">
+2本のアームを逆向きに駆動し、一方の屈折率を上げ、もう一方を下げる方式です。同じ電圧で位相差が2倍になり、理想的な対称デバイスでは出力に余分な位相変調(チャープ)が残りません。
+</Def>
+</Glossary>
+
+#### 進行波電極
+
+電極を単にキャパシタとして扱えないのはなぜでしょうか。この設計の1 cmの電極の容量は1.7 pFです。50 Ωのドライバで充電すると、帯域は $1/(2\pi R C) \approx 1.8$ GHzにしかなりません。さらに、数十GHzでは電気の波長が数mmと電極より短くなり、電圧は電極に沿って一様ですらありません。
+
+解決策が<Term id="ja-tw" n={10}>進行波電極</Term>です。電極を伝送線路として設計し、光が入る側の端から給電し、反対側の端を整合負荷で終端するので、マイクロ波と光が一緒に進みます。伝送線路は、マイクロ波屈折率と<Term id="ja-z0" n={11}>特性インピーダンス</Term>の2つの数で特徴づけられます。準TEM線路では、どちらも誘電体がある場合とない場合の単位長さあたりの容量から次のように求まります。
+
+$$
+\begin{aligned}
+n_\text{RF} &= \sqrt{\frac{C}{C_\text{air}}} \\
+Z_0 &= \frac{1}{c\sqrt{C\, C_\text{air}}}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $n_\text{RF}$ — 電極線路のマイクロ波屈折率(無次元)
+- $Z_0$ — 線路の特性インピーダンス(Ω)
+- $C$ — すべての誘電体がある場合の単位長さあたりの容量(F/m)
+- $C_\text{air}$ — すべての誘電体を真空に置き換えた場合の単位長さあたりの容量(F/m)
+- $c$ — 真空中の光速(m/s)
+
+</Symbols>
+
+このとき、変調器の応答の速さを3つの効果が制限します。
+
+**速度不整合。** $n_\text{RF}$ が光の群屈折率 $n_g$ と異なると、光は電圧の波に対して少しずつずれ、変化する電圧を平均することになります。損失のない整合線路では、規格化した電気光学応答は次のようになります。
+
+$$
+\begin{aligned}
+m(f) &= \left|\frac{\sin u}{u}\right| \\
+u &= \frac{\pi f L\,\lvert n_\text{RF} - n_g\rvert}{c}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $m(f)$ — 変調周波数 $f$ での電気光学応答を低周波の値で規格化したもの(無次元)
+- $f$ — 変調周波数(Hz)
+- $L$ — 電極長(m)
+- $n_g$ — アーム導波路の光の群屈折率(無次元)
+
+</Symbols>
+
+応答が(電気の慣習で $20\log_{10} m = -3$ となる)−3 dBに下がるのは $u = 1.39$、つまり $f_\text{3dB} \approx 1.39\,c/(\pi L \lvert n_\text{RF}-n_g\rvert)$ のときです。バルクLN変調器ではマイクロ波屈折率が光の群屈折率よりはるかに高く、速度整合には特別な電極設計が必要です[^wooten]。薄膜ではマイクロ波電界の大部分が空気と酸化膜を通るので、$n_\text{RF}$ が $n_g$ に近くなります。これがTFLN変調器が高速である主な理由の1つです。
+
+**導体損失。** マイクロ波電流は金属表面の薄い層(表皮)を流れ、その深さは $1/\sqrt{f}$ で薄くなります。そのため線路の抵抗と電圧の減衰は $\sqrt{f}$ で大きくなります。速度整合がよければ、TFLNでは通常これが主な制限になります。
+
+**インピーダンス不整合。** $Z_0$ がドライバと負荷の50 Ωと異なると、線路に入る電圧が減ります。それ単独ではほぼ一定の約0.9 dBの損失ですが、ゆっくり下がる損失律速の応答を下へずらし、−3 dBの点も一緒に下げます。
+
+これらの制限はすべて電極が長いほど悪化し、一方で $V_\pi = (V_\pi L)/L$ は良くなります。したがって電極長が中心的なトレードオフであり、設計点は帯域の目標を満たす最も長い電極、つまり最も低い $V_\pi$ です。このように設計したTFLN変調器は、CMOS互換の駆動電圧と、最大210 Gbit/sのデータレート、0.5 dB未満のチップ上の光損失を同時に達成しています[^wang]。
+
+<Glossary title="用語">
+<Def id="ja-tw" n={10} term="進行波電極">
+整合負荷で終端した伝送線路として設計した変調器電極です。電極全体を1つのキャパシタとして充電するのではなく、電気信号が光と一緒にアームに沿って進みます。
+</Def>
+<Def id="ja-z0" n={11} term="特性インピーダンス(Z₀)">
+伝送線路上の1つの波における電圧と電流の比です。$Z_0$ に等しいインピーダンスで終端した線路は何も反射しません。ドライバと負荷は通常50 Ωです。
+</Def>
+</Glossary>
+
+#### 設計の早見表:何を変えると何が変わるか
+
+<Callout kind="design" title="何を変えると何が変わるか">
+
+- **電極ギャップ ↓** → $V_\pi L$ は下がるが、金属による光損失が増える。*理由:* 電界 $\propto 1/g$。モードの裾が電極の縁に届く。
+- **電極長 ↑** → $V_\pi$ は下がるが、帯域も下がる。*理由:* $V_\pi = (V_\pi L)/L$。速度不整合、導体、インピーダンスの効果はすべて $L$ とともに大きくなる。
+- **重なり $\Gamma$ ↑**(リブ形状、膜厚、電極位置)→ $V_\pi L$ が下がる。*理由:* モードのより多くが電界の強いLN中にある。
+- **結晶方位と偏波** → $r_{33}$ を使えるのは、xカットでTE光と横方向の電極の組み合わせだけ。*理由:* $r_{33}$ は $Z$ 方向の電界と $Z$ 方向に偏光した光を結びつける。
+- **電極の下の積層**(酸化膜厚、基板)→ $n_\text{RF}$ と $Z_0$ が変わる。*理由:* マイクロ波電界は膜よりはるか下まで届く。
+- **バイアス点** → 強度変調ではクアドラチャ、位相を使う変調方式ではゼロ点。*理由:* $\cos^2$ の傾きと直線性。
+- **カプラの分岐比** → 消光比。*理由:* ゼロが完全になるのは50:50カプラのときだけ。
+- **材料**(TFLNかシリコンか)→ 直線的で高速・低損失なPockels変調か、損失があり非線形なプラズマ分散だがCMOSで集積できるか。*理由:* 屈折率変化の物理。
+
+</Callout>
+
+### シミュレーション
+
+#### 本記事のモデル
+
+デバイスは図1のxカットTFLN変調器です。厚さ600 nmのLN膜を300 nmエッチングして幅1.0 µmのリブとし、厚さ2 µmの埋め込み酸化膜とシリコン支持基板の上に置き、上は空気です。スラブ上に厚さ1 µmの金のGSG電極があり、ギャップは5 µm、信号帯の幅は20 µmです。光の波長は1.35 µmです。LNの屈折率はSellmeierフィット[^zelmon]をこの波長で評価した値($n_o = 2.218$、$n_e = 2.144$)で、$r_{33} = 30.9$ pm/Vです。シミュレーションは[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)を使い、問題の各部分に適した4つのソルバで行っています。
+
+| 問題の部分 | ソルバ |
+|---|---|
+| リブの光モード(LNの異方性を含む) | MPB(完全ベクトルのモードソルバ) |
+| 電極の電界、$C$、$n_\text{RF}$、$Z_0$、導体損失 | 断面上の有限体積法による静電界計算 |
+| カプラと干渉計全体 | 等価屈折率による2次元FDTD(Meep) |
+| 周波数応答 | 閉じた形の進行波モデル |
+
+結果はこのモデルのもので、作製したデバイスの値ではありません。側壁は垂直とし、金属による光吸収は計算せず電極位置でのモード強度から見積もり、誘電体のマイクロ波損失は省いています。
+
+#### 光モードと重なり
+
+リブのTEモードは $n_\text{eff} = 1.926$、群屈折率2.251で、LNとシリカの材料分散を含めると2.297です。xカットTFLNではTEモードとTMモードがほぼ縮退している(TMの屈折率の差はわずか $1.6\times10^{-3}$)ので、すべての計算でTEの対称性を指定し、横方向の場がモードの95 %を占めることを確認しています。
+
+このモードと図3の電極電界を1次の摂動論で組み合わせると、$\Gamma = 0.528$、$\partial n_\text{eff}/\partial V = 1.61\times10^{-5}$ V⁻¹が得られます。電界による屈折率変化を誘電率に直接入れてモードを解き直す独立な確認とは、0.18 %で一致します。したがって、モデルのプッシュプルの電圧–長さ積は $V_\pi L = 2.10$ V·cmです。マイクロ波駆動に使われることのある低めの値 $r_{33} = 26.9$ pm/Vでは2.41 V·cmになります。ギャップを掃引すると(図4)、理論の節のトレードオフが現れます。3 µmから8 µmまでで $V_\pi L$ は1.17から3.72 V·cmへ、ほぼ $g$ に比例して増えます($\Gamma$ は0.57から0.48へわずかに下がるだけです)。一方、電極の角でのモードの強度は、ピークの $1.1\times10^{-4}$ から $4.7\times10^{-9}$ へ下がります。選んだ5 µmでは $2.4\times10^{-7}$ で、金属はモードの遠い裾にあります。
+
+<Figure src={fig4} alt="左:プッシュプルのV_πLが、ギャップ3マイクロメートルでの1.17 V·cmから8マイクロメートルでの3.72へほぼ直線的に増える。右:対数目盛で、電極の角での光モード強度が3マイクロメートルでの約1e-4から8マイクロメートルでの約5e-9へ下がる。縦線は設計ギャップ5マイクロメートル。" caption="電極ギャップのトレードオフ。左:プッシュプルのV_πL。右:電極の下側の角での光強度(モードのピークに対する比)で、金属吸収の目安。縦線:選んだ5 µmのギャップ。notebooks/11_tfln_mzm.ipynb、6.5節より。" number={4} size="wide" />
+
+#### 2次元FDTDでみる干渉計
+
+実際のアームは長さ数mmで、2次元FDTDの計算領域をはるかに超えます。そこで干渉計は位相が等価なモデルで確認します。断面は等価屈折率法で2次元に縮約します(コア1.995、クラッド1.794。得られる2次元のモード屈折率はMPBの値と0.63 %以内で一致します)。アームを188 µmに短縮し、屈折率変化を各アーム $\Delta n = \pm 0.002$ と誇張して、干渉計が感じる唯一の量であるアーム位相差を同じにしています。50:50カプラも同じモデルで設計しました。ギャップ0.6 µm、結合長33.4 µmで、1.35 µmでのクロスパワーは0.500、損失は0.7 %です。
+
+結果を図5に示します。駆動なしでは光はすべてクロスポートから出ます(バーは $5\times10^{-5}$、−43 dB)。$V_\pi$ 点では98.8 %がバーポートから出て、クロスポートは $5\times10^{-4}$(−33 dB)まで下がります。中間の点は $\sin^2$ と $\cos^2$ に従います。$V_\pi$ 点で実現した位相は $1.015\pi$ です。2つの出力の比の符号がそこで反転しており、位相がちょうど $\pi$ を越えたことを示しています。干渉計は伝達関数の仮定どおりに位相を強度に変換しています。2次元モデルでできないのは電圧から位相への段階で、これは実際の断面にしか存在せず、上の重なりの計算から得られます。
+
+<Figure src={fig5} alt="等価駆動0から1.1 V_πに対するバーとクロスの出力パワー。0、1/3、2/3、1 V_πでの各出力4点のFDTD結果が、灰色のsin²とcos²の曲線に乗る。バー出力は0から0.99へ上がり、クロス出力は0.99からほぼ0へ下がる。" caption="2次元FDTDによるTFLN干渉計のスイッチング(位相等価な188 µmのアーム、λ = 1.35 µm)。点:FDTDのバーとクロスの出力。灰色:πV/(2V_π)の理想的なsin²とcos²。notebooks/11_tfln_mzm.ipynb、8節より。" number={5} />
+
+#### 進行波電極の帯域
+
+静電界の計算から $C = 173$ pF/m、$C_\text{air} = 37.8$ pF/mが得られ、$n_\text{RF} = 2.141$、$Z_0 = 41.2$ Ωになります。マイクロ波屈折率は光の群屈折率2.297に近い値です。導体損失は、金属表面が表皮深さだけ後退したときのインダクタンスの変化(Wheelerのインダクタンス増分則)から求め、100 GHzで8.7 dB/cmです。
+
+図6左は、1 cmの電極について3つの制限を分けて示したものです。速度不整合だけなら85 GHz、インピーダンス不整合だけでは−3 dBに達しません。導体損失だけでは54 GHzです。3つを合わせると22 GHzにしかなりません。インピーダンス不整合による約0.9 dBのずれが、ゆっくり下がる損失の曲線をずっと早く−3 dBに到達させるからです。マイクロ波屈折率は電極の下の酸化膜にも依存します。シリコン支持基板は誘電率が高いので、酸化膜が薄いほど $n_\text{RF}$ は $n_g$ の方へ引き上げられます。酸化膜を4.7 µmから1.0 µmにすると、$n_\text{RF}$ は1.97から2.27へ上がり、1 cmの電極の速度律速の帯域は40 GHzから565 GHzへ広がります。
+
+図6右は設計のトレードオフです。電極を20 mmから2 mmに短くすると、帯域は6 GHzから200 GHz超へ広がり、$V_\pi$ は1.05 Vから10.5 Vへ上がります。1レーンあたり約200 Gbit/sに適した67 GHzの目標に対して、それを満たす最も長い電極は4.5 mmで、$V_\pi = 4.67$ V、帯域は79 GHzです。
+
+<Figure src={fig6} alt="左:1センチメートルの電極について、200ギガヘルツまでの周波数に対する電気光学応答(dB)。速度不整合だけでは85ギガヘルツで−3 dBに下がり、導体損失だけでは54、インピーダンス不整合だけでは約0.9 dB以内にとどまり、3つを合わせると22ギガヘルツで−3 dBに達する。右:電極長を2から20ミリメートルまで変えたときのV_πと3 dB帯域の関係。破線は67ギガヘルツ、点は4.5ミリメートル、4.67ボルト、79ギガヘルツの設計点。" caption="進行波電極の帯域。左:1 cmの電極のEO応答を、各制限を単独で、および3つを合わせて示したもの(n_RF = 2.141、n_g = 2.297、Z₀ = 41.2 Ω、導体損失 ∝ √f)。右:電極長2–20 mmに対するV_πとEO 3 dB帯域の関係と、67 GHzの目標および選んだ設計点。閉じた形の進行波モデル。線路定数はnotebooks/11_tfln_mzm.ipynb、9節より。" number={6} size="wide" />
+
+<Callout kind="design" title="設計上の意味">
+
+薄膜LNではマイクロ波屈折率がすでに光の群屈折率に近いので、帯域を決めるのは速度不整合ではなく導体損失とインピーダンスです。そのため、電極の金属(厚さ、幅、導電率)と $Z_0$ は光学設計と同じくらい重要です。制限はすべて長さとともに悪化するので、電極長は最後に、帯域の目標を満たす範囲で最も長い電極を選びます。
+
+</Callout>
+
+#### 理論とシミュレーションの比較
+
+モデルの主な数値を、それが確かめる式と並べると次のとおりです。
+
+| 量 | 理論 | 本記事のモデル |
+|---|---|---|
+| 5 µmに1 Vをかけたときの屈折率変化 | $\tfrac12 n_e^3 r_{33} V/g = 3.0\times10^{-5}$ | モード:1 Vあたり $1.61\times10^{-5}$($\Gamma = 0.528$) |
+| プッシュプルの $V_\pi L$ | $\lambda g/(2 n_e^3 r_{33} \Gamma)$ | 2.10 V·cm(直接の再計算と0.18 %で一致) |
+| 伝達曲線 | $\cos^2$、$\sin^2$ | FDTDはこれに従う。$V_\pi$ 点で $1.015\pi$ |
+| 集中定数の帯域(1 cm) | $1/(2\pi R C)$ | 1.8 GHz |
+| 速度律速の帯域(1 cm) | $1.39c/(\pi L\lvert n_\text{RF}-n_g\rvert)$ | 85 GHz |
+| 設計点 | 67 GHzを満たす最長の $L$ | 4.5 mm、$V_\pi$ = 4.67 V、79 GHz |
+
+MZMは変換の連鎖として理解できます。電気光学効果が電圧を材料の屈折率変化に変え、モードとの重なりがそれを位相に変え、干渉計が位相を強度に変えます。その間ずっと、電極は信号をマイクロ波としてアームに沿って運んでいます。光学設計が $V_\pi L$ を決め、電極設計がそのうちどれだけが高周波で残るかを決めます。
+
+### コードとデータ
+
+- TFLN変調器のノートブック(Pockels効果の入門、MPBによる断面、静電界、重なり、$V_\pi L$、カプラと干渉計のFDTD、進行波電極の帯域):[`notebooks/11_tfln_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/11_tfln_mzm.ipynb)
+- シミュレーションモジュール:[`tfln_waveguide.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_waveguide.py)、[`tfln_electrostatics.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_electrostatics.py)、[`tfln_mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_mzm.py)、コンパクトモデル(SAX):[`models/tfln_mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/tfln_mzm.py)
+- モード、電極、ギャップ、RFの計算は `scripts/blog_figures/mach_zehnder_modulators_data.py` で再実行し(MPBと静電界のみ。数値はノートブックの保存済み出力を再現します)、`data/blog_figures/mach_zehnder_modulators.npz` に保存しました。図とすべての数値は、このファイルとノートブックの保存済みFDTDデータから `scripts/blog_figures/mach_zehnder_modulators.py` で作成しました。新たなFDTD計算は行っていません。
+
+---
+
+## References / 参考文献
+
+[^weis]: R. S. Weis and T. K. Gaylord, "Lithium niobate: summary of physical properties and crystal structure," *Applied Physics A* **37**, 191–203 (1985). [doi:10.1007/BF00614817](https://doi.org/10.1007/BF00614817)
+[^zelmon]: D. E. Zelmon, D. L. Small and D. Jundt, "Infrared corrected Sellmeier coefficients for congruently grown lithium niobate and 5 mol.% magnesium oxide–doped lithium niobate," *Journal of the Optical Society of America B* **14**, 3319–3322 (1997). [doi:10.1364/JOSAB.14.003319](https://doi.org/10.1364/JOSAB.14.003319)
+[^soref]: R. A. Soref and B. R. Bennett, "Electrooptical effects in silicon," *IEEE Journal of Quantum Electronics* **23**, 123–129 (1987). [doi:10.1109/JQE.1987.1073206](https://doi.org/10.1109/JQE.1987.1073206)
+[^reed]: G. T. Reed, G. Mashanovich, F. Y. Gardes and D. J. Thomson, "Silicon optical modulators," *Nature Photonics* **4**, 518–526 (2010). [doi:10.1038/nphoton.2010.179](https://doi.org/10.1038/nphoton.2010.179)
+[^rahim]: A. Rahim, A. Hermans, B. Wohlfeil, D. Petousi, B. Kuyken, D. Van Thourhout and R. Baets, "Taking silicon photonics modulators to a higher performance level: state-of-the-art and a review of new technologies," *Advanced Photonics* **3**, 024003 (2021). [doi:10.1117/1.AP.3.2.024003](https://doi.org/10.1117/1.AP.3.2.024003)
+[^wooten]: E. L. Wooten, K. M. Kissa, A. Yi-Yan, E. J. Murphy, D. A. Lafaw, P. F. Hallemeier, D. Maack, D. V. Attanasio, D. J. Fritz, G. J. McBrien and D. E. Bossi, "A review of lithium niobate modulators for fiber-optic communications systems," *IEEE Journal of Selected Topics in Quantum Electronics* **6**, 69–82 (2000). [doi:10.1109/2944.826874](https://doi.org/10.1109/2944.826874)
+[^wang]: C. Wang, M. Zhang, X. Chen, M. Bertrand, A. Shams-Ansari, S. Chandrasekhar, P. Winzer and M. Lončar, "Integrated lithium niobate electro-optic modulators operating at CMOS-compatible voltages," *Nature* **562**, 101–104 (2018). [doi:10.1038/s41586-018-0551-y](https://doi.org/10.1038/s41586-018-0551-y)

@@ -3,7 +3,7 @@
 // described by the single word "metasurfaces" only — never tools, projects, products or results.
 export const site = {
   name: "Yuma Kawaguchi",
-  title: "Photonics Researcher",
+  title: "Photonics Design Engineer",
   tagline: "Silicon Photonics · Metasurfaces · Topological Photonics",
   // One line under the name on the Home page.
   headline:

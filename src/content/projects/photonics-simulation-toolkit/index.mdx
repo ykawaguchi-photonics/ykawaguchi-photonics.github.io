@@ -4,7 +4,7 @@ description: An end-to-end, open-source workflow for building, physically valida
 date: 2026-09-28
 status: active
 repo: https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit
-technologies: [Python, Meep (FDTD), Adjoint optimization, SAX, GDSFactory, Jupyter]
+technologies: [Python, Meep (FDTD), MPB, fdtdx (3D FDTD), Adjoint optimization, SAX, GDSFactory, Jupyter]
 areas: [silicon-photonics]
 featured: true
 image: ./workflow_overview.png
@@ -53,12 +53,21 @@ Component-level FDTD results often stay trapped in the notebook that produced th
 | Racetrack and add-drop ring resonators | Resonance, extinction, and energy-conservation checks |
 | Mach–Zehnder interferometer and modulator | Interference spectrum; push-pull V<sub>π</sub> |
 | Grating coupler | Resolved x–z layer-stack cross-section |
+| Thin-film lithium niobate MZM | MPB cross-section with uniaxial anisotropy: V<sub>π</sub>L ≈ 2.1 V·cm, traveling-wave EO 3 dB bandwidth ≈ 79 GHz (simulated) |
 
-At the circuit level, a four-channel WDM demultiplexer built from FDTD-measured coupler models shows real physics changing the design outcome. Moving from a 2-coupler to a 4-coupler lattice raised the worst channel's extinction ratio from **1.7 dB to 10.1 dB**.
+At the circuit level, a four-channel WDM demultiplexer built from FDTD-measured coupler models shows real physics changing the design outcome. Moving from a 2-coupler to a 4-coupler lattice raised the worst channel's extinction ratio from **1.7 dB to 10.1 dB**. A separate study sweeps a ±10 nm critical-dimension bias through fresh coupler FDTD runs to show how the MZI response tolerates fabrication error.
+
+## Beyond the 2D component library
+
+| Study | Method | Result (simulated) |
+|---|---|---|
+| 3D focusing grating coupler | True 3D FDTD in fdtdx (JAX), fan-shaped grating to a lensed fiber, GDS export | −1.49 dB coupling efficiency at 1.35 µm |
+| Meta-grating couplers on 400 nm SiN | Meep adjoint + Adam, conventional vs. two- and three-atom gratings, literature benchmark reproduced within 0.1 dB | Conventional −4.14 dB beats the meta-gratings; an a-Si overlay reaches −1.66 dB |
+| Topological photonic crystals | MPB bands and Meep transport for spin-Hall and valley-Hall crystals; adjoint-optimized strip-to-edge-mode transitions | Wu–Hu gap reproduced to 0.1 %; transition transmission raised from 5.9 % to 48.7 % (spin) and 0 % to 77 % (valley) |
 
 ### Modeling assumptions
 
-Components use a 2D effective-index cross-section with non-dispersive materials, a deliberate first-phase simplification. The grating coupler is the exception and resolves the real vertical layer stack. The repository README documents these assumptions in full.
+The 2D component library uses an effective-index cross-section with non-dispersive materials, a deliberate first-phase simplification. The grating couplers, the TFLN modulator and the meta-grating study resolve the real layer stack, the topological crystals use bulk silicon in 2D, and the 3D track runs full 3D FDTD. The repository README documents these assumptions in full.
 
 ## Source
 

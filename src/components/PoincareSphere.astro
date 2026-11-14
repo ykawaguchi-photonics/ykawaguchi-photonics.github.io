@@ -1,0 +1,234 @@
+---
+// Interactive Poincaré sphere (drag to rotate, double-click to reset) for the
+// "Topological Photonic Crystals" post. Plain canvas, no external library.
+// Draws the great-circle loop S1 -> S3 -> -S1 -> -S3 (encloses a hemisphere,
+// geometric phase pi). Colours follow the static figures (white panel,
+// pic_toolkit.style steel / rose / reference gray), like the PNG figures.
+export interface Props {
+  caption?: string;
+  number?: number;
+  labels?: { s3p: string; s3m: string; s1p: string; s1m: string; hint: string };
+  ariaLabel?: string;
+}
+const {
+  caption,
+  number,
+  labels = {
+    s3p: "circular (S3 = +1)",
+    s3m: "opposite circular (S3 = −1)",
+    s1p: "linear (S1 = +1)",
+    s1m: "linear (S1 = −1)",
+    hint: "Drag to rotate · double-click to reset",
+  },
+  ariaLabel = "Poincaré sphere with a loop through both circular poles",
+} = Astro.props;
+---
+
+<figure class="figure poincare">
+  <div class="panel">
+    <canvas data-poincare data-labels={JSON.stringify(labels)} role="img" aria-label={ariaLabel}></canvas>
+    <p class="hint">{labels.hint}</p>
+  </div>
+  {
+    (caption || number) && (
+      <figcaption>
+        {number && <strong>Figure {number}. </strong>}
+        {caption}
+      </figcaption>
+    )
+  }
+</figure>
+
+<style>
+  .panel {
+    position: relative;
+    max-width: 520px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    cursor: grab;
+    touch-action: none;
+  }
+  canvas:active {
+    cursor: grabbing;
+  }
+  .hint {
+    position: absolute;
+    right: 0.6rem;
+    bottom: 0.4rem;
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    color: #6c757d;
+    pointer-events: none;
+  }
+</style>
+
+<script>
+  const STEEL = "#2E6E9E";
+  const ROSE = "#CC6677";
+  const GRAY = "#6C757D";
+  const TEXT = "#1f2328";
+  const EL0 = (18 * Math.PI) / 180;
+  const AZ0 = (-60 * Math.PI) / 180;
+
+  type V3 = [number, number, number];
+
+  function setup(canvas: HTMLCanvasElement) {
+    const labels = JSON.parse(canvas.dataset.labels || "{}");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    let az = AZ0;
+    let el = EL0;
+
+    // world (S1, S2, S3) -> view: rotate about S3 by az, then tilt by el.
+    // Screen x = v[0], screen up = v[2], depth toward the viewer = -v[1].
+    const view = (p: V3): V3 => {
+      const [x, y, z] = p;
+      const x1 = x * Math.cos(az) - y * Math.sin(az);
+      const y1 = x * Math.sin(az) + y * Math.cos(az);
+      const y2 = y1 * Math.cos(el) - z * Math.sin(el);
+      const z2 = y1 * Math.sin(el) + z * Math.cos(el);
+      return [x1, y2, z2];
+    };
+
+    function draw() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.clientWidth;
+      if (!w) return;
+      if (canvas.width !== Math.round(w * dpr)) {
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(w * dpr);
+      }
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx!.clearRect(0, 0, w, w);
+      const c = w / 2;
+      const R = w * 0.3;
+      const sx = (v: V3) => c + R * v[0];
+      const sy = (v: V3) => c - R * v[2];
+
+      // polyline with front (solid) / back (faint) parts
+      const curve = (pts: V3[], color: string, width: number, backAlpha = 0.25) => {
+        for (let i = 0; i < pts.length - 1; i++) {
+          const a = view(pts[i]);
+          const b = view(pts[i + 1]);
+          const front = a[1] + b[1] < 0;
+          ctx!.globalAlpha = front ? 1 : backAlpha;
+          ctx!.strokeStyle = color;
+          ctx!.lineWidth = width;
+          ctx!.beginPath();
+          ctx!.moveTo(sx(a), sy(a));
+          ctx!.lineTo(sx(b), sy(b));
+          ctx!.stroke();
+        }
+        ctx!.globalAlpha = 1;
+      };
+      const circle = (f: (t: number) => V3, n = 96) =>
+        Array.from({ length: n + 1 }, (_, i) => f((2 * Math.PI * i) / n));
+
+      // outline of the sphere
+      ctx!.strokeStyle = GRAY;
+      ctx!.lineWidth = 1;
+      ctx!.beginPath();
+      ctx!.arc(c, c, R, 0, 2 * Math.PI);
+      ctx!.stroke();
+
+      // wireframe: latitudes and meridians
+      for (const lat of [-60, -30, 30, 60]) {
+        const r = Math.cos((lat * Math.PI) / 180);
+        const z = Math.sin((lat * Math.PI) / 180);
+        curve(circle((t) => [r * Math.cos(t), r * Math.sin(t), z]), GRAY, 0.5, 0.15);
+      }
+      for (let k = 0; k < 6; k++) {
+        const p = (k * Math.PI) / 6;
+        curve(circle((t) => [Math.cos(p) * Math.cos(t), Math.sin(p) * Math.cos(t), Math.sin(t)]), GRAY, 0.5, 0.15);
+      }
+      curve(circle((t) => [Math.cos(t), Math.sin(t), 0]), GRAY, 1.2, 0.3); // equator
+
+      // the loop: great circle in the S1-S3 plane
+      const loop = circle((t) => [Math.cos(t), 0, Math.sin(t)], 160);
+      curve(loop, STEEL, 3, 0.35);
+      for (const t0 of [0.25, 0.75, 1.25, 1.75].map((q) => q * Math.PI)) {
+        const a = view([Math.cos(t0), 0, Math.sin(t0)]);
+        const b = view([Math.cos(t0 + 0.05), 0, Math.sin(t0 + 0.05)]);
+        const ang = Math.atan2(sy(b) - sy(a), sx(b) - sx(a));
+        ctx!.globalAlpha = a[1] < 0 ? 1 : 0.35;
+        ctx!.fillStyle = STEEL;
+        ctx!.beginPath();
+        ctx!.moveTo(sx(a) + 9 * Math.cos(ang), sy(a) + 9 * Math.sin(ang));
+        ctx!.lineTo(sx(a) + 7 * Math.cos(ang + 2.5), sy(a) + 7 * Math.sin(ang + 2.5));
+        ctx!.lineTo(sx(a) + 7 * Math.cos(ang - 2.5), sy(a) + 7 * Math.sin(ang - 2.5));
+        ctx!.fill();
+      }
+      ctx!.globalAlpha = 1;
+
+      // marked states and their labels (outside the sphere, along the radial direction)
+      const pts: [V3, string, string][] = [
+        [[0, 0, 1], labels.s3p, ROSE],
+        [[0, 0, -1], labels.s3m, ROSE],
+        [[1, 0, 0], labels.s1p, STEEL],
+        [[-1, 0, 0], labels.s1m, STEEL],
+      ];
+      const fs = Math.max(11, Math.round(w / 40));
+      ctx!.font = `${fs}px Inter, system-ui, sans-serif`;
+      ctx!.textBaseline = "middle";
+      for (const [p, text, color] of pts) {
+        const v = view(p);
+        const alpha = v[1] < 0 ? 1 : 0.45;
+        ctx!.globalAlpha = alpha;
+        ctx!.fillStyle = color;
+        ctx!.beginPath();
+        ctx!.arc(sx(v), sy(v), 5, 0, 2 * Math.PI);
+        ctx!.fill();
+        // label at 1.18 R in the screen direction of the point (or straight up/down near the centre)
+        let dx = v[0];
+        let dy = v[2];
+        const d = Math.hypot(dx, dy);
+        if (d < 0.35) {
+          dx = 0;
+          dy = dy >= 0 ? 1 : -1;
+        } else {
+          dx /= d;
+          dy /= d;
+        }
+        const lx = c + R * 1.18 * dx;
+        const ly = c - R * 1.18 * dy;
+        ctx!.fillStyle = TEXT;
+        ctx!.textAlign = Math.abs(dx) < 0.3 ? "center" : dx > 0 ? "left" : "right";
+        ctx!.fillText(text, lx, ly + (Math.abs(dx) < 0.3 ? -dy * fs * 0.6 : 0));
+      }
+      ctx!.globalAlpha = 1;
+    }
+
+    let drag: { x: number; y: number; az: number; el: number } | null = null;
+    canvas.addEventListener("pointerdown", (e) => {
+      drag = { x: e.clientX, y: e.clientY, az, el };
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const s = Math.PI / canvas.clientWidth;
+      az = drag.az - (e.clientX - drag.x) * s * 1.5;
+      el = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, drag.el + (e.clientY - drag.y) * s * 1.5));
+      draw();
+    });
+    const end = () => (drag = null);
+    canvas.addEventListener("pointerup", end);
+    canvas.addEventListener("pointercancel", end);
+    canvas.addEventListener("dblclick", () => {
+      az = AZ0;
+      el = EL0;
+      draw();
+    });
+    new ResizeObserver(draw).observe(canvas);
+    draw();
+  }
+
+  document.querySelectorAll<HTMLCanvasElement>("canvas[data-poincare]").forEach(setup);
+</script>

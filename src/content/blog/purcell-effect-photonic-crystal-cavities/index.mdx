@@ -1,0 +1,743 @@
+---
+title: "Purcell Effect and Photonic-Crystal Nanocavities"
+description: "The Purcell effect is the change of an emitter's spontaneous emission rate by its optical environment. Q, mode volume, L3 and nanobeam cavity design."
+date: 2026-11-11
+category: technical-notes
+tags: [Purcell effect, photonic crystal, nanocavity, quantum optics, silicon nitride, Q factor, Meep, FDTD]
+areas: [silicon-photonics]
+draft: false
+---
+
+import Figure from "@/components/Figure.astro";
+import Term from "@/components/Term.astro";
+import Glossary from "@/components/Glossary.astro";
+import Def from "@/components/Def.astro";
+import Symbols from "@/components/Symbols.astro";
+import Callout from "@/components/Callout.astro";
+import fig1 from "./fig1_geometries.png";
+import fig2 from "./fig2_slab_gap.png";
+import fig3 from "./fig3_fields.png";
+import fig4 from "./fig4_reproduction.png";
+import fig5 from "./fig5_qv_map.png";
+
+**Language:** [English](#english) · [日本語](#日本語)
+
+## English
+
+The **Purcell effect** is the change of an emitter's <Term id="en-spont" n={1}>spontaneous emission</Term> rate caused by its optical surroundings. An atom, a quantum dot or a colour centre placed in a small, low-loss optical cavity that is tuned to its emission frequency can emit many times faster than in free space, and almost all of its light can be made to go into the cavity mode. Photonic-crystal nanocavities, which confine light to a volume of about one cubic wavelength for thousands to millions of optical cycles, are among the strongest tools for this. They are central to single-photon sources and to interfaces between light and quantum emitters.[^noda][^lodahlrmp]
+
+<Glossary>
+<Def id="en-spont" n={1} term="Spontaneous emission">
+The emission of a photon by an excited emitter without any incoming light. Its rate is not a fixed property of the emitter alone: quantum mechanically it is driven by the vacuum fluctuations of the electromagnetic field, so it depends on which optical modes are available around the emitter.
+</Def>
+</Glossary>
+
+### Overview
+
+#### Emission depends on the environment
+
+Purcell pointed out in 1946 that a nuclear spin coupled to a resonant circuit should radiate far faster than in free space.[^purcell] Forty years later, Yablonovitch proposed the converse: a photonic band gap with no modes at the emission frequency should suppress spontaneous emission.[^yablonovitch] Both statements follow from one idea: an emitter can only emit into modes of the electromagnetic field that exist at its frequency and have a field at its position. Add modes and emission speeds up; remove them and it slows down.
+
+Controlling spontaneous emission matters for:
+
+- **single-photon sources**, where a fast, directional emission into one cavity mode makes the photons brighter and more indistinguishable;[^lodahlrmp]
+- **quantum interfaces**, where a single emitter must exchange photons efficiently with a waveguide or another emitter;
+- **low-threshold lasers and LEDs**, where emission into one mode rather than into all directions reduces waste.[^noda]
+
+#### Two photonic-crystal cavities
+
+This article compares two cavity families in the same material, a suspended 200 nm silicon nitride (SiN, n ≈ 2.0) membrane, designed for 637 nm, the zero-phonon line of the NV centre in diamond (Fig. 1):
+
+- the **L3 cavity**, three missing holes in a triangular lattice of air holes in a slab, the classic cavity of the Noda review;[^noda][^akahane]
+- the **nanobeam cavity**, a single row of holes in a narrow ridge, with the holes graded toward the centre.[^mccutcheon][^quan]
+
+Silicon nitride is transparent in the visible, where silicon absorbs, but its lower index makes confinement harder. That trade-off is what the comparison shows.
+
+<Figure src={fig1} alt="Top: a triangular lattice of circular holes in a slab with three holes missing in the middle row; the next three holes on each side of the gap are coloured. Bottom: a narrow beam with a single row of circular holes, slightly larger near the centre." caption="The two cavities in a 200 nm SiN membrane, top view. Top: L3 cavity (a = 266.6 nm, r = 0.30 a); the three end holes on each side (coloured) are shifted outward. Bottom: nanobeam cavity, 300 nm wide, with hole radii tapered from 92 nm at the centre to 70 nm in the mirror (own Quan–Lončar design, N = 15). Drawn from the cached geometry of sin_cavity/notebooks/02 and 03." number={1} size="wide" />
+
+### Theory
+
+#### Fermi's golden rule and the local density of states
+
+The rate at which an excited emitter decays is given by Fermi's golden rule:
+
+$$
+\Gamma = \frac{2\pi}{\hbar}\,\bigl|\langle f|\,\hat H_\text{int}\,|i\rangle\bigr|^2\,\rho(E_f), \qquad \hat H_\text{int} = -\hat{\mathbf{d}}\cdot\hat{\mathbf{E}}(\mathbf{r}_0)
+$$
+
+<Symbols>
+
+- $\Gamma$ — spontaneous emission rate (s⁻¹); $1/\Gamma$ is the emitter's lifetime
+- $|i\rangle$, $|f\rangle$ — initial (emitter excited, no photon) and final (emitter relaxed, one photon) states
+- $\hat H_\text{int}$ — dipole interaction between emitter and field
+- $\hat{\mathbf{d}}$ — transition dipole moment of the emitter (C·m)
+- $\hat{\mathbf{E}}(\mathbf{r}_0)$ — electric field operator at the emitter position $\mathbf{r}_0$
+- $\rho(E_f)$ — density of final photon states at the transition energy (J⁻¹)
+- $\hbar$ — reduced Planck constant (J·s)
+
+</Symbols>
+
+The emitter is fixed; the environment enters through two factors: how many photon modes exist at the transition frequency, and how strong their field is at the emitter in the direction of its dipole. Together they form the <Term id="en-ldos" n={2}>local density of optical states</Term> (LDOS). In a uniform medium of index $n$ the result is the textbook free-space rate:
+
+$$
+\Gamma_0 = \frac{n\,\omega^3\,|\mathbf{d}|^2}{3\pi\,\varepsilon_0\,\hbar\,c^3}
+$$
+
+<Symbols>
+
+- $\Gamma_0$ — spontaneous emission rate in a homogeneous medium (s⁻¹)
+- $n$ — refractive index of the medium (local-field corrections neglected)
+- $\omega$ — transition angular frequency (rad/s)
+- $|\mathbf{d}|$ — transition dipole moment (C·m)
+- $\varepsilon_0$ — vacuum permittivity (F/m); $c$ — speed of light (m/s)
+
+</Symbols>
+
+A cavity changes the LDOS: at its resonance it concentrates many modes' worth of field into one sharp, strong mode, and away from resonance a photonic band gap removes modes. The ratio $\Gamma/\Gamma_0$ is the Purcell enhancement.
+
+<Glossary>
+<Def id="en-ldos" n={2} term="Local density of optical states (LDOS)">
+The number of optical modes per unit frequency at a given point, weighted by the strength of each mode's electric field there along the dipole direction. An emitter's spontaneous emission rate is proportional to the LDOS at its position and frequency.
+</Def>
+</Glossary>
+
+#### Quality factor and mode volume
+
+Two numbers describe how strongly a cavity concentrates light. The <Term id="en-q" n={3}>quality factor</Term> $Q$ measures how long light stays; the <Term id="en-v" n={4}>mode volume</Term> $V$ measures how tightly it is squeezed:
+
+$$
+\begin{aligned}
+Q &= \omega_c\,\tau = \frac{\omega_c}{\Delta\omega} = \frac{\lambda_c}{\Delta\lambda} \\
+V &= \frac{\int \varepsilon(\mathbf{r})\,|\mathbf{E}(\mathbf{r})|^2\, d^3r}{\max\bigl[\varepsilon(\mathbf{r})\,|\mathbf{E}(\mathbf{r})|^2\bigr]}
+\end{aligned}
+$$
+
+<Symbols>
+
+- $Q$ — quality factor (dimensionless)
+- $\omega_c$, $\lambda_c$ — resonance angular frequency (rad/s) and vacuum wavelength (nm)
+- $\tau$ — energy decay time of the cavity (s); the stored energy falls as $e^{-t/\tau}$
+- $\Delta\omega$, $\Delta\lambda$ — full width at half maximum of the resonance (rad/s, nm)
+- $V$ — mode volume (µm³), usually quoted in units of $(\lambda_c/n)^3$
+- $\varepsilon(\mathbf{r})$ — relative permittivity; $\mathbf{E}(\mathbf{r})$ — electric field of the mode
+
+</Symbols>
+
+$Q$ counts optical cycles: a cavity with $Q = 3000$ at 640 nm stores light for about $3000/(2\pi) \approx 480$ optical cycles, about 1 ps, and has a linewidth of $\lambda/Q \approx 0.2$ nm. $V$ is the volume the mode would fill if its energy density were everywhere equal to its peak value.
+
+<Glossary>
+<Def id="en-q" n={3} term="Quality factor (Q)">
+The resonance frequency divided by the resonance linewidth, equivalently $2\pi$ times the stored energy divided by the energy lost per optical cycle. A high $Q$ means light survives many round trips and the resonance is narrow.
+</Def>
+<Def id="en-v" n={4} term="Mode volume (V)">
+A measure of how small a region the cavity's light occupies: the total electric energy of the mode divided by its peak energy density. Its natural unit is $(\lambda/n)^3$, a cube of the wavelength in the material. Photonic-crystal cavities reach $V \approx 0.5$–1 $(\lambda/n)^3$.
+</Def>
+</Glossary>
+
+#### The Purcell factor
+
+For an emitter that is spectrally narrow, on resonance, at the field maximum and aligned with the field, the enhancement of its emission rate into the cavity mode, relative to the rate in the bulk material, is the **Purcell factor**:[^noda][^lodahlrmp]
+
+$$
+F_P = \frac{3}{4\pi^2}\left(\frac{\lambda_c}{n}\right)^3 \frac{Q}{V}
+$$
+
+<Symbols>
+
+- $F_P$ — Purcell factor (dimensionless)
+- $\lambda_c/n$ — resonance wavelength in the material of index $n$ (µm)
+- $Q$ — quality factor; $V$ — mode volume (µm³)
+
+</Symbols>
+
+With $V$ in units of $(\lambda_c/n)^3$, this reduces to $F_P = 0.076\,Q/V$. The physics is that a cavity mode's LDOS is a Lorentzian of width $\omega_c/Q$ concentrated into a volume $V$: a high $Q$ packs the same mode into a narrower frequency range, and a small $V$ raises the field per photon.
+
+Real emitters rarely meet all four conditions. A more general estimate multiplies $F_P$ by three reduction factors, for position, orientation and detuning:
+
+$$
+F = F_P\,\frac{|\mathbf{E}(\mathbf{r}_0)|^2}{|\mathbf{E}_\text{max}|^2}\,\cos^2\theta\;\frac{1}{1 + 4Q^2\left(\lambda_e/\lambda_c - 1\right)^2}
+$$
+
+<Symbols>
+
+- $F$ — enhancement of emission into the cavity mode for a real emitter (dimensionless)
+- $\mathbf{r}_0$ — emitter position; $\mathbf{E}_\text{max}$ — field at the point of maximum $\varepsilon|\mathbf{E}|^2$ (emitter and maximum in the same material)
+- $\theta$ — angle between the emitter's dipole and the local field
+- $\lambda_e$ — emitter wavelength (nm)
+
+</Symbols>
+
+The formula also assumes the emitter's own linewidth is much narrower than the cavity's. At $Q = 10^6$ near 640 nm the cavity line is only about 0.6 pm (≈ 0.5 GHz) wide, far narrower than most solid-state emitters at room temperature. A broad emitter only uses the small fraction of its spectrum that overlaps the cavity line, so the useful enhancement then saturates at a value set by the emitter's linewidth, not by $Q$.
+
+#### Efficiency, weak and strong coupling
+
+What usually matters is not only how fast the emitter decays but what fraction of its photons go into the cavity mode, the β factor:
+
+$$
+\beta = \frac{\Gamma_\text{cav}}{\Gamma_\text{cav} + \Gamma_\text{other}}
+$$
+
+<Symbols>
+
+- $\beta$ — fraction of the emission that goes into the cavity mode
+- $\Gamma_\text{cav}$ — emission rate into the cavity mode (s⁻¹)
+- $\Gamma_\text{other}$ — emission rate into all other channels, such as radiation modes and non-radiative decay (s⁻¹)
+
+</Symbols>
+
+A photonic band gap helps twice: the cavity raises $\Gamma_\text{cav}$, and the gap lowers $\Gamma_\text{other}$ by removing in-plane modes.[^noda] In everything above, the emitter–cavity system is in the <Term id="en-weak" n={5}>weak-coupling regime</Term>: the photon leaves the cavity before it can be reabsorbed, and the cavity only speeds up an irreversible decay. In that regime, with a cavity energy decay rate $\kappa$ much larger than the emitter linewidth, the emission rate into the cavity is
+
+$$
+\Gamma_\text{cav} = \frac{4g^2}{\kappa}, \qquad \kappa = \frac{\omega_c}{Q}
+$$
+
+<Symbols>
+
+- $g$ — emitter–cavity coupling rate, half the vacuum Rabi frequency (rad/s); it scales as $|\mathbf{d}|/\sqrt{V}$
+- $\kappa$ — energy decay rate of the cavity, equal to its linewidth $\Delta\omega$ (rad/s)
+
+</Symbols>
+
+When $g$ becomes larger than the losses, roughly $g > |\kappa - \gamma|/4$ with $\gamma$ the emitter's linewidth (both full widths), the emitter and the cavity exchange energy back and forth faster than either loses it. The emission line then splits into two (vacuum Rabi splitting): the <Term id="en-strong" n={6}>strong-coupling regime</Term>. It was observed with single quantum dots in photonic-crystal cavities.[^yoshie] This article stays in the weak-coupling regime, which the Purcell factor describes.
+
+<Glossary>
+<Def id="en-weak" n={5} term="Weak coupling">
+The regime in which the cavity loses a photon faster than the emitter–cavity coupling can exchange it. Emission stays an irreversible exponential decay whose rate is enhanced by the Purcell factor.
+</Def>
+<Def id="en-strong" n={6} term="Strong coupling">
+The regime in which emitter and cavity exchange energy coherently several times before it is lost. The two become mixed states (polaritons), and the spectrum shows two peaks separated by the vacuum Rabi splitting $2g$.
+</Def>
+</Glossary>
+
+#### How a photonic-crystal slab confines light
+
+A <Term id="en-slab" n={7}>photonic-crystal slab</Term> confines light in two different ways. In the plane, the lattice of holes has a band gap: a defect such as three missing holes creates a mode inside the gap that cannot spread into the crystal. Vertically, the light is held only by total internal reflection at the slab surfaces. Total internal reflection fails for plane-wave components whose in-plane wavevector is smaller than the wavevector in air, the <Term id="en-cone" n={8}>light cone</Term>:
+
+$$
+|\mathbf{k}_\parallel| < k_0 = \frac{2\pi}{\lambda_0}
+$$
+
+<Symbols>
+
+- $\mathbf{k}_\parallel$ — in-plane wavevector of a Fourier component of the cavity field (rad/µm)
+- $k_0$ — wavevector in air (rad/µm); $\lambda_0$ — vacuum wavelength (µm)
+
+</Symbols>
+
+A cavity mode is localized in space, so it contains a spread of in-plane wavevectors. The part of that spread that falls inside the light cone radiates out of the slab, and this vertical radiation limits $Q$. A field envelope that ends abruptly at the cavity edge has many low-$k$ components; a gentle, Gaussian-like envelope has few.[^srinivasan] This is the principle behind every high-Q slab design: **shape the envelope so that the mode keeps out of the light cone.**
+
+<Glossary>
+<Def id="en-slab" n={7} term="Photonic-crystal slab">
+A thin membrane (here 200 nm of SiN, suspended in air) patterned with a two-dimensional lattice of holes. It confines light in the plane by the photonic band gap and vertically by total internal reflection.
+</Def>
+<Def id="en-cone" n={8} term="Light cone">
+The set of wavevectors whose in-plane component is small enough for the wave to propagate in the air above and below the slab. Field components inside the light cone escape vertically; those outside it are guided.
+</Def>
+</Glossary>
+
+#### L3 cavities: shifting the end holes
+
+In an L3 cavity the field ends sharply at the two holes that terminate the line defect. Akahane et al. showed that moving those end holes outward by a fraction of the lattice constant softens the envelope; this raised the measured $Q$ in silicon to $4.5\times10^4$.[^akahane] Optimizing three pairs of end holes in silicon gives $Q \approx 1.6\times10^6$ in simulation.[^minkov] Double-heterostructure cavities, a short section of slightly larger lattice constant in a line defect, reached a measured $Q$ of $6\times10^5$ in silicon.[^song]
+
+The index of the slab sets the ceiling. In silicon ($n \approx 3.5$) the light cone is a small part of the in-plane wavevectors that the mode contains. In SiN ($n = 2.0$) it is a much larger part, and the in-plane gap is smaller too. Hole shifts still help, but they cannot hide a mode in a low-index slab from the light cone. Measured SiN slab cavities in the visible reach $Q$ of only a few thousand, about $1.5$–$3.4\times10^3$ across reports.[^barth]
+
+#### Nanobeam cavities: grading the mirror
+
+A <Term id="en-nanobeam" n={9}>nanobeam cavity</Term> confines light in only one direction with a photonic crystal, the row of holes along the beam, and in the other two by total internal reflection at the beam's sides. The holes form a Bragg mirror whose strength is set by how deep the operating frequency sits in the mirror's band gap:[^quan]
+
+$$
+\gamma_m = \sqrt{\left(\frac{f_2 - f_1}{f_2 + f_1}\right)^2 - \left(\frac{f_\text{res} - f_0}{f_0}\right)^2}, \qquad f_0 = \frac{f_1 + f_2}{2}
+$$
+
+<Symbols>
+
+- $\gamma_m$ — mirror strength: how fast the field decays per period inside the mirror (dimensionless)
+- $f_1$, $f_2$ — dielectric- and air-band-edge frequencies of one mirror period at the zone boundary
+- $f_\text{res}$ — target resonance frequency
+- $f_0$ — mid-gap frequency of the mirror
+
+</Symbols>
+
+Quan and Lončar's recipe keeps the period constant and grades the hole size so that $\gamma_m$ grows linearly from zero at the centre. A linearly growing mirror strength gives a Gaussian field envelope, the one with the fewest components in the light cone.[^quan] With enough taper periods, $Q$ rises steeply, and in a low-index material the nanobeam keeps most of the advantage that the slab loses: its mode is confined by a 1D gap and two narrow side walls, so far less of it falls inside the light cone.[^mccutcheon]
+
+<Glossary>
+<Def id="en-nanobeam" n={9} term="Nanobeam cavity">
+A narrow suspended ridge waveguide with a row of holes along it. The holes on each side act as Bragg mirrors, and a cavity forms between them where the hole pattern is graded. It is also called a one-dimensional photonic-crystal cavity.
+</Def>
+</Glossary>
+
+In both cavity types the designer works with the same few levers, summarized below.
+
+<Callout kind="design" title="What this means for design">
+
+- **Hole radius r/a (slab)** → sets the width of the in-plane gap (in a 200 nm SiN membrane, about 1 % at r/a = 0.20 up to 16 % near 0.36–0.38) and the thickness of the walls between holes. *Why:* larger holes raise the index contrast but thin the walls that fabrication must keep.
+- **Lattice constant a** → places the resonance at the target wavelength (λ scales with a at fixed geometry). *Why:* Maxwell's equations scale with size; the membrane thickness does not scale, so a retune moves λ slightly less than proportionally.
+- **End-hole shifts (L3)** → raise $Q$ by softening the envelope, at the cost of a larger $V$. *Why:* fewer field components fall in the light cone, but the mode spreads.
+- **Number of taper periods (nanobeam)** → raises $Q$ steeply (a Gaussian envelope) and increases $V$ moderately. *Why:* a slower grading gives a smoother envelope.
+- **Mirror periods** → add $Q$ until in-plane leakage is negligible. *Why:* each period reduces the field that leaks through the mirror by the factor set by $\gamma_m$.
+- **Hole-radius and thickness errors** → shift λ by about 10 nm per 5 nm of radius here. A high-$Q$ graded design loses more $Q$ than an L3. *Why:* the resonance tracks the dielectric fraction, and a graded mirror relies on precise band edges.
+- **Emitter position and orientation** → set the usable fraction of $F_P$. *Why:* $F$ scales with the field intensity and $\cos^2\theta$ at the emitter.
+
+</Callout>
+
+### Simulation
+
+#### The model used here
+
+All cavity results are 3D Meep FDTD in a suspended 200 nm SiN membrane, with bulk index $n = 2.0$, non-dispersive and lossless, and air above and below. Out-of-plane radiation is the main loss, so it cannot be captured in 2D. Each cavity is excited by a short dipole pulse at its centre. Harminv, a tool that fits decaying sinusoids, extracts the frequency and $Q$ from the ringing field; the fundamental mode is the highest-$Q$ one. $V$ is computed from the field, and $F_P = 0.076\,Q/V$. Resolution is 64 grid points per µm (15.6 nm) for the final designs. Band gaps and mirror strengths come from MPB.
+
+#### The slab band gap
+
+Fig. 2 shows the guided TE-like gap of the triangular hole lattice in the 200 nm SiN membrane, computed below the light line for several lattice constants. The gap grows from about 1 % at r/a = 0.20 to a maximum of 14–16 % near r/a = 0.36–0.38. The L3 design uses r/a = 0.30 (an 11–12 % gap), which leaves walls of 0.4 a ≈ 110 nm between holes.
+
+<Figure src={fig2} alt="Guided gap in percent versus hole radius r over a from 0.20 to 0.42, for lattice constants 240 to 320 nm: all curves rise from about 1 percent to a maximum of 14 to 16 percent near 0.36 to 0.38 and then fall; a dashed line marks 0.30." caption="Guided TE-like band gap of a triangular hole lattice in a 200 nm SiN membrane (n = 2.0), versus hole radius, for five lattice constants. Dashed: r/a = 0.30, used for the L3. MPB, from sin_cavity/notebooks/01." number={2} />
+
+#### L3: what end-hole shifts can do at n = 2.0
+
+The plain SiN L3 (a = 280 nm) has $Q \approx 510$ and $V = 0.78\,(\lambda/n)^3$. Shifting the end holes raises $Q$, but much less than in silicon:
+
+| L3 in 200 nm SiN (3D FDTD) | λ (nm) | Q | V ((λ/n)³) | $F_P$ |
+|---|---|---|---|---|
+| plain, a = 280 nm | 662 | 5.1×10² | 0.78 | 49 |
+| first end hole shifted, S1 = 0.25 a | 668 | 1.3×10³ | 0.97 | 101 |
+| three shifts optimized for silicon | 669 | 2.3×10³ | 1.13 | 153 |
+| **final: a = 266.6 nm, shifts (0.35, 0.35, 0.20) a** | **642** | **3.0×10³** | **1.13** | **≈ 200** |
+
+The final shifts were found with a fast guided-mode-expansion screen (the `legume` package). It was checked on the silicon literature first: it gives $Q$ = 4.0×10⁴ for Akahane's shift, against 4.5×10⁴ measured, and 1.2×10⁶ for the three-shift design, against 1.6×10⁶ simulated. For SiN it matches the 3D FDTD to 1 % in wavelength. The optimum is broad: the SiN L3 saturates near $Q \approx 3\times10^3$, in line with measured SiN slab cavities.[^barth] Fig. 3 (top) shows the final mode: the field fills the defect and spreads several periods into the crystal along the diagonal rows.
+
+<Figure src={fig3} alt="Top: field intensity of the L3 cavity mode, bright in the three-hole gap and decaying into the surrounding holes. Bottom: field intensity of the nanobeam mode, a row of bright spots between holes, strongest at the centre and fading over about 2 micrometres on each side." caption="|E|² in the mid-plane of the membrane, normalized; white outlines: the holes. Top: final L3 (λ = 642 nm, Q = 3.0×10³, V = 1.13 (λ/n)³). Bottom: own nanobeam with a 15-period taper (λ = 643 nm, V = 1.01 (λ/n)³; Q is extrapolated, order of magnitude 10⁶–10⁷). 3D Meep FDTD, from sin_cavity/notebooks/02 and 03." number={3} size="wide" />
+
+#### Nanobeam: reproducing a published design
+
+Before trusting new designs, the model was checked against McCutcheon and Lončar's SiN nanobeam, which they report with $Q = 2.3\times10^5$ and $V = 0.55\,(\lambda/n)^3$ at a cavity gap of $s$ = 95 nm.[^mccutcheon] Fig. 4 compares the two as a function of $s$. The model reproduces the sharply peaked $Q$ (peak 2.2×10⁵, against 2.3×10⁵) and the mode volume over the whole scan (0.45–0.65, against 0.46–0.64 $(\lambda/n)^3$). The peak sits 10 nm higher in $s$, and the wavelength is 1.9–2.5 % longer, the size of change that a few nanometres in the effective hole size causes in a design this sensitive. Going from 64 to 80 grid points per µm changed $Q$ by 1 %.
+
+<Figure src={fig4} alt="Left: Q versus cavity gap s from 80 to 110 nm on a log scale; the simulated curve peaks at 2.2e5 at 105 nm and the published curve peaks at 2.3e5 at 95 nm. Right: mode volume versus s; both curves rise from about 0.45 to 0.65 and nearly overlap." caption="Reproduction of the McCutcheon–Lončar SiN nanobeam: Q (left) and V (right) versus the cavity gap s. Circles: this model (3D Meep, 64 px/µm); squares: values read from the paper's Fig. 4. From sin_cavity/notebooks/03." number={4} size="wide" />
+
+#### Nanobeam: a graded taper
+
+An own design following Quan and Lončar's recipe (constant 250 nm period, hole radius graded from 92 nm at the centre to 70 nm over 15 periods, then 10 mirror periods) raises $Q$ to the order of $10^6$–$10^7$ (Fig. 3, bottom). These values are extrapolated by Harminv from a ring-down far shorter than the cavity's decay time, so only the order of magnitude is claimed. Scaled to 637 nm, the design keeps $Q \approx 1.4\times10^6$. Its graded mirror spreads the mode over more periods, so $V \approx 1.0\,(\lambda/n)^3$ is about twice the McCutcheon design's.
+
+<Callout kind="note" title="Assumptions">
+
+The model has no absorption, no surface roughness and no disorder. Fabricated SiN nanobeams have reached $Q = 5.5\times10^4$ in the visible,[^khan] so designs above about $10^5$ are limited by fabrication in practice. Purcell factors below are for an ideal emitter (narrow, on resonance, at the field maximum inside the SiN, aligned). A room-temperature NV centre is far broader than these cavity lines, and an emitter in a nanodiamond on the surface sees less than the peak field, so the realized enhancement of the high-$Q$ designs is much smaller.
+
+</Callout>
+
+#### Fabrication tolerance
+
+Every hole radius and the membrane thickness were changed by ±5 nm, one at a time:
+
+| change | L3: Δλ | L3: Q | nanobeam: Δλ | nanobeam: Q |
+|---|---|---|---|---|
+| r + 5 nm | −8.8 nm | 1.8×10³ | −12.2 nm | 9×10⁴ |
+| r − 5 nm | +9.5 nm | 4.6×10³ | +9.9 nm | 3.5×10⁶ |
+| t = 205 nm | +2.8 nm | 2.9×10³ | +2.1 nm | 3.8×10⁶ |
+| t = 195 nm | −2.7 nm | 2.7×10³ | −2.7 nm | 2.1×10⁵ |
+
+Both cavities shift by about 10 nm per 5 nm of hole radius, many linewidths, so either needs post-fabrication tuning to reach a fixed emitter line. The L3's $Q$ barely changes because it is limited by the light cone everywhere. The graded nanobeam's $Q$ drops by almost two orders of magnitude for larger holes, which move the mirror's band gap away from the resonance. Even so, its worst case remains about 30 times the L3.
+
+#### L3 versus nanobeam
+
+Fig. 5 places the designs on a $Q$–$V$ map with lines of constant Purcell factor. The nanobeam wins by two to three orders of magnitude in both $Q$ and $F_P$. The mode volumes are similar (0.6–1.1 $(\lambda/n)^3$), so $Q$ decides.
+
+<Figure src={fig5} alt="Log-log map of Q versus mode volume from 0.3 to 3 with dotted lines of constant Purcell factor from 1e2 to 1e5. The L3 lies near Q 3e3 and V 1.1; the McCutcheon nanobeam at Q 2e5 and V 0.6; the own nanobeams at Q 1e6 to 6e6 and V 1.0 to 1.65. An open star marks the measured SiN nanobeam at Q 5.5e4 and V 0.55." caption="Q–V map. Dotted: constant Purcell factor F_P = 0.076 Q/V. Markers: the final L3, the reproduced McCutcheon nanobeam (s = 105 nm) and the own nanobeam before and after retuning to 637 nm (own-design Q values: order of magnitude). Open star: the best measured SiN nanobeam (Khan et al. 2011), at its measured Q and at the simulated V that paper gives for the fabricated design. The measured SiN slab cavities state no V and are not plotted. From sin_cavity/notebooks/03." number={5} />
+
+| | L3 (2D slab) | nanobeam |
+|---|---|---|
+| Q (simulated) | 3.0×10³ | 2.2×10⁵ (McCutcheon) – ~10⁶–10⁷ (graded taper) |
+| V ((λ/n)³) | 1.1 | 0.6 – ≈ 1 |
+| $F_P$ (ideal emitter) | ≈ 200 | ≈ 3×10⁴ – ~10⁵–10⁶ |
+| Q with ±5 nm errors | 1.8–4.6×10³ | 9×10⁴ – > 10⁶ |
+| measured in SiN (literature) | 1.5–3.4×10³ | 5.5×10⁴ |
+
+For SiN in the visible, the nanobeam is the cavity of choice for emitter coupling. The L3 remains useful where a 2D platform, a robust $Q$ or coupling to a 2D photonic-crystal circuit matters more than a high $Q$. In silicon, by contrast, slab cavities reach $Q \sim 10^6$, the regime of the Noda review.[^noda]
+
+#### Theory versus simulation
+
+| prediction | simulation |
+|---|---|
+| lower index → smaller in-plane gap and more light-cone loss | SiN gap ≤ 16 %; plain L3 Q ≈ 510 |
+| end-hole shifts raise Q by softening the envelope, but V grows | Q 5.1×10² → 3.0×10³, V 0.78 → 1.13 |
+| a graded (Gaussian) envelope avoids the light cone | graded nanobeam Q ~ 10⁶–10⁷ |
+| $F_P = 0.076\,Q/V$ | L3 ≈ 200; nanobeam ≈ 3×10⁴ (reproduction) to ~10⁵–10⁶ |
+| reproduction of a published structure | peak Q within 6 %, V within 0.01–0.02 $(\lambda/n)^3$ |
+
+Cavities like these also connect to topological photonics: an emitter placed at a chiral point of a topological edge mode emits in one direction along the edge, a route to directional quantum interfaces; see [Topological Photonic Crystals](/blog/topological-photonic-crystals/).
+
+### Code and data
+
+- Slab band gap, nanobeam band edges and mirror strength: [`sin_cavity/notebooks/01_bands_and_mirrors.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/sin_cavity/notebooks/01_bands_and_mirrors.ipynb)
+- L3 cavity, guided-mode-expansion screen, final design and tolerance: [`sin_cavity/notebooks/02_l3_cavity.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/sin_cavity/notebooks/02_l3_cavity.ipynb)
+- Nanobeam reproduction, own taper, tolerance and comparison: [`sin_cavity/notebooks/03_nanobeam_cavity.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/sin_cavity/notebooks/03_nanobeam_cavity.ipynb)
+- Simulation module: [`phc_cavity.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/phc_cavity.py)
+- Figures 1–5 were made from the saved data with `scripts/blog_figures/purcell_cavities.py` in the same repository; no simulation was re-run.
+
+---
+
+## 日本語
+
+**パーセル効果**とは、エミッタの<Term id="ja-spont" n={1}>自然放出</Term>レートが、周囲の光学環境によって変わる現象です。原子、量子ドット、色中心などを、発光周波数に合わせた小さく低損失な光共振器に入れると、自由空間より何倍も速く発光させられます。さらに、光のほとんどを共振器モードへ送り込めます。光を約1立方波長の体積に、数千から数百万回の光学振動の間閉じ込めるフォトニック結晶ナノ共振器は、そのための最も強力な道具の1つです。単一光子源や、光と量子エミッタの間のインターフェースで中心的な役割を果たします。[^noda][^lodahlrmp]
+
+<Glossary title="用語">
+<Def id="ja-spont" n={1} term="自然放出">
+入射光がなくても、励起したエミッタが光子を放出することです。そのレートはエミッタだけで決まる固定値ではありません。量子力学的には電磁場の真空ゆらぎが引き起こすので、エミッタのまわりにどの光学モードがあるかで変わります。
+</Def>
+</Glossary>
+
+### 概要
+
+#### 発光は環境で決まる
+
+Purcellは1946年に、共振回路に結合した核スピンは自由空間よりはるかに速く放射するはずだと指摘しました。[^purcell] その40年後、Yablonovitchは逆の現象を提案しました。発光周波数にモードがないフォトニックバンドギャップの中では、自然放出が抑えられるはずだ、というものです。[^yablonovitch] どちらも1つの考えから導かれます。エミッタは、その周波数に存在し、かつその位置に場をもつ電磁場のモードにしか発光できません。モードを加えれば発光は速くなり、取り除けば遅くなります。
+
+自然放出の制御は、次のような用途で重要です。
+
+- **単一光子源**:1つの共振器モードへ速く指向的に発光させると、光子が明るく、区別のつかないものになります。[^lodahlrmp]
+- **量子インターフェース**:1つのエミッタが、導波路や別のエミッタと効率よく光子をやり取りする必要があります。
+- **低しきい値のレーザーやLED**:全方向ではなく1つのモードへ発光させることで、無駄が減ります。[^noda]
+
+#### 2つのフォトニック結晶共振器
+
+本記事では、同じ材料、すなわち空中に浮かせた厚さ200 nmの窒化シリコン(SiN、n ≈ 2.0)メンブレンで、2種類の共振器を比べます。設計波長は、ダイヤモンド中のNV中心のゼロフォノン線である637 nmです(図1)。
+
+- **L3共振器**:スラブの空気穴の三角格子から3つの穴を除いたもので、Nodaのレビューに登場する代表的な共振器です。[^noda][^akahane]
+- **ナノビーム共振器**:細いリッジに1列の穴をあけ、中心に向かって穴を段階的に変えたものです。[^mccutcheon][^quan]
+
+窒化シリコンは、シリコンが吸収する可視域で透明ですが、屈折率が低いため光を閉じ込めにくくなります。この比較が示すのは、そのトレードオフです。
+
+<Figure src={fig1} alt="上:スラブ中の円形の穴の三角格子で、中央の列の穴が3つ欠けている。欠けた部分の両側の3つずつの穴が色分けされている。下:円形の穴が1列並んだ細いビームで、中心付近の穴がわずかに大きい。" caption="200 nmのSiNメンブレン中の2つの共振器の上面図。上:L3共振器(a = 266.6 nm、r = 0.30 a)。両側の3つずつの端の穴(色付き)を外側へずらしている。下:幅300 nmのナノビーム共振器。穴の半径を中心の92 nmからミラーの70 nmまで変化させた(Quan–Lončar法による自作の設計、N = 15)。sin_cavity/notebooks/02 と 03 にキャッシュされた形状から描画。" number={1} size="wide" />
+
+### 理論
+
+#### フェルミの黄金律と局所光学状態密度
+
+励起したエミッタが減衰するレートは、フェルミの黄金律で次のようになります。
+
+$$
+\Gamma = \frac{2\pi}{\hbar}\,\bigl|\langle f|\,\hat H_\text{int}\,|i\rangle\bigr|^2\,\rho(E_f), \qquad \hat H_\text{int} = -\hat{\mathbf{d}}\cdot\hat{\mathbf{E}}(\mathbf{r}_0)
+$$
+
+<Symbols title="記号">
+
+- $\Gamma$ — 自然放出レート(s⁻¹)。$1/\Gamma$ がエミッタの寿命
+- $|i\rangle$, $|f\rangle$ — 始状態(エミッタが励起し、光子なし)と終状態(エミッタが緩和し、光子1つ)
+- $\hat H_\text{int}$ — エミッタと場の双極子相互作用
+- $\hat{\mathbf{d}}$ — エミッタの遷移双極子モーメント(C·m)
+- $\hat{\mathbf{E}}(\mathbf{r}_0)$ — エミッタの位置 $\mathbf{r}_0$ での電場演算子
+- $\rho(E_f)$ — 遷移エネルギーでの終状態(光子)の状態密度(J⁻¹)
+- $\hbar$ — 換算プランク定数(J·s)
+
+</Symbols>
+
+エミッタは決まっているので、環境は2つの因子を通して入ってきます。遷移周波数にいくつの光子モードがあるかと、それらの場がエミッタの位置で双極子の向きにどれだけ強いかです。この2つを合わせたものが<Term id="ja-ldos" n={2}>局所光学状態密度</Term>(LDOS)です。屈折率 $n$ の一様な媒質では、教科書どおりの自由空間のレートが次のように得られます。
+
+$$
+\Gamma_0 = \frac{n\,\omega^3\,|\mathbf{d}|^2}{3\pi\,\varepsilon_0\,\hbar\,c^3}
+$$
+
+<Symbols title="記号">
+
+- $\Gamma_0$ — 一様な媒質中での自然放出レート(s⁻¹)
+- $n$ — 媒質の屈折率(局所場補正は無視)
+- $\omega$ — 遷移の角周波数(rad/s)
+- $|\mathbf{d}|$ — 遷移双極子モーメント(C·m)
+- $\varepsilon_0$ — 真空の誘電率(F/m)、$c$ — 光速(m/s)
+
+</Symbols>
+
+共振器はLDOSを変えます。共鳴では多くのモードぶんの場を1つの鋭く強いモードに集め、共鳴から外れた周波数では、フォトニックバンドギャップがモードを取り除きます。比 $\Gamma/\Gamma_0$ がパーセル増強です。
+
+<Glossary title="用語">
+<Def id="ja-ldos" n={2} term="局所光学状態密度(LDOS)">
+ある点での単位周波数あたりの光学モードの数を、その点での各モードの電場の(双極子の向きの)強さで重みづけしたものです。エミッタの自然放出レートは、その位置と周波数でのLDOSに比例します。
+</Def>
+</Glossary>
+
+#### Q値とモード体積
+
+共振器が光をどれだけ強く集めるかは、2つの数で表せます。<Term id="ja-q" n={3}>Q値</Term> $Q$ は光がどれだけ長くとどまるか、<Term id="ja-v" n={4}>モード体積</Term> $V$ はどれだけ小さく押し込められるかを表し、次のように定義されます。
+
+$$
+\begin{aligned}
+Q &= \omega_c\,\tau = \frac{\omega_c}{\Delta\omega} = \frac{\lambda_c}{\Delta\lambda} \\
+V &= \frac{\int \varepsilon(\mathbf{r})\,|\mathbf{E}(\mathbf{r})|^2\, d^3r}{\max\bigl[\varepsilon(\mathbf{r})\,|\mathbf{E}(\mathbf{r})|^2\bigr]}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $Q$ — Q値(無次元)
+- $\omega_c$, $\lambda_c$ — 共鳴の角周波数(rad/s)と真空波長(nm)
+- $\tau$ — 共振器のエネルギー減衰時間(s)。蓄積エネルギーは $e^{-t/\tau}$ で減る
+- $\Delta\omega$, $\Delta\lambda$ — 共鳴の半値全幅(rad/s, nm)
+- $V$ — モード体積(µm³)。通常 $(\lambda_c/n)^3$ 単位で示す
+- $\varepsilon(\mathbf{r})$ — 比誘電率、$\mathbf{E}(\mathbf{r})$ — モードの電場
+
+</Symbols>
+
+$Q$ は光学振動の回数を数えるものです。640 nmで $Q = 3000$ の共振器は、光を約 $3000/(2\pi) \approx 480$ 周期、つまり約1 psの間蓄え、線幅は $\lambda/Q \approx 0.2$ nmです。$V$ は、モードのエネルギー密度がどこでもピーク値に等しいとしたときに、モードが占める体積です。
+
+<Glossary title="用語">
+<Def id="ja-q" n={3} term="Q値">
+共鳴周波数を共鳴の線幅で割ったもので、蓄積エネルギーを1周期あたりに失うエネルギーで割って $2\pi$ を掛けたものと同じです。$Q$ が高いほど、光は多くの往復を生き延び、共鳴は鋭くなります。
+</Def>
+<Def id="ja-v" n={4} term="モード体積(V)">
+共振器の光がどれだけ小さな領域を占めるかを表す量で、モードの全電場エネルギーをピークのエネルギー密度で割ったものです。自然な単位は、材料中の波長の立方 $(\lambda/n)^3$ です。フォトニック結晶共振器は $V \approx 0.5$–1 $(\lambda/n)^3$ に達します。
+</Def>
+</Glossary>
+
+#### パーセル因子
+
+スペクトル幅が狭く、共鳴にあり、場の最大の位置に置かれ、場と向きのそろったエミッタについて、共振器モードへの発光レートがバルク材料中のレートの何倍になるかを表すのが**パーセル因子**で、次のようになります。[^noda][^lodahlrmp]
+
+$$
+F_P = \frac{3}{4\pi^2}\left(\frac{\lambda_c}{n}\right)^3 \frac{Q}{V}
+$$
+
+<Symbols title="記号">
+
+- $F_P$ — パーセル因子(無次元)
+- $\lambda_c/n$ — 屈折率 $n$ の材料中での共鳴波長(µm)
+- $Q$ — Q値、$V$ — モード体積(µm³)
+
+</Symbols>
+
+$V$ を $(\lambda_c/n)^3$ 単位で表すと、$F_P = 0.076\,Q/V$ になります。物理的には、共振器モードのLDOSは幅 $\omega_c/Q$ のローレンツ型で、体積 $V$ に集中しています。$Q$ が高いと同じモードがより狭い周波数範囲に詰め込まれ、$V$ が小さいと光子1つあたりの場が強くなります。
+
+実際のエミッタが4つの条件すべてを満たすことはまれです。より一般的な見積もりでは、$F_P$ に位置・向き・離調の3つの低減因子を掛けて、次のようになります。
+
+$$
+F = F_P\,\frac{|\mathbf{E}(\mathbf{r}_0)|^2}{|\mathbf{E}_\text{max}|^2}\,\cos^2\theta\;\frac{1}{1 + 4Q^2\left(\lambda_e/\lambda_c - 1\right)^2}
+$$
+
+<Symbols title="記号">
+
+- $F$ — 実際のエミッタの、共振器モードへの発光の増強(無次元)
+- $\mathbf{r}_0$ — エミッタの位置、$\mathbf{E}_\text{max}$ — $\varepsilon|\mathbf{E}|^2$ が最大になる点での場(エミッタと最大点は同じ材料内)
+- $\theta$ — エミッタの双極子と局所的な場のなす角
+- $\lambda_e$ — エミッタの波長(nm)
+
+</Symbols>
+
+この式は、エミッタ自身の線幅が共振器の線幅よりずっと狭いことも仮定しています。640 nm付近で $Q = 10^6$ のとき、共振器の線幅はわずか約0.6 pm(≈ 0.5 GHz)で、室温の多くの固体エミッタよりはるかに狭くなります。幅の広いエミッタは、スペクトルのうち共振器の線と重なるごく一部しか使えないので、そのとき有効な増強は $Q$ ではなくエミッタの線幅で決まる値で頭打ちになります。
+
+#### 効率、弱結合と強結合
+
+実際に重要なのは、エミッタの減衰の速さだけではなく、光子のうちどれだけの割合が共振器モードへ入るかです。これがβ因子で、次のようになります。
+
+$$
+\beta = \frac{\Gamma_\text{cav}}{\Gamma_\text{cav} + \Gamma_\text{other}}
+$$
+
+<Symbols title="記号">
+
+- $\beta$ — 発光のうち共振器モードへ入る割合
+- $\Gamma_\text{cav}$ — 共振器モードへの発光レート(s⁻¹)
+- $\Gamma_\text{other}$ — 放射モードや非輻射減衰など、他のすべての経路へのレート(s⁻¹)
+
+</Symbols>
+
+フォトニックバンドギャップは2重に役立ちます。共振器が $\Gamma_\text{cav}$ を上げ、ギャップが面内のモードを取り除いて $\Gamma_\text{other}$ を下げるからです。[^noda] ここまでの議論では、エミッタと共振器の系は<Term id="ja-weak" n={5}>弱結合領域</Term>にあります。光子は再吸収される前に共振器から出ていき、共振器は不可逆な減衰を速めるだけです。この領域で、共振器のエネルギー減衰レート $\kappa$ がエミッタの線幅よりずっと大きいとき、共振器への発光レートは次のようになります。
+
+$$
+\Gamma_\text{cav} = \frac{4g^2}{\kappa}, \qquad \kappa = \frac{\omega_c}{Q}
+$$
+
+<Symbols title="記号">
+
+- $g$ — エミッタと共振器の結合レート。真空ラビ周波数の半分(rad/s)。$|\mathbf{d}|/\sqrt{V}$ に比例する
+- $\kappa$ — 共振器のエネルギー減衰レートで、線幅 $\Delta\omega$ に等しい(rad/s)
+
+</Symbols>
+
+$g$ が損失より大きくなると、おおよそ $g > |\kappa - \gamma|/4$($\gamma$ はエミッタの線幅で、どちらも全幅)のとき、エミッタと共振器はどちらかが失うより速くエネルギーをやり取りします。発光線は2本に分裂し(真空ラビ分裂)、これが<Term id="ja-strong" n={6}>強結合領域</Term>です。フォトニック結晶共振器中の単一量子ドットで観測されています。[^yoshie] 本記事は、パーセル因子が記述する弱結合領域にとどまります。
+
+<Glossary title="用語">
+<Def id="ja-weak" n={5} term="弱結合">
+エミッタと共振器の結合が光子をやり取りするより速く、共振器が光子を失う領域です。発光は不可逆な指数関数的減衰のままで、そのレートがパーセル因子で増強されます。
+</Def>
+<Def id="ja-strong" n={6} term="強結合">
+エミッタと共振器が、エネルギーを失う前に何度もコヒーレントにやり取りする領域です。両者は混ざった状態(ポラリトン)になり、スペクトルには真空ラビ分裂 $2g$ だけ離れた2つのピークが現れます。
+</Def>
+</Glossary>
+
+#### フォトニック結晶スラブが光を閉じ込める仕組み
+
+<Term id="ja-slab" n={7}>フォトニック結晶スラブ</Term>は、2つの異なる仕組みで光を閉じ込めます。面内では、穴の格子にバンドギャップがあり、3つの穴を除くなどの欠陥がギャップ内のモードを作ります。このモードは結晶の中へ広がれません。縦方向には、光はスラブ表面での全反射だけで保たれます。全反射は、面内の波数ベクトルが空気中の波数ベクトルより小さい平面波成分では成り立ちません。この範囲が<Term id="ja-cone" n={8}>ライトコーン</Term>で、条件は次のようになります。
+
+$$
+|\mathbf{k}_\parallel| < k_0 = \frac{2\pi}{\lambda_0}
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{k}_\parallel$ — 共振器の場のフーリエ成分の面内波数ベクトル(rad/µm)
+- $k_0$ — 空気中の波数(rad/µm)、$\lambda_0$ — 真空波長(µm)
+
+</Symbols>
+
+共振器モードは空間的に局在しているので、面内の波数ベクトルにある広がりをもちます。その広がりのうちライトコーンの中に入る部分はスラブの外へ放射し、この縦方向の放射が $Q$ を制限します。共振器の端で急に途切れる場の包絡線は低い $k$ の成分を多く含み、なだらかなガウス型の包絡線はそれが少なくなります。[^srinivasan] 高Qのスラブ設計はすべて、この原理に基づいています。**包絡線の形を整えて、モードをライトコーンの外に保つ**ことです。
+
+<Glossary title="用語">
+<Def id="ja-slab" n={7} term="フォトニック結晶スラブ">
+2次元の穴の格子をパターニングした薄いメンブレン(ここでは空中に浮かせた厚さ200 nmのSiN)です。面内ではフォトニックバンドギャップで、縦方向には全反射で光を閉じ込めます。
+</Def>
+<Def id="ja-cone" n={8} term="ライトコーン">
+面内成分が十分小さく、スラブの上下の空気中を伝搬できる波数ベクトルの集合です。ライトコーンの中の場の成分は縦方向へ逃げ、外の成分は導波されます。
+</Def>
+</Glossary>
+
+#### L3共振器:端の穴をずらす
+
+L3共振器では、線欠陥を終える2つの穴のところで場が急に途切れます。Akahaneらは、その端の穴を格子定数の数分の1だけ外側へずらすと包絡線がなだらかになることを示し、シリコンで測定 $Q$ を $4.5\times10^4$ に高めました。[^akahane] シリコンで3対の端の穴を最適化すると、シミュレーションで $Q \approx 1.6\times10^6$ になります。[^minkov] 線欠陥の中に格子定数をわずかに大きくした短い区間を設けたダブルヘテロ構造共振器は、シリコンで測定 $Q = 6\times10^5$ に達しています。[^song]
+
+上限はスラブの屈折率で決まります。シリコン($n \approx 3.5$)では、ライトコーンはモードが含む面内波数ベクトルのごく一部にすぎません。SiN($n = 2.0$)ではそれがはるかに大きな割合になり、面内のギャップも小さくなります。穴をずらすことはなお有効ですが、低屈折率のスラブではモードをライトコーンから隠しきれません。可視域で測定されたSiNスラブ共振器の $Q$ は数千、報告全体で約 $1.5$–$3.4\times10^3$ にとどまります。[^barth]
+
+#### ナノビーム共振器:ミラーを段階的に変える
+
+<Term id="ja-nanobeam" n={9}>ナノビーム共振器</Term>は、フォトニック結晶(ビームに沿った穴の列)で光を閉じ込めるのは1方向だけで、他の2方向はビームの側面での全反射で閉じ込めます。穴はブラッグミラーを作り、その強さは、動作周波数がミラーのバンドギャップのどれだけ奥にあるかで決まります。式は次のようになります。[^quan]
+
+$$
+\gamma_m = \sqrt{\left(\frac{f_2 - f_1}{f_2 + f_1}\right)^2 - \left(\frac{f_\text{res} - f_0}{f_0}\right)^2}, \qquad f_0 = \frac{f_1 + f_2}{2}
+$$
+
+<Symbols title="記号">
+
+- $\gamma_m$ — ミラー強度。ミラー内で場が1周期あたりどれだけ速く減衰するか(無次元)
+- $f_1$, $f_2$ — ミラー1周期のゾーン境界での誘電体バンド端とエアバンド端の周波数
+- $f_\text{res}$ — 目標の共鳴周波数
+- $f_0$ — ミラーのギャップ中心の周波数
+
+</Symbols>
+
+Quan と Lončar の手法では、周期を一定に保ち、穴の大きさを段階的に変えて、$\gamma_m$ が中心のゼロから線形に増えるようにします。ミラー強度が線形に増えるとガウス型の場の包絡線になり、ライトコーン内の成分が最も少なくなります。[^quan] テーパーの周期数が十分あれば $Q$ は急に上がります。低屈折率の材料では、スラブが失う利点の多くをナノビームは保てます。モードは1次元のギャップと2つの狭い側壁で閉じ込められるので、ライトコーンの中に入る割合がはるかに少ないからです。[^mccutcheon]
+
+<Glossary title="用語">
+<Def id="ja-nanobeam" n={9} term="ナノビーム共振器">
+空中に浮かせた細いリッジ導波路に、穴を1列あけたものです。両側の穴がブラッグミラーとして働き、穴のパターンを段階的に変えた部分の間に共振器ができます。1次元フォトニック結晶共振器とも呼ばれます。
+</Def>
+</Glossary>
+
+どちらの共振器でも、設計者が使える調整の手段は共通しており、以下にまとめます。
+
+<Callout kind="design" title="設計上の意味">
+
+- **穴の半径 r/a(スラブ)** → 面内ギャップの幅(200 nmのSiNメンブレンでは r/a = 0.20 の約1 %から0.36–0.38 付近の16 %まで)と、穴の間の壁の厚さを決めます。*理由:* 穴を大きくすると屈折率差は増しますが、作製で残すべき壁が薄くなります。
+- **格子定数 a** → 共鳴を目標波長に置きます(形状を固定すると λ は a に比例)。*理由:* マクスウェル方程式は大きさに対してスケールしますが、メンブレンの厚さはスケールしないので、再調整による λ の移動は比例より少し小さくなります。
+- **端の穴のずらし(L3)** → 包絡線をなだらかにして $Q$ を上げますが、$V$ は大きくなります。*理由:* ライトコーンに入る場の成分は減りますが、モードは広がります。
+- **テーパーの周期数(ナノビーム)** → $Q$ を急に上げ(ガウス型の包絡線)、$V$ を適度に増やします。*理由:* 変化をゆるやかにするほど包絡線がなめらかになります。
+- **ミラーの周期数** → 面内の漏れが無視できるようになるまで $Q$ を上げます。*理由:* 1周期ごとに、$\gamma_m$ で決まる割合だけミラーを通り抜ける場が減ります。
+- **穴の半径と厚さの誤差** → ここでは半径5 nmあたり約10 nm、λ がずれます。段階的に変えた高 $Q$ の設計は、L3より大きく $Q$ を失います。*理由:* 共鳴は誘電体の割合に追随し、段階的なミラーは正確なバンド端に頼っているからです。
+- **エミッタの位置と向き** → $F_P$ のうち使える割合を決めます。*理由:* $F$ はエミッタの位置での場の強度と $\cos^2\theta$ に比例します。
+
+</Callout>
+
+### シミュレーション
+
+#### 本記事のモデル
+
+共振器の結果はすべて、空中に浮かせた厚さ200 nmのSiNメンブレンでの3次元Meep FDTDによるものです。屈折率はバルクの $n = 2.0$ で、分散と損失はなく、上下は空気です。主な損失は面外への放射なので、2次元では扱えません。各共振器を中心の短い双極子パルスで励起します。減衰する正弦波をフィットするツールHarminvで、残響する場から周波数と $Q$ を求めます。基本モードは $Q$ の最も高いものです。$V$ は場から計算し、$F_P = 0.076\,Q/V$ とします。最終設計の解像度は1 µmあたり64格子点(15.6 nm)です。バンドギャップとミラー強度はMPBで求めています。
+
+#### スラブのバンドギャップ
+
+図2は、200 nmのSiNメンブレン中の三角格子の穴がもつ、導波するTE的なギャップです。ライトコーンより下で、いくつかの格子定数について計算しています。ギャップは r/a = 0.20 の約1 %から増え、r/a = 0.36–0.38 付近で最大14–16 %になります。L3の設計では r/a = 0.30(ギャップ11–12 %)を使い、穴の間に 0.4 a ≈ 110 nm の壁を残しています。
+
+<Figure src={fig2} alt="r/a 0.20から0.42に対する導波ギャップ(%)。格子定数240から320 nmのどの曲線も約1 %から上がり、0.36から0.38付近で14から16 %の最大になってから下がる。破線は0.30を示す。" caption="200 nmのSiNメンブレン(n = 2.0)中の三角格子の穴がもつ、導波するTE的なバンドギャップ。5つの格子定数について穴の半径に対して示した。破線:L3で使った r/a = 0.30。MPB、sin_cavity/notebooks/01より。" number={2} />
+
+#### L3:n = 2.0 で端の穴のずらしにできること
+
+ずらしのないSiNのL3(a = 280 nm)は、$Q \approx 510$、$V = 0.78\,(\lambda/n)^3$ です。端の穴をずらすと $Q$ は上がりますが、シリコンよりはるかに小さな上がり方です。
+
+| 200 nm SiNのL3(3次元FDTD) | λ (nm) | Q | V ((λ/n)³) | $F_P$ |
+|---|---|---|---|---|
+| ずらしなし、a = 280 nm | 662 | 5.1×10² | 0.78 | 49 |
+| 最初の端の穴をずらす、S1 = 0.25 a | 668 | 1.3×10³ | 0.97 | 101 |
+| シリコン向けに最適化した3つのずらし | 669 | 2.3×10³ | 1.13 | 153 |
+| **最終:a = 266.6 nm、ずらし (0.35, 0.35, 0.20) a** | **642** | **3.0×10³** | **1.13** | **≈ 200** |
+
+最終的なずらしは、高速な導波モード展開法によるスクリーニング(`legume` パッケージ)で見つけました。まずシリコンの文献で検証しています。Akahane のずらしで $Q$ = 4.0×10⁴(測定値 4.5×10⁴)、3つのずらしの設計で 1.2×10⁶(シミュレーション値 1.6×10⁶)です。SiNでは、波長で3次元FDTDと1 %以内で一致します。最適値はなだらかで、SiNのL3は $Q \approx 3\times10^3$ 付近で頭打ちになり、測定されたSiNスラブ共振器と一致します。[^barth] 図3(上)が最終的なモードで、場は欠陥を満たし、斜めの列に沿って結晶の中へ数周期広がっています。
+
+<Figure src={fig3} alt="上:L3共振器モードの場の強度。3つの穴が欠けた部分で明るく、周囲の穴へ減衰する。下:ナノビームのモードの場の強度。穴の間に明るい点が並び、中心で最も強く、両側約2マイクロメートルにわたって弱くなる。" caption="メンブレン中央面での |E|²(規格化)。白い輪郭:穴。上:最終的なL3(λ = 642 nm、Q = 3.0×10³、V = 1.13 (λ/n)³)。下:15周期のテーパーをもつ自作のナノビーム(λ = 643 nm、V = 1.01 (λ/n)³。Q は外挿で、桁として10⁶–10⁷)。3次元Meep FDTD、sin_cavity/notebooks/02 と 03 より。" number={3} size="wide" />
+
+#### ナノビーム:報告された設計の再現
+
+新しい設計を信頼する前に、モデルを McCutcheon と Lončar のSiNナノビームで検証しました。彼らは、共振器ギャップ $s$ = 95 nmで $Q = 2.3\times10^5$、$V = 0.55\,(\lambda/n)^3$ を報告しています。[^mccutcheon] 図4は両者を $s$ の関数として比べたものです。モデルは鋭いピークをもつ $Q$(ピーク 2.2×10⁵、論文 2.3×10⁵)と、掃引全体でのモード体積(0.45–0.65、論文 0.46–0.64 $(\lambda/n)^3$)を再現しています。ピークの位置は $s$ で10 nm大きく、波長は1.9–2.5 %長くなります。これは、これほど敏感な設計で、穴の実効的な大きさが数nm変わったときに生じる程度の差です。1 µmあたりの格子点を64から80にすると、$Q$ は1 %変わりました。
+
+<Figure src={fig4} alt="左:80から110 nmの共振器ギャップsに対するQ(対数軸)。シミュレーションの曲線は105 nmで2.2e5のピーク、論文の曲線は95 nmで2.3e5のピーク。右:sに対するモード体積。両曲線とも約0.45から0.65へ上がり、ほぼ重なる。" caption="McCutcheon–Lončar のSiNナノビームの再現:共振器ギャップ s に対する Q(左)と V(右)。丸:本モデル(3次元Meep、64 px/µm)、四角:論文の図4から読み取った値。sin_cavity/notebooks/03より。" number={4} size="wide" />
+
+#### ナノビーム:段階的なテーパー
+
+Quan と Lončar の手法に従った自作の設計(周期250 nmで一定、穴の半径を中心の92 nmから15周期かけて70 nmへ変え、その外に10周期のミラー)は、$Q$ を $10^6$–$10^7$ の桁まで上げます(図3下)。これらの値は、共振器の減衰時間よりはるかに短い残響からHarminvが外挿したものなので、桁だけを主張しています。637 nmにスケールしても、$Q \approx 1.4\times10^6$ を保ちます。段階的なミラーはモードをより多くの周期に広げるので、$V \approx 1.0\,(\lambda/n)^3$ は McCutcheon の設計の約2倍です。
+
+<Callout kind="note" title="前提">
+
+モデルには吸収、表面の荒れ、乱れがありません。作製されたSiNナノビームの可視域での $Q$ は $5.5\times10^4$ に達しており、[^khan] 実際には約 $10^5$ を超える設計は作製で制限されます。以下のパーセル因子は理想的なエミッタ(線幅が狭く、共鳴にあり、SiN内の場の最大に置かれ、向きがそろっている)についての値です。室温のNV中心はこれらの共振器の線よりはるかに幅が広く、表面のナノダイヤモンド中のエミッタは場のピークより弱い場しか感じないので、高 $Q$ 設計で実際に得られる増強はずっと小さくなります。
+
+</Callout>
+
+#### 作製誤差への耐性
+
+すべての穴の半径とメンブレンの厚さを、1つずつ±5 nm変えた結果は次のとおりです。
+
+| 変更 | L3:Δλ | L3:Q | ナノビーム:Δλ | ナノビーム:Q |
+|---|---|---|---|---|
+| r + 5 nm | −8.8 nm | 1.8×10³ | −12.2 nm | 9×10⁴ |
+| r − 5 nm | +9.5 nm | 4.6×10³ | +9.9 nm | 3.5×10⁶ |
+| t = 205 nm | +2.8 nm | 2.9×10³ | +2.1 nm | 3.8×10⁶ |
+| t = 195 nm | −2.7 nm | 2.7×10³ | −2.7 nm | 2.1×10⁵ |
+
+どちらの共振器も、穴の半径5 nmあたり約10 nm、つまり線幅の何倍もずれるので、決まったエミッタの線に合わせるには、作製後の調整が必要です。L3の $Q$ はほとんど変わりません。どこでもライトコーンで制限されているからです。段階的なナノビームの $Q$ は、穴が大きくなるとほぼ2桁下がります。ミラーのバンドギャップが共鳴から離れるためです。それでも、最悪の場合でもL3の約30倍を保ちます。
+
+#### L3とナノビームの比較
+
+図5は、設計をパーセル因子一定の線を引いた $Q$–$V$ マップに置いたものです。ナノビームは、$Q$ と $F_P$ のどちらでも2〜3桁上回ります。モード体積は同程度(0.6–1.1 $(\lambda/n)^3$)なので、差を決めるのは $Q$ です。
+
+<Figure src={fig5} alt="モード体積0.3から3に対するQの両対数マップで、パーセル因子1e2から1e5の一定線が点線で引かれている。L3はQ 3e3、V 1.1付近、McCutcheonのナノビームはQ 2e5、V 0.6、自作のナノビームはQ 1e6から6e6、V 1.0から1.65にある。白抜きの星印はQ 5.5e4、V 0.55の測定されたSiNナノビームを示す。" caption="Q–V マップ。点線:パーセル因子一定 F_P = 0.076 Q/V。印:最終的なL3、再現した McCutcheon のナノビーム(s = 105 nm)、637 nmへの再調整前後の自作ナノビーム(自作設計の Q は桁の値)。白抜きの星印:最良の測定されたSiNナノビーム(Khan ら 2011)。Q は測定値、V はその論文が作製した設計について示すシミュレーション値。測定されたSiNスラブ共振器は V が示されていないため載せていない。sin_cavity/notebooks/03より。" number={5} />
+
+| | L3(2次元スラブ) | ナノビーム |
+|---|---|---|
+| Q(シミュレーション) | 3.0×10³ | 2.2×10⁵(McCutcheon)– ~10⁶–10⁷(段階的テーパー) |
+| V ((λ/n)³) | 1.1 | 0.6 – ≈ 1 |
+| $F_P$(理想的なエミッタ) | ≈ 200 | ≈ 3×10⁴ – ~10⁵–10⁶ |
+| ±5 nmの誤差での Q | 1.8–4.6×10³ | 9×10⁴ – > 10⁶ |
+| SiNでの測定値(文献) | 1.5–3.4×10³ | 5.5×10⁴ |
+
+可視域のSiNでエミッタと結合するなら、ナノビームが適した共振器です。L3は、高い $Q$ よりも、2次元のプラットフォーム、頑健な $Q$、2次元フォトニック結晶回路との結合が重要な場面で有用です。これに対しシリコンでは、スラブ共振器は $Q \sim 10^6$ に達します。これがNodaのレビューで扱われている領域です。[^noda]
+
+#### 理論とシミュレーションの比較
+
+| 予測 | シミュレーション |
+|---|---|
+| 屈折率が低い → 面内ギャップが小さく、ライトコーンでの損失が増える | SiNのギャップは16 %以下、ずらしなしのL3は Q ≈ 510 |
+| 端の穴のずらしは包絡線をなだらかにして Q を上げるが、V は増える | Q 5.1×10² → 3.0×10³、V 0.78 → 1.13 |
+| 段階的な(ガウス型の)包絡線はライトコーンを避ける | 段階的なナノビームで Q ~ 10⁶–10⁷ |
+| $F_P = 0.076\,Q/V$ | L3 ≈ 200、ナノビーム ≈ 3×10⁴(再現)から ~10⁵–10⁶ |
+| 報告された構造の再現 | ピーク Q は6 %以内、V は0.01–0.02 $(\lambda/n)^3$ 以内 |
+
+このような共振器は、トポロジカルフォトニクスにもつながります。トポロジカルなエッジモードのカイラルな点に置いたエミッタは、エッジに沿って一方向に発光し、指向的な量子インターフェースへの道になります。[トポロジカルフォトニック結晶](/blog/topological-photonic-crystals/)を参照してください。
+
+### コードとデータ
+
+- スラブのバンドギャップ、ナノビームのバンド端とミラー強度:[`sin_cavity/notebooks/01_bands_and_mirrors.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/sin_cavity/notebooks/01_bands_and_mirrors.ipynb)
+- L3共振器、導波モード展開法によるスクリーニング、最終設計と耐性:[`sin_cavity/notebooks/02_l3_cavity.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/sin_cavity/notebooks/02_l3_cavity.ipynb)
+- ナノビームの再現、自作のテーパー、耐性と比較:[`sin_cavity/notebooks/03_nanobeam_cavity.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/sin_cavity/notebooks/03_nanobeam_cavity.ipynb)
+- シミュレーションモジュール:[`phc_cavity.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/phc_cavity.py)
+- 図1–5は、保存済みデータから同リポジトリの `scripts/blog_figures/purcell_cavities.py` で作成しました。シミュレーションは再実行していません。
+
+---
+
+## References / 参考文献
+
+[^noda]: S. Noda, M. Fujita and T. Asano, "Spontaneous-emission control by photonic crystals and nanocavities," *Nature Photonics* **1**, 449–458 (2007). [doi:10.1038/nphoton.2007.141](https://doi.org/10.1038/nphoton.2007.141)
+[^lodahlrmp]: P. Lodahl, S. Mahmoodian and S. Stobbe, "Interfacing single photons and single quantum dots with photonic nanostructures," *Reviews of Modern Physics* **87**, 347–400 (2015). [doi:10.1103/RevModPhys.87.347](https://doi.org/10.1103/RevModPhys.87.347)
+[^purcell]: E. M. Purcell, "Spontaneous emission probabilities at radio frequencies," *Physical Review* **69**, 681 (1946) (abstract, Proceedings of the American Physical Society).
+[^yablonovitch]: E. Yablonovitch, "Inhibited spontaneous emission in solid-state physics and electronics," *Physical Review Letters* **58**, 2059–2062 (1987). [doi:10.1103/PhysRevLett.58.2059](https://doi.org/10.1103/PhysRevLett.58.2059)
+[^akahane]: Y. Akahane, T. Asano, B.-S. Song and S. Noda, "High-Q photonic nanocavity in a two-dimensional photonic crystal," *Nature* **425**, 944–947 (2003). [doi:10.1038/nature02063](https://doi.org/10.1038/nature02063)
+[^song]: B.-S. Song, S. Noda, T. Asano and Y. Akahane, "Ultra-high-Q photonic double-heterostructure nanocavity," *Nature Materials* **4**, 207–210 (2005). [doi:10.1038/nmat1320](https://doi.org/10.1038/nmat1320)
+[^minkov]: M. Minkov and V. Savona, "Automated optimization of photonic crystal slab cavities," *Scientific Reports* **4**, 5124 (2014). [doi:10.1038/srep05124](https://doi.org/10.1038/srep05124)
+[^srinivasan]: K. Srinivasan and O. Painter, "Momentum space design of high-Q photonic crystal optical cavities," *Optics Express* **10**, 670 (2002). [doi:10.1364/OE.10.000670](https://doi.org/10.1364/OE.10.000670)
+[^mccutcheon]: M. W. McCutcheon and M. Lončar, "Design of a silicon nitride photonic crystal nanocavity with a Quality factor of one million for coupling to a diamond nanocrystal," *Optics Express* **16**, 19136 (2008). [doi:10.1364/OE.16.019136](https://doi.org/10.1364/OE.16.019136)
+[^quan]: Q. Quan and M. Lončar, "Deterministic design of wavelength scale, ultra-high Q photonic crystal nanobeam cavities," *Optics Express* **19**, 18529 (2011). [doi:10.1364/OE.19.018529](https://doi.org/10.1364/OE.19.018529)
+[^khan]: M. Khan, T. Babinec, M. W. McCutcheon, P. Deotare and M. Lončar, "Fabrication and characterization of high-quality-factor silicon nitride nanobeam cavities," *Optics Letters* **36**, 421 (2011). [doi:10.1364/OL.36.000421](https://doi.org/10.1364/OL.36.000421)
+[^barth]: M. Barth, J. Kouba, J. Stingl, B. Löchel and O. Benson, "Modification of visible spontaneous emission with silicon nitride photonic crystal nanocavities," *Optics Express* **15**, 17231 (2007). [doi:10.1364/OE.15.017231](https://doi.org/10.1364/OE.15.017231)
+[^yoshie]: T. Yoshie, A. Scherer, J. Hendrickson, G. Khitrova, H. M. Gibbs, G. Rupper, C. Ell, O. B. Shchekin and D. G. Deppe, "Vacuum Rabi splitting with a single quantum dot in a photonic crystal nanocavity," *Nature* **432**, 200–203 (2004). [doi:10.1038/nature03119](https://doi.org/10.1038/nature03119)

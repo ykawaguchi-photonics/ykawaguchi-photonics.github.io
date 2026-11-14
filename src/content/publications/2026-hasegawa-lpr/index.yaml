@@ -1,0 +1,32 @@
+title: "Millimeter-Scale Single-Layer RGB Achromatic Metalens via Time-Simultaneity-Free Design"
+authors:
+  - "Atsushi Hasegawa"
+  - "Kosuke Nishiura"
+  - "Keisuke Ozawa"
+  - "Yuki Abe"
+  - "Yuma Kawaguchi"
+  - "Mineki Taoka"
+  - "Takeshi Yamagishi"
+  - "Kentaro Iwami"
+year: 2026
+date: "2026-11-11"
+venue: "Laser & Photonics Reviews"
+venueShort: "Laser Photonics Rev."
+pages: "e72174"
+type: "journal"
+doi: "10.1002/lpor.72174"
+abstract: "Compact and high-performance optical components are essential for miniaturizing next-generation imaging and display systems. While metalenses offer a promising ultrathin alternative to refractive optics, scaling up achromatic metalenses is fundamentally hindered by the trade-off between aperture size and operational bandwidth. In this study, we propose a time-simultaneity-free (TSF) approach that strategically abandons temporal simultaneity. By introducing wavelength-dependent DC phase biases into the target phase profiles, we reframe the design as a global phase-space alignment problem, enabling simultaneous phase matching across the red, green, and blue (RGB) wavelengths. Crucially, our theoretical scaling analysis reveals that the multi-wavelength phase efficiency asymptotically converges to a stable lower bound in the large-aperture regime, indicating the potential for macroscopic scalability. Based on this mechanism, we experimentally demonstrate a single-layer, polarization-insensitive silicon nitride metalens with a diameter of 1 mm and a numerical aperture of 0.1. The fabricated device achieves near-diffraction-limited focusing with Strehl ratios of 0.80, 0.97, and 0.95 at 450, 532, and 633 nm, respectively, while tightly bounding focal-length deviations. Furthermore, high-fidelity, full-color imaging of test targets and graphics is successfully demonstrated using a commercial CMOS image sensor. These results provide a highly scalable, application-driven paradigm for macroscopic multi-wavelength metasurface optics."
+areas:
+  - "metalens-flat-optics"
+  - "metasurfaces"
+tags:
+  - "metalens"
+  - "achromatic"
+  - "RGB"
+  - "silicon nitride"
+featured: false
+selfRole: "co"
+
+# Optional figure: put an image in this folder and uncomment.
+# image: ./figure.png
+# imageAlt: "Describe what the figure shows"

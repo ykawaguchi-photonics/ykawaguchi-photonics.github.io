@@ -1,0 +1,744 @@
+---
+title: "Topological Photonic Crystals"
+description: "A topological photonic crystal guides light along domain walls set by band topology. Berry phase, Chern number, spin-Hall and valley-Hall crystals, and design."
+date: 2026-11-11
+category: technical-notes
+tags: [topological photonics, photonic crystal, Berry phase, valley-Hall, spin-Hall, edge states, Meep, MPB]
+areas: [topological-photonics, silicon-photonics]
+draft: false
+---
+
+import Figure from "@/components/Figure.astro";
+import Term from "@/components/Term.astro";
+import Glossary from "@/components/Glossary.astro";
+import Def from "@/components/Def.astro";
+import Symbols from "@/components/Symbols.astro";
+import Callout from "@/components/Callout.astro";
+import PoincareSphere from "@/components/PoincareSphere.astro";
+import fig1 from "./fig1_unit_cells.png";
+import fig3 from "./fig3_bulk_bands.png";
+import fig4 from "./fig4_edge_bands.png";
+import fig5 from "./fig5_one_way.png";
+import fig6 from "./fig6_coupling.png";
+
+**Language:** [English](#english) · [日本語](#日本語)
+
+## English
+
+A **topological photonic crystal** is a periodic optical structure whose band structure carries a global, integer-valued property — a topological invariant — so that the boundary between two crystals with different invariants is guaranteed to support guided <Term id="en-edge" n={1}>edge states</Term> inside the band gap. Those edge states can be made to travel in one direction for a given internal "spin" of the light, and to pass sharp bends with little reflection. Topological photonics brings these ideas, first found for electrons in the quantum Hall effect, to light.[^ozawa][^lu]
+
+<Glossary>
+<Def id="en-edge" n={1} term="Edge state (boundary mode)">
+A wave that is bound to the boundary between two materials and propagates along it, while it decays into both materials on either side. In a photonic crystal an edge state has a frequency inside the band gap of the surrounding crystals, so it cannot leak into them.
+</Def>
+</Glossary>
+
+### Overview
+
+#### Why the boundary matters
+
+An ordinary waveguide confines light by total internal reflection or by a defect line in a photonic crystal. Its mode can be reflected by a bend or a fabrication defect into the backward-travelling mode at the same frequency. A topological edge state is different in one key respect: its existence follows from the bulk crystals on both sides, not from the details of the boundary. As long as the two crystals keep their band gap and their different invariants, some edge state must cross the gap — even if the boundary is bent, disordered or deformed.
+
+This has made topological photonics attractive for:
+
+- **robust routing** of light around sharp corners in compact circuits;[^he][^shalaev]
+- **chiral interfaces to quantum emitters**, where an emitter's circular polarization decides the direction it emits into the edge mode;[^barik][^lodahl]
+- **lasers and resonators** whose modes are set by the domain-wall topology rather than by a fixed cavity shape.
+
+It is worth saying up front what topology does *not* do. In the all-dielectric crystals used on silicon chips, the protection relies on a crystal symmetry, and real structures break it slightly: backscattering is suppressed, not forbidden, and in slab geometries some edge states radiate out of the plane.[^rosiek] The useful view is that topology guarantees *existence* and supplies well-defined internal degrees of freedom, while *performance* still has to be designed.
+
+#### Two all-dielectric routes
+
+The first photonic topological insulators used magneto-optical materials and a magnetic field to break time-reversal symmetry, at microwave frequencies.[^haldane][^wang] On a chip, magnetic bias is impractical, so two all-dielectric designs dominate. Both start from a honeycomb lattice of holes or rods, which behaves like graphene for light: its bands touch at conical points called <Term id="en-dirac" n={2}>Dirac points</Term>. Perturbing the honeycomb in two different ways opens a gap with different topological character (Fig. 1):
+
+- **Spin-Hall (Wu–Hu) crystals.** Groups of six holes ("clusters") are shrunk toward or expanded away from the centre of each hexagonal cell.[^wuhu][^barik] Shrunken clusters give an ordinary (trivial) gap; expanded clusters give an inverted, topological one.
+- **Valley-Hall crystals.** The two holes of the honeycomb's primitive cell are made unequal, which breaks inversion symmetry and opens the Dirac points at the corners K and K′ of the Brillouin zone.[^ma][^he][^shalaev]
+
+<Figure src={fig1} alt="Four tiled maps of a silicon slab with triangular air holes. First, a honeycomb of six-hole clusters with equal spacing; second, the clusters shrunk toward each cell centre; third, the clusters expanded outward; fourth, a lattice of alternating small and large inverted triangles." caption="TE (air-hole) unit cells, tiled. From left: the honeycomb limit (gapless), shrunken clusters (trivial spin-Hall crystal), expanded clusters (topological spin-Hall crystal), and the valley-Hall crystal with unequal triangles. Dark: silicon (ε = 11.7); white: air. Spin-Hall lengths in a0, valley-Hall lengths in a = a0/√3; at 1550 nm, a0 = 632 nm. Drawn with the geometry module of topological/notebooks/01." number={1} size="wide" />
+
+<Glossary>
+<Def id="en-dirac" n={2} term="Dirac point">
+A point in the band structure where two bands touch with a linear (cone-shaped) dispersion, $\omega - \omega_D \propto \pm|\mathbf{k}-\mathbf{k}_D|$. Any perturbation that breaks the symmetry protecting the touching opens a gap there; how the gap opens decides the topology.
+</Def>
+</Glossary>
+
+### Theory
+
+#### Photonic crystals and band gaps
+
+A <Term id="en-phc" n={3}>photonic crystal</Term> has a permittivity that repeats with a lattice period. Its modes are not plane waves but <Term id="en-bloch" n={4}>Bloch modes</Term>: a plane wave multiplied by a function with the lattice period.
+
+$$
+\mathbf{H}_{n\mathbf{k}}(\mathbf{r}) = e^{i\mathbf{k}\cdot\mathbf{r}}\,\mathbf{u}_{n\mathbf{k}}(\mathbf{r})
+$$
+
+<Symbols>
+
+- $\mathbf{H}_{n\mathbf{k}}$ — magnetic field of the Bloch mode of band $n$ (A/m)
+- $\mathbf{k}$ — Bloch wavevector (rad/µm), restricted to the first Brillouin zone
+- $\mathbf{u}_{n\mathbf{k}}$ — cell-periodic part of the mode (same period as the lattice)
+- $n$ — band index (1, 2, 3, … in order of frequency)
+
+</Symbols>
+
+Plotting the mode frequencies $\omega_n(\mathbf{k})$ along the edges of the <Term id="en-bz" n={5}>Brillouin zone</Term> gives the band structure. A frequency range with no mode for any $\mathbf{k}$ is a **band gap**: light at those frequencies cannot propagate in the crystal, just as electrons cannot in an insulator. A complete gap needs strong index contrast, which is why these crystals are made of silicon (ε = 11.7) and air. In two dimensions the field splits into two polarizations: **TE** (in-plane E, out-of-plane $H_z$), which is the relevant case for air holes in a silicon slab, and **TM** (out-of-plane $E_z$), relevant for rods.
+
+<Glossary>
+<Def id="en-phc" n={3} term="Photonic crystal">
+A material whose refractive index varies periodically on the scale of the wavelength (here a silicon slab perforated by a lattice of holes). Multiple scattering from the periodic structure forbids some frequency ranges: the band gaps.
+</Def>
+<Def id="en-bloch" n={4} term="Bloch mode">
+An eigenmode of a periodic structure. It is the product of a plane wave $e^{i\mathbf{k}\cdot\mathbf{r}}$ and a function with the period of the lattice; $\mathbf{k}$ is its crystal momentum.
+</Def>
+<Def id="en-bz" n={5} term="Brillouin zone">
+The set of distinct Bloch wavevectors. Wavevectors that differ by a reciprocal-lattice vector describe the same mode, so all of k-space folds into this one cell. For a triangular lattice it is a hexagon with centre Γ, edge midpoints M and corners K and K′.
+</Def>
+</Glossary>
+
+#### Geometric phase: an intuition from polarization
+
+A topological invariant is built from a **geometric phase**: the phase a state picks up when it is carried slowly around a closed loop of parameters, on top of the ordinary (dynamic) phase. Polarization gives the clearest picture. Every polarization state of light is a point on the <Term id="en-poincare" n={6}>Poincaré sphere</Term>: linear polarizations lie on the equator and the two circular polarizations at the poles (Fig. 2). Pancharatnam showed that when light is taken through a sequence of polarization states that closes a loop on the sphere, it returns with an extra phase equal to half the solid angle the loop encloses.[^pancharatnam]
+
+$$
+|\gamma_\mathrm{g}| = \frac{\Omega_\mathrm{s}}{2}
+$$
+
+<Symbols>
+
+- $\gamma_\mathrm{g}$ — geometric (Pancharatnam–Berry) phase (rad); its sign depends on the direction of the loop
+- $\Omega_\mathrm{s}$ — solid angle enclosed by the loop on the unit Poincaré sphere (sr)
+
+</Symbols>
+
+The loop in Fig. 2 passes through both poles along a great circle and encloses a hemisphere, $\Omega_\mathrm{s} = 2\pi$, so the light acquires a phase $\pi$: it returns to its starting polarization with its sign flipped. A loop that retraces its own path encloses no area and gives no geometric phase. This phase depends only on the *shape* of the path, not on how fast it is traversed — the defining feature of a geometric phase.
+
+<PoincareSphere number={2} caption="The Poincaré sphere (drag to rotate). A polarization that is carried around the great circle through both circular poles (thick loop) encloses a hemisphere, Ω = 2π, and returns with a geometric phase of π. Which circular handedness sits at which pole is a convention, so the poles are labelled by the sign of the Stokes parameter S3. Front parts are drawn solid, back parts faint." ariaLabel="Rotatable Poincaré sphere; a loop runs along a great circle through both circular poles and both linear points on the equator." />
+
+<Glossary>
+<Def id="en-poincare" n={6} term="Poincaré sphere">
+A unit sphere on which each point represents one polarization state, with coordinates given by the normalized Stokes parameters $S_1, S_2, S_3$. Linear polarizations lie on the equator, the two circular polarizations at the poles, and elliptical ones in between.
+</Def>
+</Glossary>
+
+#### Berry phase, Berry curvature and the Chern number
+
+Berry generalized this to any quantum or classical state that depends on parameters.[^berry] For a photonic band the parameter is the Bloch wavevector $\mathbf{k}$, and the state is the cell-periodic field $\mathbf{u}_{n\mathbf{k}}$. Carrying $\mathbf{k}$ around a closed loop $C$ in the Brillouin zone gives the **Berry phase**:
+
+$$
+\begin{aligned}
+\mathbf{A}_n(\mathbf{k}) &= i\,\langle \mathbf{u}_{n\mathbf{k}} | \nabla_{\mathbf{k}}\, \mathbf{u}_{n\mathbf{k}} \rangle \\
+\gamma_n(C) &= \oint_C \mathbf{A}_n(\mathbf{k})\cdot d\mathbf{k}
+\end{aligned}
+$$
+
+<Symbols>
+
+- $\mathbf{A}_n$ — Berry connection of band $n$ (µm); real when $\mathbf{u}$ is normalized
+- $\langle\cdot|\cdot\rangle$ — inner product over one unit cell, $\int_\text{cell} \mathbf{u}^*\cdot\mathbf{u}'\,d^2r$ for the H-field of a non-magnetic crystal, with $\langle \mathbf{u}_{n\mathbf{k}}|\mathbf{u}_{n\mathbf{k}}\rangle = 1$
+- $\gamma_n(C)$ — Berry phase acquired around the loop $C$ (rad)
+
+</Symbols>
+
+The factor $i$ makes $\mathbf{A}_n$ real, because $\langle u|\nabla u\rangle$ is purely imaginary for a normalized state. By Stokes' theorem the loop integral equals the flux of the **Berry curvature** through the enclosed area. Integrated over the whole Brillouin zone, that flux is always $2\pi$ times an integer, the **Chern number**:
+
+$$
+\begin{aligned}
+\Omega_n(\mathbf{k}) &= \frac{\partial A_{n,y}}{\partial k_x} - \frac{\partial A_{n,x}}{\partial k_y} \\
+C_n &= \frac{1}{2\pi}\int_\text{BZ} \Omega_n(\mathbf{k})\, d^2k
+\end{aligned}
+$$
+
+<Symbols>
+
+- $\Omega_n$ — Berry curvature of band $n$ (µm²); it plays the role of a magnetic field in k-space
+- $C_n$ — Chern number of band $n$ (integer, dimensionless)
+- $d^2k$ — area element of the Brillouin zone (µm⁻²)
+
+</Symbols>
+
+The Chern number is an integer because the Brillouin zone is a closed surface (a torus): the phase of $\mathbf{u}$ must wind a whole number of times around its boundary. It can only change if the gap closes, so it cannot be altered by a small deformation of the crystal. Under time-reversal symmetry, $\Omega_n(\mathbf{k}) = -\Omega_n(-\mathbf{k})$, so the total Chern number of every band is zero. **A nonzero total Chern number therefore requires broken time-reversal symmetry** — in photonics, a magneto-optical material in a magnetic field.[^haldane][^wang] The all-dielectric crystals of this article keep time-reversal symmetry and have zero total Chern number; their topology lives in a refined invariant, defined for each pseudospin or each valley separately, as the next sections show.
+
+#### Bulk–edge correspondence
+
+The reason invariants matter is the <Term id="en-bec" n={7}>bulk–edge correspondence</Term>: at a boundary between two gapped crystals, the net number of edge states crossing the shared gap equals the difference of their invariants.[^ozawa]
+
+$$
+N_\rightarrow - N_\leftarrow = C_\text{left} - C_\text{right}
+$$
+
+<Symbols>
+
+- $N_\rightarrow$, $N_\leftarrow$ — number of edge states travelling in each direction along the wall at a given frequency in the gap
+- $C_\text{left}$, $C_\text{right}$ — sum of the Chern numbers of all bands below the gap, for the crystal on each side
+
+</Symbols>
+
+The left side is a property of the boundary; the right side is a property of the two bulk crystals far from it. No local change at the boundary can change the bulk, so the net number of one-way edge states is fixed. For the time-reversal-symmetric crystals below, the same counting holds separately for each pseudospin or each valley, which is why their edge states come in counter-propagating pairs that carry opposite pseudospin or valley.
+
+<Glossary>
+<Def id="en-bec" n={7} term="Bulk–edge correspondence">
+The rule that ties the edge states at an interface to the topological invariants of the bulk materials on either side: the number of edge states (counted with their direction) equals the change of invariant across the interface.
+</Def>
+</Glossary>
+
+#### Dirac points, mass and the valley-Hall crystal
+
+Both all-dielectric routes are easiest to understand near a Dirac point. Close to it, the two touching bands behave like a two-level system described by an effective Hamiltonian with a "velocity" and a "mass":
+
+$$
+\begin{aligned}
+\hat H(\mathbf{q}) &= v\,(q_x\,\hat\sigma_x + q_y\,\hat\sigma_y) + m\,\hat\sigma_z \\
+\omega_\pm(\mathbf{q}) &= \omega_D \pm \sqrt{v^2 q^2 + m^2}
+\end{aligned}
+$$
+
+<Symbols>
+
+- $\mathbf{q}$ — wavevector measured from the Dirac point (rad/µm)
+- $v$ — slope of the Dirac cone, a group velocity (µm/s)
+- $m$ — mass term (rad/s); the gap is $2|m|$
+- $\hat\sigma_{x,y,z}$ — Pauli matrices acting on the two degenerate states at the Dirac point
+- $\omega_D$ — frequency of the Dirac point (rad/s)
+
+</Symbols>
+
+Integrating the Berry curvature of this model over the neighbourhood of one Dirac point gives half an integer, $\pm\tfrac12\,\mathrm{sgn}(m)$. In the **valley-Hall** crystal the two Dirac points sit at K and K′, and unequal holes give them masses of opposite sign. Each <Term id="en-valley" n={8}>valley</Term> then carries a valley Chern number $C_K = -C_{K'} = \tfrac12\mathrm{sgn}(m)$, and the total is zero.[^ma] Swapping the large and small holes flips the sign of $m$. Across a wall between the two arrangements the valley Chern number changes by 1 in each valley, so each valley contributes one edge state, and the two travel in opposite directions (Fig. 4, right).
+
+A sign change of the mass across a line always binds a state to that line; this is the Jackiw–Rebbi mechanism behind all the edge states here. Its decay length into the bulk follows from the model: with a gap $\Delta\omega = 2|m|$, the field decays as
+
+$$
+|\mathbf{H}| \propto e^{-|y|/\ell}, \qquad \ell = \frac{v}{|m|} = \frac{2v}{\Delta\omega}
+$$
+
+<Symbols>
+
+- $y$ — distance from the domain wall (µm)
+- $\ell$ — decay length of the edge state into the crystal (µm)
+- $\Delta\omega$ — width of the bulk gap (rad/s)
+
+</Symbols>
+
+A narrow gap therefore gives an edge state that spreads over many rows of the crystal. This is a design rule, not a detail: the crystal on each side of the wall must be several decay lengths thick, or the edge state leaks out through it.
+
+<Glossary>
+<Def id="en-valley" n={8} term="Valley">
+One of the two inequivalent corners K and K′ of the hexagonal Brillouin zone, around which the bands of a honeycomb lattice form Dirac cones. Like the spin of an electron, the valley index is a binary label that can be used to carry information, as long as nothing scatters a state from one valley to the other.
+</Def>
+</Glossary>
+
+#### Pseudospin and the spin-Hall crystal
+
+In the **spin-Hall** design of Wu and Hu, the honeycomb is described with a larger, hexagonal unit cell holding six holes.[^wuhu] Folding the Brillouin zone moves both Dirac points to Γ, where four bands meet. The six-hole cluster acts like an artificial atom whose modes look like atomic orbitals: two dipole-like (p) modes and two quadrupole-like (d) modes. Their circular combinations
+
+$$
+p_\pm = \frac{p_x \pm i\,p_y}{\sqrt2}, \qquad d_\pm = \frac{d_{x^2-y^2} \pm i\,d_{xy}}{\sqrt2}
+$$
+
+<Symbols>
+
+- $p_x, p_y$ — the two dipole-like cluster modes
+- $d_{x^2-y^2}, d_{xy}$ — the two quadrupole-like cluster modes
+- $\pm$ — sense of rotation of the field around the cluster, the <Term id="en-pseudospin" n={9}>pseudospin</Term>
+
+</Symbols>
+
+carry orbital angular momentum of either sense, which plays the role of an electron's spin. The C6 symmetry of the lattice provides a pseudo-time-reversal operation that pairs them, the analogue of Kramers pairs.[^wuhu] Shrinking the clusters keeps the p modes below the d modes at Γ, an ordinary order: a trivial gap. Expanding them pushes the d modes below the p modes: the bands are **inverted**, which is a sign change of the mass term, and the gap is topological. In this structure the mass is set by the ratio of the lattice constant $a_0$ to the cluster radius $R$: $a_0/R = 3$ is the gapless honeycomb, $a_0/R > 3$ shrinks the clusters (trivial) and $a_0/R < 3$ expands them (topological). A wall between shrunken and expanded crystals carries a pair of edge states with opposite pseudospin travelling in opposite directions — helical edge states (Fig. 4, left).
+
+<Glossary>
+<Def id="en-pseudospin" n={9} term="Pseudospin">
+A two-valued internal degree of freedom of a photonic mode that behaves like the spin of an electron, here the clockwise or counter-clockwise rotation of the field around a six-hole cluster. In the far field it shows up as left- or right-circular polarization.
+</Def>
+</Glossary>
+
+#### Directional coupling from a circular source
+
+Because the edge state's pseudospin or valley is locked to its direction, a circularly polarized source can send light along the wall in one direction only. The mechanism is local: by reciprocity, a point dipole couples to the edge mode in proportion to the mode's field at the dipole, and the backward mode has the complex-conjugate field. A circular dipole therefore splits its power with a directionality equal to the local degree of circular polarization of the edge mode:[^lodahl]
+
+$$
+C(\mathbf{r}_0) = \frac{2\,\mathrm{Im}\!\left(F_x^* F_y\right)}{|F_x|^2 + |F_y|^2}
+$$
+
+<Symbols>
+
+- $C$ — predicted directionality, from −1 (all one way) to +1 (all the other way)
+- $\mathbf{r}_0$ — position of the dipole (µm)
+- $F_x, F_y$ — in-plane field of the edge mode at $\mathbf{r}_0$ (E for TE, H for TM)
+
+</Symbols>
+
+$|C|$ is close to 1 at many points of the unit cell but changes sign over a fraction of a lattice constant, so the direction depends on where the emitter sits, not only on its handedness. At a point of twofold rotation symmetry on the wall, $C = 0$ and the emission splits evenly. A good emitter position needs both $|C|\approx 1$ and a strong field, so that little power goes into the bulk.
+
+#### What protection does and does not guarantee
+
+- **What is guaranteed:** edge states cross the shared gap at any wall between topologically different crystals, whatever the wall's shape, as long as the gap stays open.
+- **What is approximate:** suppression of backscattering. For spin-Hall crystals it relies on the C6 symmetry, which any wall or bend breaks slightly; the two edge bands then anticross with a small gap at Γ (visible in Fig. 4). For valley-Hall crystals it relies on the absence of scattering between K and K′, which short-range defects and sharp features can provide. Strong backscattering has been measured in valley-Hall waveguides.[^rosiek]
+- **What 2D models leave out:** in a real silicon slab, modes above the light line radiate out of the plane. Spin-Hall edge states sit near Γ, above the light line, and radiate; valley-Hall edge states sit near K, below the light line, and are guided.[^he][^shalaev]
+
+<Callout kind="design" title="What this means for design">
+
+- **Cluster radius $a_0/R$ (spin-Hall)** → sets which side is topological ($a_0/R<3$) and the gap width, which grows with $|a_0/R - 3|$. *Why:* it sets the size and sign of the p–d mass at Γ.
+- **Hole-size difference (valley-Hall)** → sets the gap width at K. *Why:* the difference breaks inversion symmetry; the mass grows with the difference.
+- **Gap width** → sets how far the edge state spreads, $\ell = 2v/\Delta\omega$. *Why:* a narrow gap gives a weak mass and a slowly decaying edge state, so it needs more rows.
+- **Rows on each side of the wall** → size them in wavelengths, as several decay lengths. *Why:* too few rows let the edge state leak through the crystal.
+- **Lattice constant** → places the gap at the target wavelength, $\lambda = a/f$ for a gap at normalized frequency $f$ (in $c/a$). *Why:* Maxwell's equations scale with size.
+- **Wall termination (zigzag, bearded, armchair)** → sets the edge dispersion and the mode's mirror symmetry. *Why:* the boundary decides where the edge band sits in the gap and which external modes can couple to it.
+- **Choice of route** → valley-Hall for low-loss guiding in slabs (below the light line); spin-Hall where pseudospin-to-circular-polarization mapping in the far field is useful. *Why:* the edge states sit at different points of the Brillouin zone.
+
+</Callout>
+
+### Simulation
+
+#### The model used here
+
+The simulations use the MPB eigensolver for band structures and Meep (FDTD) for walls and waveguides, in **2D**, with non-dispersive silicon (ε = 11.7) and air. This bulk-silicon index follows Wu and Hu's paper; it is not the effective index of a slab, so out-of-plane radiation is absent and the numbers are an idealized reference, not predictions for a fabricated slab. Spin-Hall lengths are in $a_0$ and valley-Hall lengths in $a = a_0/\sqrt3$; at 1550 nm, $a_0$ = 632 nm and $a$ = 367 nm.
+
+#### Bulk bands: band inversion and the gaps
+
+Fig. 3 shows the TE bands. For the spin-Hall crystals each point is coloured by whether its field around the cluster is p-like or d-like. At Γ the doublet just below the gap is p-like for the shrunken cluster and d-like for the expanded one: the band inversion. The valley-Hall crystal opens its gap at K instead.
+
+<Figure src={fig3} alt="Three band diagrams along Gamma, M, K, Gamma with a gray gap band. Left and centre, spin-Hall: points coloured from purple (d-like) to yellow (p-like); at Gamma the bands below the gap are yellow on the left and purple in the centre. Right, valley-Hall: bands open a gap at K." caption="TE bulk bands. Left and centre: spin-Hall crystals with shrunken (trivial) and expanded (topological) clusters, coloured by the p-like share of the field; the order of p and d at Γ is reversed. Right: valley-Hall crystal, gap at K. Gray: the gap shared by the two crystals of a pair. MPB, from topological/notebooks/01." number={3} size="wide" />
+
+The gaps shared by the two crystals of each pair (MPB, notebook 01) are:
+
+| crystal | gap centre | relative gap |
+|---|---|---|
+| spin-Hall rods (TM) | 0.4624 c/a0 | 4.1 % |
+| spin-Hall holes (TE) | 0.4078 c/a0 | 3.1 % |
+| valley-Hall holes (TE) | 0.2385 c/a | 6.8 % |
+| valley-Hall rods (TM) | 0.2671 c/a | 8.7 % |
+
+The spin-Hall rods reproduce Wu and Hu's gap centre (0.4629 c/a0 from their paper) to 0.1 %. The valley-Hall gaps are about twice as wide, so their edge states are more tightly confined.
+
+#### Edge states at the domain wall
+
+A ribbon — a strip of crystal that is periodic along the wall — gives the band structure of the wall (Fig. 4). The bulk crystals have no states inside the shared gap, so every state that appears there is bound to a wall. Outside the gap, wall and bulk states cannot be told apart reliably, so all states are drawn the same way. For the spin-Hall wall two edge bands cross near Γ: the pseudospin pair, with a small anticrossing because the wall breaks C6 symmetry. For the valley-Hall wall the edge band crosses the gap near the projected K point. The edge states travel at group velocities of 0.11–0.21 c.
+
+<Figure src={fig4} alt="Two ribbon band diagrams versus kx with a gray gap band. Left, spin-Hall: two bands cross the gap in an X shape at kx = 0. Right, valley-Hall: bands cross the gap near kx = plus and minus one third." caption="Ribbon band structures, all states drawn the same way; gray band: shared bulk gap of the two crystals. Every state inside the gray band is a wall state. Left: spin-Hall wall, with the pseudospin pair crossing near Γ. Right: valley-Hall wall, with edge bands crossing the gap near the projected K and K′ points (dotted). The ribbon is periodic, so it also contains a second, wrap-around wall. MPB, from topological/notebooks/01." number={4} size="wide" />
+
+#### One-way excitation with a circular dipole
+
+Each wall was driven by a circularly polarized dipole at a point where the edge mode is circularly polarized *and* strong, chosen from the map of $C$ and the field strength. Fig. 5 shows the valley-Hall hole wall: the S+ dipole sends nearly all its power to the left, and the S− dipole to the right.
+
+<Figure src={fig5} alt="Two log-scale intensity maps of a photonic crystal with a horizontal domain wall. Top: a star marks the source; bright intensity runs along the wall to the left only. Bottom: the same with intensity running to the right only." caption="One-way excitation of the valley-Hall hole wall at 0.2368 c/a. |E|² on a log scale; star: the circularly polarized dipole; white outlines: the holes. Top: S+ dipole; bottom: S− dipole. Power fractions through the left and right planes are in the panel titles. Meep 2D, from topological/notebooks/02." number={5} size="wide" />
+
+The directionality $\eta = (P_\text{left}-P_\text{right})/(P_\text{left}+P_\text{right})$ on all four walls is:
+
+| wall | η |
+|---|---|
+| spin-Hall rods (TM) | 0.994 |
+| spin-Hall holes (TE) | 0.990 |
+| valley-Hall holes (TE) | 0.997 |
+| valley-Hall rods (TM) | 0.998 |
+
+At most 1.2 % of the power leaves through the bulk. Moving the same dipole to the centre of a hexagon on the valley-Hall wall, a point of twofold symmetry, makes the split exactly even ($\eta \approx 10^{-4}$), as $C = 0$ predicts. Two lessons from the notebook carry over to design: the direction is set by the sign of $C$ at the source point, not by the wall alone, and a drive frequency close to a gap edge needs many rows (the spin-Hall hole wall needed 20 rows per side, at a fine 64/a0 grid, to converge).
+
+#### Feeding the edge state from a strip waveguide
+
+To be useful, an edge state has to be fed from an ordinary waveguide. Notebook 03 couples a 500 nm silicon strip (TE) into the spin-Hall and valley-Hall hole walls. The crystals were retuned so that both have the same relative gap (about 4.3 %), so that the two walls are compared on equal terms. The coupling is counted as all forward power across the full height, because inside the shared gap only the edge state carries power forward.[^vakulenko]
+
+Two physical effects set the starting point:
+
+- A **butt joint** couples poorly: 11.9 % for the spin-Hall wall, with 63 % reflected, and 0.01 % for the valley-Hall wall.
+- The valley-Hall result is a **symmetry rule**, not a poor match. The bearded valley-Hall wall is mirror-symmetric and its TE edge mode is odd about the wall line, while the fundamental strip mode is even, so any mirror-symmetric joint cannot couple them. The strip's first odd mode does couple (28 %).
+
+A 2.5 µm square transition designed by adjoint [topology optimization](/blog/inverse-design-topology-optimization-adjoint/), with a 100 nm length scale, breaks that symmetry. It raises the band-averaged coupling to 87.0 % (spin-Hall) and 83.6 % (valley-Hall) over a ≈ 19–20 nm band (Fig. 6).
+
+<Figure src={fig6} alt="Two panels of forward power versus wavelength from about 1480 to 1630 nm. In each, a blue butt-joint curve stays low, under 0.2 for spin-Hall and near zero for valley-Hall, while a green optimized curve peaks near 0.9 inside a shaded operating band." caption="Forward power in the wall (full height) per incident strip-mode power, for a butt joint (blue) and a topology-optimized 2.5 µm transition (green). Gray: shared bulk gap; cyan: operating band (spin-Hall 1556–1575 nm, valley-Hall 1539–1559 nm). Meep 2D, ε = 11.7; from topological/notebooks/03." number={6} size="wide" />
+
+<Callout kind="note" title="Assumptions">
+
+These are 2D results with the bulk silicon index: no out-of-plane radiation, no substrate, no sidewall roughness. The transitions were optimized in one run each. Removing every feature below 100 nm keeps 79.6 % for the spin-Hall design but collapses the valley-Hall design to 5 %, which relies on fine silicon bridges. Published 3D devices are therefore not directly comparable; for example, a strip-to-valley-Hall coupler optimized in a 220 nm SOI slab reached 96.3 % in 3D simulation and 94.2 % measured.[^shi]
+
+</Callout>
+
+#### Theory versus simulation
+
+| prediction | simulation |
+|---|---|
+| p/d band inversion between shrunken and expanded clusters (Wu–Hu) | inverted order at Γ; gap centre of the rods within 0.1 % of Wu and Hu |
+| valley-Hall gap opens at K | gap at K, 6.8 % (holes) and 8.7 % (rods) |
+| one edge band per pseudospin/valley crosses the gap | edge bands cross every shared gap |
+| a circular dipole couples one way where $|C|\approx 1$ | η = 0.990–0.998; η ≈ 0 at a C2 point |
+| narrow gap → wide edge state (ℓ = 2v/Δω) | narrow-gap walls need 20 rows or more per side |
+| even strip mode cannot enter an odd edge mode at a symmetric joint | butt coupling 0.01 % (valley-Hall) |
+
+For the next step from waveguides to emitters, see [Purcell Effect and Photonic-Crystal Nanocavities](/blog/purcell-effect-photonic-crystal-cavities/), which explains how a cavity changes an emitter's emission rate. A broader review of the field is Ozawa et al.[^ozawa]
+
+### Code and data
+
+- Unit cells, bulk bands and edge bands: [`topological/notebooks/01_unit_cells_and_edge_states.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/topological/notebooks/01_unit_cells_and_edge_states.ipynb)
+- Domain walls and circular-dipole excitation: [`topological/notebooks/02_domain_walls_chiral_excitation.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/topological/notebooks/02_domain_walls_chiral_excitation.ipynb)
+- Strip-to-wall coupling and topology optimization: [`topological/notebooks/03_waveguide_to_topological_coupling.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/topological/notebooks/03_waveguide_to_topological_coupling.ipynb)
+- Simulation module: [`topological_pc.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/topological_pc.py)
+- Figures 1–6 were made from the saved data with `scripts/blog_figures/topological_photonics.py` in the same repository; no simulation was re-run.
+
+---
+
+## 日本語
+
+**トポロジカルフォトニック結晶**とは、バンド構造が大域的な整数値の性質(トポロジカル不変量)をもつ周期的な光学構造です。不変量の異なる2つの結晶の境界には、バンドギャップの中に導波する<Term id="ja-edge" n={1}>エッジ状態</Term>が必ず現れます。このエッジ状態は、光の内部自由度(「スピン」)ごとに一方向へ進むように設計でき、急な曲がりもほとんど反射せずに通過できます。トポロジカルフォトニクスは、電子の量子ホール効果で見つかったこれらの考え方を光に持ち込む分野です。[^ozawa][^lu]
+
+<Glossary title="用語">
+<Def id="ja-edge" n={1} term="エッジ状態(境界モード)">
+2つの物質の境界に束縛され、境界に沿って伝わる波です。両側の物質の中へは減衰します。フォトニック結晶では、エッジ状態の周波数は周囲の結晶のバンドギャップの中にあるため、結晶の中へは漏れ出せません。
+</Def>
+</Glossary>
+
+### 概要
+
+#### なぜ境界が重要か
+
+通常の導波路は、全反射やフォトニック結晶の線欠陥で光を閉じ込めます。そのモードは、曲がりや作製欠陥によって、同じ周波数の後ろ向きのモードへ反射されることがあります。トポロジカルなエッジ状態は、1つの重要な点で異なります。その存在が、境界の細部ではなく、両側のバルク結晶から決まることです。2つの結晶がバンドギャップと互いに異なる不変量を保つ限り、境界が曲がっていても、乱れていても、変形していても、ギャップを横切るエッジ状態が必ず存在します。
+
+このため、トポロジカルフォトニクスは次の用途で注目されてきました。
+
+- 小型回路で急な角を回る、**頑健な光の経路**[^he][^shalaev]
+- **量子エミッタへのカイラルな接続**。エミッタの円偏光が、エッジモードへ放出する向きを決めます[^barik][^lodahl]
+- 決まった共振器形状ではなく、ドメイン壁のトポロジーでモードが決まる**レーザーや共振器**
+
+トポロジーが「しないこと」も先に述べておきます。シリコンチップで使う全誘電体の結晶では、保護は結晶の対称性に頼っており、実際の構造はそれをわずかに破ります。後方散乱は抑えられますが、禁止されるわけではありません。スラブ構造では、面外へ放射するエッジ状態もあります。[^rosiek] トポロジーは*存在*を保証し、明確な内部自由度を与えますが、*性能*は依然として設計する必要がある、と捉えるのが実用的です。
+
+#### 全誘電体による2つの方法
+
+最初のフォトニックトポロジカル絶縁体は、磁気光学材料と磁場で時間反転対称性を破るもので、マイクロ波帯で実現されました。[^haldane][^wang] チップ上で磁場をかけるのは現実的でないため、全誘電体の2つの設計が主流です。どちらも、穴またはロッドのハニカム格子から出発します。ハニカム格子は光にとってのグラフェンのようにふるまい、バンドが<Term id="ja-dirac" n={2}>ディラック点</Term>と呼ばれる円錐状の点で接します。このハニカムを2通りに変形すると、トポロジカルな性質の異なるギャップが開きます(図1)。
+
+- **スピンホール型(Wu–Hu)結晶。** 6つの穴からなる組(クラスター)を、六角形セルの中心へ縮めるか、中心から広げます。[^wuhu][^barik] 縮めたクラスターは通常の(トリビアルな)ギャップを、広げたクラスターは反転したトポロジカルなギャップを与えます。
+- **バレーホール型結晶。** ハニカムの基本セルにある2つの穴の大きさを変えます。これにより空間反転対称性が破れ、ブリルアンゾーンの角KとK′にあるディラック点にギャップが開きます。[^ma][^he][^shalaev]
+
+<Figure src={fig1} alt="三角形の空気穴をもつシリコンスラブを敷き詰めた4枚の図。1枚目は等間隔の6穴クラスターのハニカム、2枚目はクラスターを各セル中心へ縮めたもの、3枚目は外へ広げたもの、4枚目は大小の逆三角形が交互に並ぶ格子。" caption="TE(空気穴)の単位セルを敷き詰めた図。左から、ハニカム極限(ギャップなし)、縮めたクラスター(トリビアルなスピンホール結晶)、広げたクラスター(トポロジカルなスピンホール結晶)、大きさの異なる三角形をもつバレーホール結晶。濃い色:シリコン(ε = 11.7)、白:空気。スピンホールの長さは a0、バレーホールの長さは a = a0/√3 単位で、1550 nmでは a0 = 632 nm。topological/notebooks/01 の形状モジュールで描画。" number={1} size="wide" />
+
+<Glossary title="用語">
+<Def id="ja-dirac" n={2} term="ディラック点">
+バンド構造の中で、2本のバンドが線形(円錐状)の分散 $\omega - \omega_D \propto \pm|\mathbf{k}-\mathbf{k}_D|$ で接する点です。接点を守っている対称性を破る摂動を加えると、そこにギャップが開きます。ギャップの開き方がトポロジーを決めます。
+</Def>
+</Glossary>
+
+### 理論
+
+#### フォトニック結晶とバンドギャップ
+
+<Term id="ja-phc" n={3}>フォトニック結晶</Term>では、誘電率が格子の周期で繰り返されます。そのモードは平面波ではなく<Term id="ja-bloch" n={4}>ブロッホモード</Term>で、平面波に格子と同じ周期をもつ関数を掛けたものです。式は次のようになります。
+
+$$
+\mathbf{H}_{n\mathbf{k}}(\mathbf{r}) = e^{i\mathbf{k}\cdot\mathbf{r}}\,\mathbf{u}_{n\mathbf{k}}(\mathbf{r})
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{H}_{n\mathbf{k}}$ — バンド $n$ のブロッホモードの磁場(A/m)
+- $\mathbf{k}$ — ブロッホ波数ベクトル(rad/µm)。第1ブリルアンゾーン内に限る
+- $\mathbf{u}_{n\mathbf{k}}$ — モードのセル周期部分(格子と同じ周期)
+- $n$ — バンド番号(周波数の低い順に1, 2, 3, …)
+
+</Symbols>
+
+<Term id="ja-bz" n={5}>ブリルアンゾーン</Term>の縁に沿ってモードの周波数 $\omega_n(\mathbf{k})$ を描いたものがバンド構造です。どの $\mathbf{k}$ にもモードがない周波数範囲が**バンドギャップ**です。電子が絶縁体の中を伝わらないのと同じように、その周波数の光は結晶の中を伝わりません。完全なギャップには大きな屈折率差が必要なので、これらの結晶はシリコン(ε = 11.7)と空気で作ります。2次元では、場は2つの偏光に分かれます。面内のEと面外の $H_z$ をもつ**TE**(シリコンスラブの空気穴で重要)と、面外の $E_z$ をもつ**TM**(ロッドで重要)です。
+
+<Glossary title="用語">
+<Def id="ja-phc" n={3} term="フォトニック結晶">
+屈折率が波長程度のスケールで周期的に変わる材料です(ここでは、穴の格子をあけたシリコンスラブ)。周期構造による多重散乱で、ある周波数範囲の伝搬が禁止されます。これがバンドギャップです。
+</Def>
+<Def id="ja-bloch" n={4} term="ブロッホモード">
+周期構造の固有モードです。平面波 $e^{i\mathbf{k}\cdot\mathbf{r}}$ と格子の周期をもつ関数の積で表され、$\mathbf{k}$ が結晶運動量です。
+</Def>
+<Def id="ja-bz" n={5} term="ブリルアンゾーン">
+互いに区別できるブロッホ波数ベクトルの集合です。逆格子ベクトルだけ異なる波数ベクトルは同じモードを表すので、k空間全体はこの1つのセルに折りたためます。三角格子では、中心Γ、辺の中点M、角KとK′をもつ六角形になります。
+</Def>
+</Glossary>
+
+#### 幾何学的位相:偏光からの直感
+
+トポロジカル不変量は**幾何学的位相**から作られます。これは、パラメータの閉じたループに沿って状態をゆっくり運んだとき、通常の(動的な)位相に加えて得られる位相です。偏光を使うと最もわかりやすく描けます。光の偏光状態はすべて<Term id="ja-poincare" n={6}>ポアンカレ球</Term>上の1点で表され、直線偏光は赤道上に、2つの円偏光は極にあります(図2)。Pancharatnamは、光を球上で閉じたループをなす一連の偏光状態に通すと、ループが囲む立体角の半分に等しい余分な位相を得て戻ることを示しました。[^pancharatnam] 式は次のようになります。
+
+$$
+|\gamma_\mathrm{g}| = \frac{\Omega_\mathrm{s}}{2}
+$$
+
+<Symbols title="記号">
+
+- $\gamma_\mathrm{g}$ — 幾何学的(Pancharatnam–Berry)位相(rad)。符号はループの向きで決まる
+- $\Omega_\mathrm{s}$ — 単位ポアンカレ球上でループが囲む立体角(sr)
+
+</Symbols>
+
+図2のループは大円に沿って両極を通り、半球を囲むので $\Omega_\mathrm{s} = 2\pi$ です。光は位相 $\pi$ を得て、符号が反転した状態で出発点の偏光に戻ります。同じ経路を引き返すループは面積を囲まないので、幾何学的位相は生じません。この位相は経路の*形*だけで決まり、たどる速さにはよりません。これが幾何学的位相を特徴づける性質です。
+
+<PoincareSphere number={2} caption="ポアンカレ球(ドラッグで回転できます)。両方の円偏光の極を通る大円(太いループ)に沿って運ばれた偏光は、半球(Ω = 2π)を囲み、幾何学的位相πを得て戻る。どちらの円偏光をどちらの極に置くかは慣習なので、極はストークスパラメータ S3 の符号で示した。手前側を実線、奥側を薄く描いている。" labels={{ s3p: "円偏光(S3 = +1)", s3m: "逆回りの円偏光(S3 = −1)", s1p: "直線偏光(S1 = +1)", s1m: "直線偏光(S1 = −1)", hint: "ドラッグで回転・ダブルクリックで元に戻る" }} ariaLabel="回転できるポアンカレ球。両方の円偏光の極と赤道上の2つの直線偏光の点を通る大円に沿ってループが描かれている。" />
+
+<Glossary title="用語">
+<Def id="ja-poincare" n={6} term="ポアンカレ球">
+各点が1つの偏光状態を表す単位球で、座標は規格化したストークスパラメータ $S_1, S_2, S_3$ です。直線偏光は赤道上に、2つの円偏光は極に、楕円偏光はその間にあります。
+</Def>
+</Glossary>
+
+#### ベリー位相、ベリー曲率、チャーン数
+
+Berryはこれを、パラメータに依存する任意の量子的・古典的な状態へ一般化しました。[^berry] フォトニックバンドではパラメータはブロッホ波数ベクトル $\mathbf{k}$、状態はセル周期部分の場 $\mathbf{u}_{n\mathbf{k}}$ です。ブリルアンゾーン内の閉じたループ $C$ に沿って $\mathbf{k}$ を運ぶと、**ベリー位相**は次のようになります。
+
+$$
+\begin{aligned}
+\mathbf{A}_n(\mathbf{k}) &= i\,\langle \mathbf{u}_{n\mathbf{k}} | \nabla_{\mathbf{k}}\, \mathbf{u}_{n\mathbf{k}} \rangle \\
+\gamma_n(C) &= \oint_C \mathbf{A}_n(\mathbf{k})\cdot d\mathbf{k}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{A}_n$ — バンド $n$ のベリー接続(µm)。$\mathbf{u}$ を規格化すると実数になる
+- $\langle\cdot|\cdot\rangle$ — 単位セル1つにわたる内積。非磁性結晶のH場では $\int_\text{cell} \mathbf{u}^*\cdot\mathbf{u}'\,d^2r$ で、$\langle \mathbf{u}_{n\mathbf{k}}|\mathbf{u}_{n\mathbf{k}}\rangle = 1$
+- $\gamma_n(C)$ — ループ $C$ を1周して得るベリー位相(rad)
+
+</Symbols>
+
+規格化した状態では $\langle u|\nabla u\rangle$ は純虚数なので、係数 $i$ によって $\mathbf{A}_n$ は実数になります。ストークスの定理により、ループ積分は囲まれた領域を貫く**ベリー曲率**の流束に等しくなります。ブリルアンゾーン全体で積分すると、この流束は必ず $2\pi$ の整数倍になり、その整数が**チャーン数**です。式は次のようになります。
+
+$$
+\begin{aligned}
+\Omega_n(\mathbf{k}) &= \frac{\partial A_{n,y}}{\partial k_x} - \frac{\partial A_{n,x}}{\partial k_y} \\
+C_n &= \frac{1}{2\pi}\int_\text{BZ} \Omega_n(\mathbf{k})\, d^2k
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $\Omega_n$ — バンド $n$ のベリー曲率(µm²)。k空間での磁場の役割を果たす
+- $C_n$ — バンド $n$ のチャーン数(整数、無次元)
+- $d^2k$ — ブリルアンゾーンの面積要素(µm⁻²)
+
+</Symbols>
+
+ブリルアンゾーンは閉じた面(トーラス)なので、$\mathbf{u}$ の位相はその縁に沿って整数回だけ巻きつく必要があり、そのためチャーン数は整数になります。チャーン数はギャップが閉じない限り変わらないので、結晶を少し変形しても変えられません。時間反転対称性があると $\Omega_n(\mathbf{k}) = -\Omega_n(-\mathbf{k})$ なので、各バンドのチャーン数の合計はゼロになります。**したがって、合計のチャーン数がゼロでないためには、時間反転対称性を破る必要があります。** フォトニクスでは、磁場中の磁気光学材料がこれにあたります。[^haldane][^wang] 本記事の全誘電体結晶は時間反転対称性を保ち、合計のチャーン数はゼロです。後の節で示すように、そのトポロジーは擬スピンごと、またはバレーごとに定義された、より細かい不変量にあります。
+
+#### バルク–エッジ対応
+
+不変量が重要なのは、<Term id="ja-bec" n={7}>バルク–エッジ対応</Term>があるためです。ギャップをもつ2つの結晶の境界では、共通のギャップを横切るエッジ状態の正味の数が、両者の不変量の差に等しくなります。[^ozawa] 式は次のようになります。
+
+$$
+N_\rightarrow - N_\leftarrow = C_\text{left} - C_\text{right}
+$$
+
+<Symbols title="記号">
+
+- $N_\rightarrow$, $N_\leftarrow$ — ギャップ内のある周波数で、壁に沿ってそれぞれの向きに進むエッジ状態の数
+- $C_\text{left}$, $C_\text{right}$ — 各側の結晶について、ギャップより下の全バンドのチャーン数の和
+
+</Symbols>
+
+左辺は境界の性質で、右辺は境界から離れた2つのバルク結晶の性質です。境界での局所的な変更ではバルクは変わらないので、一方向エッジ状態の正味の数は固定されます。以下の時間反転対称な結晶では、同じ数え方が擬スピンごと、またはバレーごとに成り立ちます。そのため、それらのエッジ状態は逆向きに進む対をなし、それぞれ逆の擬スピンやバレーをもちます。
+
+<Glossary title="用語">
+<Def id="ja-bec" n={7} term="バルク–エッジ対応">
+界面のエッジ状態を、両側のバルク材料のトポロジカル不変量に結びつける規則です。向きを考慮して数えたエッジ状態の数は、界面をまたぐ不変量の変化に等しくなります。
+</Def>
+</Glossary>
+
+#### ディラック点、質量、バレーホール結晶
+
+全誘電体の2つの方法は、どちらもディラック点の近くで考えると理解しやすくなります。その近くでは、接する2本のバンドは「速度」と「質量」をもつ有効ハミルトニアンで表される2準位系のようにふるまいます。式は次のようになります。
+
+$$
+\begin{aligned}
+\hat H(\mathbf{q}) &= v\,(q_x\,\hat\sigma_x + q_y\,\hat\sigma_y) + m\,\hat\sigma_z \\
+\omega_\pm(\mathbf{q}) &= \omega_D \pm \sqrt{v^2 q^2 + m^2}
+\end{aligned}
+$$
+
+<Symbols title="記号">
+
+- $\mathbf{q}$ — ディラック点から測った波数ベクトル(rad/µm)
+- $v$ — ディラックコーンの傾き。群速度にあたる(µm/s)
+- $m$ — 質量項(rad/s)。ギャップは $2|m|$
+- $\hat\sigma_{x,y,z}$ — ディラック点で縮退した2状態に作用するパウリ行列
+- $\omega_D$ — ディラック点の周波数(rad/s)
+
+</Symbols>
+
+このモデルのベリー曲率を1つのディラック点の近傍で積分すると、半整数 $\pm\tfrac12\,\mathrm{sgn}(m)$ になります。**バレーホール**結晶では2つのディラック点がKとK′にあり、穴の大きさを変えると、両者に逆符号の質量が生じます。各<Term id="ja-valley" n={8}>バレー</Term>はバレーチャーン数 $C_K = -C_{K'} = \tfrac12\mathrm{sgn}(m)$ をもち、合計はゼロです。[^ma] 大きい穴と小さい穴を入れ替えると $m$ の符号が反転します。2つの配置の間の壁では、各バレーでバレーチャーン数が1だけ変わるので、各バレーが1つずつエッジ状態をもち、それらは逆向きに進みます(図4右)。
+
+質量の符号が線をまたいで反転すると、必ずその線に束縛された状態が生じます。これがジャッキウ–レビ機構で、ここで扱うエッジ状態すべての背景にあります。バルクへの減衰長もこのモデルから決まります。ギャップを $\Delta\omega = 2|m|$ とすると、場は次のように減衰します。
+
+$$
+|\mathbf{H}| \propto e^{-|y|/\ell}, \qquad \ell = \frac{v}{|m|} = \frac{2v}{\Delta\omega}
+$$
+
+<Symbols title="記号">
+
+- $y$ — ドメイン壁からの距離(µm)
+- $\ell$ — エッジ状態の結晶への減衰長(µm)
+- $\Delta\omega$ — バルクギャップの幅(rad/s)
+
+</Symbols>
+
+したがって、ギャップが狭いと、エッジ状態は結晶の多くの列に広がります。これは細部ではなく設計規則です。壁の両側の結晶を減衰長の数倍の厚さにしないと、エッジ状態は結晶を通り抜けて漏れ出します。
+
+<Glossary title="用語">
+<Def id="ja-valley" n={8} term="バレー">
+六角形のブリルアンゾーンの互いに等価でない2つの角KとK′のことで、ハニカム格子のバンドはそのまわりでディラックコーンを作ります。電子のスピンと同じように、バレー番号は情報を運べる2値のラベルです。ただし、状態を一方のバレーから他方へ散乱させるものがない場合に限ります。
+</Def>
+</Glossary>
+
+#### 擬スピンとスピンホール結晶
+
+Wu と Hu の**スピンホール**型の設計では、ハニカムを、6つの穴を含むより大きな六角形の単位セルで表します。[^wuhu] ブリルアンゾーンを折りたたむと、両方のディラック点がΓに移り、4本のバンドがそこで接します。6穴のクラスターは人工原子のようにふるまい、そのモードは原子軌道に似ています。双極子的な(p)モードが2つ、四重極子的な(d)モードが2つです。それらの円的な組み合わせは次のようになります。
+
+$$
+p_\pm = \frac{p_x \pm i\,p_y}{\sqrt2}, \qquad d_\pm = \frac{d_{x^2-y^2} \pm i\,d_{xy}}{\sqrt2}
+$$
+
+<Symbols title="記号">
+
+- $p_x, p_y$ — 双極子的な2つのクラスターモード
+- $d_{x^2-y^2}, d_{xy}$ — 四重極子的な2つのクラスターモード
+- $\pm$ — クラスターのまわりで場が回る向き。<Term id="ja-pseudospin" n={9}>擬スピン</Term>
+
+</Symbols>
+
+これらは左右どちらかの向きの軌道角運動量をもち、電子のスピンの役割を果たします。格子のC6対称性が、それらを対にする擬時間反転操作を与えます。これはクラマース対に相当します。[^wuhu] クラスターを縮めると、Γではpモードがdモードより下にとどまる通常の順序となり、トリビアルなギャップになります。広げるとdモードがpモードより下に押し下げられ、バンドが**反転**します。これは質量項の符号反転にあたり、ギャップはトポロジカルになります。この構造では、質量は格子定数 $a_0$ とクラスター半径 $R$ の比で決まります。$a_0/R = 3$ がギャップのないハニカム、$a_0/R > 3$ がクラスターを縮めたもの(トリビアル)、$a_0/R < 3$ が広げたもの(トポロジカル)です。縮めた結晶と広げた結晶の間の壁には、逆の擬スピンをもち逆向きに進むエッジ状態の対が現れます。これがヘリカルなエッジ状態です(図4左)。
+
+<Glossary title="用語">
+<Def id="ja-pseudospin" n={9} term="擬スピン">
+フォトニックモードがもつ2値の内部自由度で、電子のスピンのようにふるまいます。ここでは、6穴クラスターのまわりを場が時計回りに回るか反時計回りに回るかです。遠方場では、左右の円偏光として現れます。
+</Def>
+</Glossary>
+
+#### 円偏光源からの指向性結合
+
+エッジ状態の擬スピンやバレーは進む向きと固定されているので、円偏光の光源は、壁に沿って一方向にだけ光を送れます。この仕組みは局所的です。相反性により、点双極子は双極子の位置でのモードの場に比例してエッジモードと結合し、後ろ向きのモードは複素共役の場をもちます。したがって円偏光の双極子は、エッジモードの局所的な円偏光度に等しい指向性でパワーを分けます。[^lodahl] 式は次のようになります。
+
+$$
+C(\mathbf{r}_0) = \frac{2\,\mathrm{Im}\!\left(F_x^* F_y\right)}{|F_x|^2 + |F_y|^2}
+$$
+
+<Symbols title="記号">
+
+- $C$ — 予測される指向性。−1(すべて一方向)から+1(すべて逆方向)まで
+- $\mathbf{r}_0$ — 双極子の位置(µm)
+- $F_x, F_y$ — $\mathbf{r}_0$ でのエッジモードの面内の場(TEではE、TMではH)
+
+</Symbols>
+
+$|C|$ は単位セル内の多くの点で1に近くなりますが、格子定数の数分の1の距離で符号を変えます。そのため、向きはエミッタの円偏光の向きだけでなく、エミッタを置く位置でも決まります。壁上の2回回転対称の点では $C = 0$ となり、放射は均等に分かれます。よいエミッタ位置には、$|C|\approx 1$ であることと場が強いことの両方が必要です。そうすればバルクへ入るパワーが少なくなります。
+
+#### 保護が保証すること、しないこと
+
+- **保証されること:** トポロジカルに異なる結晶の間の壁には、ギャップが開いている限り、壁の形によらず、共通のギャップを横切るエッジ状態が現れます。
+- **近似的にしか成り立たないこと:** 後方散乱の抑制です。スピンホール結晶ではC6対称性に頼っていますが、壁や曲がりはこれをわずかに破り、2本のエッジバンドはΓで小さなギャップをもって反交差します(図4で見えます)。バレーホール結晶ではKとK′の間の散乱がないことに頼っていますが、短距離の欠陥や鋭い形状はこの散乱を起こし得ます。バレーホール導波路で強い後方散乱が測定された例もあります。[^rosiek]
+- **2次元モデルが含まないこと:** 実際のシリコンスラブでは、ライトラインより上のモードは面外へ放射します。スピンホールのエッジ状態はΓ付近のライトラインより上にあって放射し、バレーホールのエッジ状態はK付近のライトラインより下にあって導波されます。[^he][^shalaev]
+
+<Callout kind="design" title="設計上の意味">
+
+- **クラスター半径 $a_0/R$(スピンホール)** → どちら側がトポロジカルか($a_0/R<3$)とギャップ幅を決めます。ギャップは $|a_0/R - 3|$ とともに広がります。*理由:* Γでのp–d質量の大きさと符号を決めるからです。
+- **穴の大きさの差(バレーホール)** → Kでのギャップ幅を決めます。*理由:* 差が空間反転対称性を破り、質量は差とともに大きくなります。
+- **ギャップ幅** → エッジ状態の広がり $\ell = 2v/\Delta\omega$ を決めます。*理由:* ギャップが狭いと質量が弱く、エッジ状態の減衰が遅いため、より多くの列が必要です。
+- **壁の両側の列数** → 波長単位で、減衰長の数倍にとります。*理由:* 列が少なすぎると、エッジ状態は結晶を通り抜けて漏れます。
+- **格子定数** → ギャップを目標波長に置きます。規格化周波数 $f$($c/a$ 単位)のギャップに対して $\lambda = a/f$。*理由:* マクスウェル方程式は大きさに対してスケールするからです。
+- **壁の終端(ジグザグ、ひげ状、アームチェア)** → エッジの分散とモードの鏡映対称性を決めます。*理由:* 境界によって、エッジバンドがギャップ内のどこに来るか、外部のどのモードと結合できるかが決まります。
+- **方式の選択** → スラブで低損失に導波するならバレーホール(ライトラインより下)。擬スピンと遠方場の円偏光の対応を使うならスピンホール。*理由:* エッジ状態がブリルアンゾーンの異なる点にあるからです。
+
+</Callout>
+
+### シミュレーション
+
+#### 本記事のモデル
+
+バンド構造には固有値ソルバーMPBを、壁と導波路にはMeep(FDTD)を使い、**2次元**で、分散のないシリコン(ε = 11.7)と空気で計算しています。このバルクシリコンの屈折率はWu と Hu の論文に合わせたもので、スラブの実効屈折率ではありません。したがって面外への放射はなく、数値は理想化した基準であって、作製したスラブの予測ではありません。スピンホールの長さは $a_0$、バレーホールの長さは $a = a_0/\sqrt3$ 単位で、1550 nmでは $a_0$ = 632 nm、$a$ = 367 nmです。
+
+#### バルクバンド:バンド反転とギャップ
+
+図3はTEバンドです。スピンホール結晶では、クラスターのまわりの場がp的かd的かで各点を色分けしています。Γのギャップのすぐ下の2重縮退は、縮めたクラスターではp的、広げたクラスターではd的です。これがバンド反転です。バレーホール結晶は、代わりにKでギャップを開きます。
+
+<Figure src={fig3} alt="Γ、M、K、Γに沿った3枚のバンド図で、灰色の帯がギャップを示す。左と中央はスピンホールで、点は紫(d的)から黄(p的)に色分けされ、Γでギャップの下のバンドは左で黄、中央で紫。右はバレーホールで、Kでギャップが開く。" caption="TEのバルクバンド。左と中央:クラスターを縮めた(トリビアル)スピンホール結晶と広げた(トポロジカル)スピンホール結晶で、場のp的な割合で色分けした。Γでのpとdの順序が反転している。右:バレーホール結晶で、ギャップはK。灰色:対をなす2つの結晶の共通ギャップ。MPB、topological/notebooks/01より。" number={3} size="wide" />
+
+各対の2つの結晶に共通のギャップ(MPB、ノートブック01)は次のとおりです。
+
+| 結晶 | ギャップ中心 | 相対ギャップ |
+|---|---|---|
+| スピンホール、ロッド(TM) | 0.4624 c/a0 | 4.1 % |
+| スピンホール、穴(TE) | 0.4078 c/a0 | 3.1 % |
+| バレーホール、穴(TE) | 0.2385 c/a | 6.8 % |
+| バレーホール、ロッド(TM) | 0.2671 c/a | 8.7 % |
+
+スピンホールのロッドは、Wu と Hu のギャップ中心(論文から求めた 0.4629 c/a0)を0.1 %以内で再現しています。バレーホールのギャップは約2倍広いので、エッジ状態はより強く閉じ込められます。
+
+#### ドメイン壁のエッジ状態
+
+壁に沿って周期的な結晶の帯(リボン)を計算すると、壁のバンド構造が得られます(図4)。バルク結晶には共通ギャップの中に状態がないので、そこに現れる状態はすべて壁に束縛された状態です。ギャップの外では壁の状態とバルクの状態を確実には区別できないため、すべての状態を同じ形で描いています。スピンホールの壁では、2本のエッジバンドがΓ付近で交差します。これが擬スピンの対で、壁がC6対称性を破るため小さな反交差があります。バレーホールの壁では、エッジバンドは射影したK点の近くでギャップを横切ります。エッジ状態の群速度は 0.11–0.21 c です。
+
+<Figure src={fig4} alt="kxに対する2枚のリボンバンド図で、灰色の帯がギャップを示す。左はスピンホールで、2本のバンドがkx = 0でX字状にギャップを横切る。右はバレーホールで、バンドがkx = ±1/3付近でギャップを横切る。" caption="リボンのバンド構造。すべての状態を同じ形で描いた。灰色の帯:2つの結晶の共通バルクギャップで、その中の状態はすべて壁の状態。左:スピンホールの壁で、擬スピンの対がΓ付近で交差する。右:バレーホールの壁で、エッジバンドは射影したK点とK′点(点線)の近くでギャップを横切る。リボンは周期的なので、反対側の境界にもう1つの壁を含む。MPB、topological/notebooks/01より。" number={4} size="wide" />
+
+#### 円偏光の双極子による一方向励起
+
+各壁を、エッジモードが円偏光で*かつ*強い点に置いた円偏光の双極子で励起しました。位置は $C$ と場の強さの分布から選んでいます。図5はバレーホールの穴の壁です。S+の双極子はほぼすべてのパワーを左へ、S−の双極子は右へ送ります。
+
+<Figure src={fig5} alt="水平なドメイン壁をもつフォトニック結晶の対数スケール強度分布2枚。上:星印が光源を示し、明るい強度が壁に沿って左にだけ延びる。下:同様に、強度が右にだけ延びる。" caption="バレーホールの穴の壁の一方向励起(0.2368 c/a)。対数スケールの|E|²。星印:円偏光の双極子、白い輪郭:穴。上:S+の双極子、下:S−の双極子。左右の面を通るパワーの割合を各パネルの題に示した。Meep 2次元、topological/notebooks/02より。" number={5} size="wide" />
+
+4つの壁すべての指向性 $\eta = (P_\text{left}-P_\text{right})/(P_\text{left}+P_\text{right})$ は次のとおりです。
+
+| 壁 | η |
+|---|---|
+| スピンホール、ロッド(TM) | 0.994 |
+| スピンホール、穴(TE) | 0.990 |
+| バレーホール、穴(TE) | 0.997 |
+| バレーホール、ロッド(TM) | 0.998 |
+
+バルクを通って逃げるパワーは最大でも1.2 %です。同じ双極子をバレーホールの壁の六角形の中心(2回対称の点)へ移すと、$C = 0$ の予測どおり、パワーは正確に均等に分かれます($\eta \approx 10^{-4}$)。ノートブックから設計へ持ち帰れる教訓が2つあります。向きは壁だけでなく光源の位置での $C$ の符号で決まること、そしてギャップ端に近い駆動周波数では多くの列が必要なことです(スピンホールの穴の壁は、収束に片側20列と64/a0の細かい格子を要しました)。
+
+#### ストリップ導波路からのエッジ状態への給電
+
+エッジ状態を役立てるには、通常の導波路から給電する必要があります。ノートブック03では、幅500 nmのシリコンストリップ(TE)をスピンホールとバレーホールの穴の壁へ結合しています。2つの壁を同じ条件で比べるため、結晶を調整して、どちらも同じ相対ギャップ(約4.3 %)にしています。結合は高さ全体での前方パワーで数えています。共通のギャップ内では、前方へパワーを運ぶのはエッジ状態だけだからです。[^vakulenko]
+
+出発点は、2つの物理的な効果で決まります。
+
+- **突き合わせ接続**は結合が弱く、スピンホールの壁で11.9 %(63 %が反射)、バレーホールの壁で0.01 %です。
+- バレーホールの結果は、整合の悪さではなく**対称性の規則**によるものです。ひげ状のバレーホールの壁は鏡映対称で、そのTEエッジモードは壁の線に対して奇です。一方、ストリップの基本モードは偶なので、鏡映対称な接続ではどんな形でも両者を結合できません。ストリップの1次の奇モードなら結合します(28 %)。
+
+随伴法による[トポロジー最適化](/blog/inverse-design-topology-optimization-adjoint/)で設計した2.5 µm角の変換部(100 nmの長さスケール)は、この対称性を破ります。約19–20 nmの帯域での平均結合は、87.0 %(スピンホール)と83.6 %(バレーホール)に上がります(図6)。
+
+<Figure src={fig6} alt="約1480から1630 nmの波長に対する前方パワーの2枚の図。各図で、青の突き合わせ接続の曲線は低く、スピンホールでは0.2未満、バレーホールではほぼゼロ。緑の最適化した曲線は、網掛けした動作帯域の中で約0.9のピークをもつ。" caption="入射したストリップモードのパワーあたりの、壁の中の前方パワー(高さ全体)。突き合わせ接続(青)とトポロジー最適化した2.5 µmの変換部(緑)。灰色:共通のバルクギャップ、シアン:動作帯域(スピンホール 1556–1575 nm、バレーホール 1539–1559 nm)。Meep 2次元、ε = 11.7、topological/notebooks/03より。" number={6} size="wide" />
+
+<Callout kind="note" title="前提">
+
+これらはバルクシリコンの屈折率を使った2次元の結果で、面外への放射、基板、側壁の荒れを含みません。変換部の最適化はそれぞれ1回ずつです。100 nm未満の形状をすべて取り除くと、スピンホールの設計は79.6 %を保ちますが、細いシリコンの橋に頼るバレーホールの設計は5 %まで下がります。したがって、報告されている3次元デバイスとは直接比べられません。たとえば、220 nmのSOIスラブで最適化したストリップ–バレーホール結合器は、3次元シミュレーションで96.3 %、測定で94.2 %に達しています。[^shi]
+
+</Callout>
+
+#### 理論とシミュレーションの比較
+
+| 予測 | シミュレーション |
+|---|---|
+| 縮めたクラスターと広げたクラスターの間でp/dのバンドが反転する(Wu–Hu) | Γで順序が反転。ロッドのギャップ中心はWu と Hu の値と0.1 %以内で一致 |
+| バレーホールのギャップはKで開く | Kでギャップ、6.8 %(穴)と8.7 %(ロッド) |
+| 擬スピン/バレーごとに1本のエッジバンドがギャップを横切る | すべての共通ギャップをエッジバンドが横切る |
+| 円偏光の双極子は $|C|\approx 1$ の点で一方向に結合する | η = 0.990–0.998。C2対称の点では η ≈ 0 |
+| ギャップが狭い → エッジ状態が広い(ℓ = 2v/Δω) | ギャップの狭い壁では片側20列以上が必要 |
+| 対称な接続では偶のストリップモードは奇のエッジモードに入れない | 突き合わせ結合0.01 %(バレーホール) |
+
+導波路からエミッタへ進む次の段階については、共振器がエミッタの発光レートをどう変えるかを説明した[パーセル効果とフォトニック結晶ナノ共振器](/blog/purcell-effect-photonic-crystal-cavities/)を参照してください。分野全体のレビューとしては Ozawa らがあります。[^ozawa]
+
+### コードとデータ
+
+- 単位セル、バルクバンド、エッジバンド:[`topological/notebooks/01_unit_cells_and_edge_states.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/topological/notebooks/01_unit_cells_and_edge_states.ipynb)
+- ドメイン壁と円偏光の双極子による励起:[`topological/notebooks/02_domain_walls_chiral_excitation.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/topological/notebooks/02_domain_walls_chiral_excitation.ipynb)
+- ストリップから壁への結合とトポロジー最適化:[`topological/notebooks/03_waveguide_to_topological_coupling.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/topological/notebooks/03_waveguide_to_topological_coupling.ipynb)
+- シミュレーションモジュール:[`topological_pc.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/topological_pc.py)
+- 図1–6は、保存済みデータから同リポジトリの `scripts/blog_figures/topological_photonics.py` で作成しました。シミュレーションは再実行していません。
+
+---
+
+## References / 参考文献
+
+[^ozawa]: T. Ozawa, H. M. Price, A. Amo, N. Goldman, M. Hafezi, L. Lu, M. C. Rechtsman, D. Schuster, J. Simon, O. Zilberberg and I. Carusotto, "Topological photonics," *Reviews of Modern Physics* **91**, 015006 (2019). [doi:10.1103/RevModPhys.91.015006](https://doi.org/10.1103/RevModPhys.91.015006)
+[^lu]: L. Lu, J. D. Joannopoulos and M. Soljačić, "Topological photonics," *Nature Photonics* **8**, 821–829 (2014). [doi:10.1038/nphoton.2014.248](https://doi.org/10.1038/nphoton.2014.248)
+[^haldane]: F. D. M. Haldane and S. Raghu, "Possible realization of directional optical waveguides in photonic crystals with broken time-reversal symmetry," *Physical Review Letters* **100**, 013904 (2008). [doi:10.1103/PhysRevLett.100.013904](https://doi.org/10.1103/PhysRevLett.100.013904)
+[^wang]: Z. Wang, Y. Chong, J. D. Joannopoulos and M. Soljačić, "Observation of unidirectional backscattering-immune topological electromagnetic states," *Nature* **461**, 772–775 (2009). [doi:10.1038/nature08293](https://doi.org/10.1038/nature08293)
+[^wuhu]: L.-H. Wu and X. Hu, "Scheme for achieving a topological photonic crystal by using dielectric material," *Physical Review Letters* **114**, 223901 (2015). [doi:10.1103/PhysRevLett.114.223901](https://doi.org/10.1103/PhysRevLett.114.223901)
+[^ma]: T. Ma and G. Shvets, "All-Si valley-Hall photonic topological insulator," *New Journal of Physics* **18**, 025012 (2016). [doi:10.1088/1367-2630/18/2/025012](https://doi.org/10.1088/1367-2630/18/2/025012)
+[^barik]: S. Barik, A. Karasahin, C. Flower, T. Cai, H. Miyake, W. DeGottardi, M. Hafezi and E. Waks, "A topological quantum optics interface," *Science* **359**, 666–668 (2018). [doi:10.1126/science.aaq0327](https://doi.org/10.1126/science.aaq0327)
+[^he]: X.-T. He, E.-T. Liang, J.-J. Yuan, H.-Y. Qiu, X.-D. Chen, F.-L. Zhao and J.-W. Dong, "A silicon-on-insulator slab for topological valley transport," *Nature Communications* **10**, 872 (2019). [doi:10.1038/s41467-019-08881-z](https://doi.org/10.1038/s41467-019-08881-z)
+[^shalaev]: M. I. Shalaev, W. Walasik, A. Tsukernik, Y. Xu and N. M. Litchinitser, "Robust topologically protected transport in photonic crystals at telecommunication wavelengths," *Nature Nanotechnology* **14**, 31–34 (2019). [doi:10.1038/s41565-018-0297-6](https://doi.org/10.1038/s41565-018-0297-6)
+[^rosiek]: C. A. Rosiek, G. Arregui, A. Vladimirova, M. Albrechtsen, B. Vosoughi Lahijani, R. E. Christiansen and S. Stobbe, "Observation of strong backscattering in valley-Hall photonic topological interface modes," *Nature Photonics* **17**, 386–392 (2023). [doi:10.1038/s41566-023-01189-x](https://doi.org/10.1038/s41566-023-01189-x)
+[^lodahl]: P. Lodahl, S. Mahmoodian, S. Stobbe, A. Rauschenbeutel, P. Schneeweiss, J. Volz, H. Pichler and P. Zoller, "Chiral quantum optics," *Nature* **541**, 473–480 (2017). [doi:10.1038/nature21037](https://doi.org/10.1038/nature21037)
+[^pancharatnam]: S. Pancharatnam, "Generalized theory of interference, and its applications," *Proceedings of the Indian Academy of Sciences – Section A* **44**, 247–262 (1956). [doi:10.1007/BF03046050](https://doi.org/10.1007/BF03046050)
+[^berry]: M. V. Berry, "Quantal phase factors accompanying adiabatic changes," *Proceedings of the Royal Society of London A* **392**, 45–57 (1984). [doi:10.1098/rspa.1984.0023](https://doi.org/10.1098/rspa.1984.0023)
+[^vakulenko]: A. Vakulenko, S. Kiriushechkina, D. Smirnova, S. Guddala, F. Komissarenko, A. Alù, M. Allen, J. Allen and A. B. Khanikaev, "Adiabatic topological photonic interfaces," *Nature Communications* **14**, 4629 (2023). [doi:10.1038/s41467-023-40238-5](https://doi.org/10.1038/s41467-023-40238-5)
+[^shi]: Y. Shi et al., "Efficient coupling of topological photonic crystal waveguides based on transverse spin matching mechanism," *Nature Communications* **16**, 4645 (2025). [doi:10.1038/s41467-025-59941-6](https://doi.org/10.1038/s41467-025-59941-6)

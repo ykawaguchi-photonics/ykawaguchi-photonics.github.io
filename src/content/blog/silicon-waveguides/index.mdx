@@ -313,7 +313,7 @@ On a finite-difference grid, waves travel at a speed that depends on how many ce
 </Def>
 </Glossary>
 
-<Figure src={fig5} alt="Left: accumulated phase of the transmitted mode versus waveguide length from 10 to 11 micrometres at 1.35 micrometres; eleven FDTD points lie on a dashed straight line rising from 0 to about 11.4 radians. Right: effective index versus wavelength from 1.30 to 1.40 micrometres; the FDTD cutback points lie about 0.035 above the mode-solver line for the same 2D model." caption="Cutback in 2D FDTD (20 px/µm). Left: accumulated phase of S₂₁ versus waveguide length at λ = 1.35 µm, with a linear fit. Right: effective index from the phase slope at every wavelength, compared with a mode solver applied to the same 2D model. The constant offset of about 1.5 % is the FDTD grid's numerical dispersion. From notebooks/01_waveguide_baseline.ipynb, Sections 4.2b and 5." number={5} size="wide" />
+<Figure src={fig5} alt="Left: accumulated phase of the transmitted mode versus waveguide length from 10 to 11 micrometres at 1.35 micrometres; eleven FDTD points lie on a dashed straight line rising from 0 to about 11.4 radians. Right: effective index versus wavelength from 1.30 to 1.40 micrometres; the FDTD cutback points lie about 0.035 above the mode-solver line for the same 2D model." caption="Cutback in 2D FDTD (20 px/µm). Left: accumulated phase of S₂₁ versus waveguide length at λ = 1.35 µm, with a linear fit. Right: effective index from the phase slope at every wavelength, compared with a mode solver applied to the same 2D model. The constant offset of about 1.5 % is the FDTD grid's numerical dispersion. From si/notebooks/01_waveguide_baseline.ipynb, Sections 4.2b and 5." number={5} size="wide" />
 
 <Callout kind="design" title="What this means for design">
 
@@ -346,7 +346,7 @@ A silicon waveguide's behaviour comes down to its mode. Width and thickness set 
 
 ### Code and data
 
-- Straight waveguide in 2D FDTD (geometry, S-parameters, length sweep, cutback fit): [`notebooks/01_waveguide_baseline.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/01_waveguide_baseline.ipynb)
+- Straight waveguide in 2D FDTD (geometry, S-parameters, length sweep, cutback fit): [`si/notebooks/01_waveguide_baseline.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/01_waveguide_baseline.ipynb)
 - Straight waveguide in 3D FDTD (fdtdx, staircase and matched grids): [`3d/notebooks/01b_waveguide_3d_fdtdx.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/3d/notebooks/01b_waveguide_3d_fdtdx.ipynb)
 - The MPB mode solves of Figs. 1, 3 and 4 are run by `scripts/blog_figures/silicon_waveguides_data.py` and saved in `data/blog_figures/silicon_waveguides_mpb.npz`. The figures and all numbers are produced from the saved data by `scripts/blog_figures/silicon_waveguides.py` in the same repository. No new FDTD runs were needed.
 
@@ -643,7 +643,7 @@ $$
 </Def>
 </Glossary>
 
-<Figure src={fig5} alt="左:1.35マイクロメートルにおける透過モードの蓄積位相と導波路長10から11マイクロメートルの関係。11個のFDTD点が0から約11.4ラジアンまで上がる破線の直線に乗る。右:1.30から1.40マイクロメートルでの実効屈折率。FDTDのカットバックの点は、同じ2次元モデルのモードソルバの線より約0.035上にある。" caption="2次元FDTD(20 px/µm)によるカットバック。左:λ = 1.35 µmでのS₂₁の蓄積位相と導波路長の関係、および直線フィット。右:各波長の位相の傾きから求めた実効屈折率と、同じ2次元モデルに適用したモードソルバの比較。約1.5 %の一定のずれはFDTD格子の数値分散である。notebooks/01_waveguide_baseline.ipynb、4.2b節と5節より。" number={5} size="wide" />
+<Figure src={fig5} alt="左:1.35マイクロメートルにおける透過モードの蓄積位相と導波路長10から11マイクロメートルの関係。11個のFDTD点が0から約11.4ラジアンまで上がる破線の直線に乗る。右:1.30から1.40マイクロメートルでの実効屈折率。FDTDのカットバックの点は、同じ2次元モデルのモードソルバの線より約0.035上にある。" caption="2次元FDTD(20 px/µm)によるカットバック。左:λ = 1.35 µmでのS₂₁の蓄積位相と導波路長の関係、および直線フィット。右:各波長の位相の傾きから求めた実効屈折率と、同じ2次元モデルに適用したモードソルバの比較。約1.5 %の一定のずれはFDTD格子の数値分散である。si/notebooks/01_waveguide_baseline.ipynb、4.2b節と5節より。" number={5} size="wide" />
 
 <Callout kind="design" title="設計上の意味">
 
@@ -676,7 +676,7 @@ $$
 
 ### コードとデータ
 
-- 2次元FDTDによる直線導波路(形状、Sパラメータ、長さ掃引、カットバックのフィット):[`notebooks/01_waveguide_baseline.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/01_waveguide_baseline.ipynb)
+- 2次元FDTDによる直線導波路(形状、Sパラメータ、長さ掃引、カットバックのフィット):[`si/notebooks/01_waveguide_baseline.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/01_waveguide_baseline.ipynb)
 - 3次元FDTDによる直線導波路(fdtdx、階段近似の格子と構造に合わせた格子):[`3d/notebooks/01b_waveguide_3d_fdtdx.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/3d/notebooks/01b_waveguide_3d_fdtdx.ipynb)
 - 図1、3、4のMPBによるモード計算は `scripts/blog_figures/silicon_waveguides_data.py` で実行し、`data/blog_figures/silicon_waveguides_mpb.npz` に保存しました。図とすべての数値は、保存済みデータから同リポジトリの `scripts/blog_figures/silicon_waveguides.py` で作成しました。新たなFDTD計算は行っていません。
 

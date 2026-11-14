@@ -2,7 +2,7 @@
 title: "Directional Couplers"
 description: "A directional coupler moves light between two nearby waveguides by evanescent coupling. How gap, length and wavelength set its split ratio, in theory and FDTD."
 date: 2026-10-20
-updated: 2026-10-23
+updated: 2026-10-29
 category: technical-notes
 tags: [silicon photonics, directional coupler, coupled-mode theory, Meep, FDTD]
 areas: [silicon-photonics]
@@ -40,7 +40,7 @@ This makes the directional coupler one of the most common PIC components. A Mach
 
 Two waveguides approach each other through S-bends, run parallel for a **coupling length** $L$ at an edge-to-edge **gap** $g$, and separate again (Fig. 1). The designer chooses three things: the gap, the coupling length and the waveguide cross-section. The theory below explains how these choices set the splitting ratio, its wavelength dependence and its sensitivity to fabrication errors.
 
-<Figure src={fig1} alt="Top view of two waveguides that approach each other through S-bends, run parallel with a 200 nm gap for 13.71 micrometres, and separate again." caption="Geometry of the 50:50 coupler saved in the toolkit's design point: 500 nm wide waveguides, 200 nm gap, 13.71 µm straight coupling section (shaded), raised-cosine S-bends 6 µm long that open to a 2 µm port separation. Drawn from the parameters in data/design_points/coupler.yaml." number={1} size="wide" />
+<Figure src={fig1} alt="Top view of two waveguides that approach each other through S-bends, run parallel with a 200 nm gap for 13.71 micrometres, and separate again." caption="Geometry of the 50:50 coupler saved in the toolkit's design point: 500 nm wide waveguides, 200 nm gap, 13.71 µm straight coupling section (shaded), raised-cosine S-bends 6 µm long that open to a 2 µm port separation. Drawn from the parameters in si/data/design_points/coupler.yaml." number={1} size="wide" />
 
 <Glossary>
 <Def id="en-evanescent" n={1} term="Evanescent field and evanescent coupling">
@@ -239,7 +239,7 @@ A practical design sequence follows: choose the cross-section, choose a gap that
 
 #### The model used here
 
-All simulations in this article are **2D** and use an <Term id="en-eim" n={6}>effective-index</Term> description of a silicon strip waveguide.[^eim] The core index is $n_\text{core}=2.7$ (a simplified core index, lower than the TE effective index of a 220 nm silicon slab, about 2.95 at 1.35 µm, and far below bulk silicon's ≈3.45, so the 2D mode is somewhat less confined than in a real strip), the cladding is silica-like $n_\text{clad}=1.44$, the waveguides are 500 nm wide, and the materials are non-dispersive. The effective-index reduction is an approximation, and it is known to be less accurate for high-contrast silicon wires than for weakly guiding structures. The band is 1.30–1.40 µm (O-band) with a design wavelength of $\lambda_0=1.35$ µm. The polarization is Meep's 2D TE family ($H_z$ out of plane, $\mathbf{E}$ in plane), forced explicitly at every source and monitor.
+All simulations in this article are **2D** and use an <Term id="en-eim" n={6}>effective-index</Term> description of a silicon strip waveguide.[^eim] The core index is $n_\text{core}=2.7$ (a simplified core index, lower than the TE effective index of a 220 nm silicon slab, about 2.95 at 1.35 µm, and far below bulk silicon's ≈3.45, so the 2D mode is less confined than in a real strip: $n_\text{eff}=2.418$ at 1.35 µm, against 2.65 for a real 500 × 220 nm strip, so the coupling lengths found here belong to this model), the cladding is silica-like $n_\text{clad}=1.44$, the waveguides are 500 nm wide, and the materials are non-dispersive. The effective-index reduction is an approximation, and it is known to be less accurate for high-contrast silicon wires than for weakly guiding structures. The band is 1.30–1.40 µm (O-band) with a design wavelength of $\lambda_0=1.35$ µm. The polarization is Meep's 2D TE family ($H_z$ out of plane, $\mathbf{E}$ in plane), forced explicitly at every source and monitor.
 
 So the numbers below are specific to this model. They are not predictions for a fabricated 3D device. The physics and the method, however, carry over directly. All runs use the <Term id="en-fdtd" n={7}>finite-difference time-domain (FDTD)</Term> method in Meep[^meep], with my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit).
 
@@ -271,7 +271,7 @@ T_through, T_cross = abs(S_through)**2, abs(S_cross)**2   # power fractions
 
 (Lightly condensed from the module.) Each input port is excited in a separate run. Every simulated point is checked for energy conservation, top/bottom symmetry and passivity before it is used. For every point of the length sweep below, through + cross + reflection at 1.35 µm lies between 0.997 and 0.999. The missing ≈0.2 % is radiated, mostly at the S-bends. Reflection is tiny: below 0.04 % across the band for the 50:50 design.
 
-<Figure src={fig3} alt="Simulated real part of the Hz field: light enters the upper-left waveguide, and by the right edge appears in both output waveguides." caption="Re(Hz) from the FDTD simulation, light launched in the upper-left port (λ = 1.35 µm, notebook baseline run with Lc = 13 µm). Field visibly builds up in the lower waveguide along the coupling section, and both outputs carry roughly half the power. Gray bands: perfectly matched layers. From notebooks/06_directional_coupler.ipynb, Section 6." number={3} size="wide" />
+<Figure src={fig3} alt="Simulated real part of the Hz field: light enters the upper-left waveguide, and by the right edge appears in both output waveguides." caption="Re(Hz) from the FDTD simulation, light launched in the upper-left port (λ = 1.35 µm, notebook baseline run with Lc = 13 µm). Field visibly builds up in the lower waveguide along the coupling section, and both outputs carry roughly half the power. Gray bands: perfectly matched layers. From si/notebooks/06_directional_coupler.ipynb, Section 6." number={3} size="wide" />
 
 <Glossary>
 <Def id="en-sparam" n={8} term="S-parameters">
@@ -305,7 +305,7 @@ This fit matches all 17 FDTD points with an rms residual of $2\times10^{-4}$. Th
 
 The saved 50:50 design uses $L_c = 13.71$ µm, found by interpolating the sweep and then re-simulating. At that length, $P_\text{through}=0.498$ and $P_\text{cross}=0.500$ at 1.35 µm, and the cross/through phase difference is 90.01°–90.06° across the whole band, exactly the quadrature that CMT predicts.
 
-<Figure src={fig4} alt="Cross-port and through-port power versus coupling length from 0 to 26 micrometres: FDTD points follow sine-squared and cosine-squared curves, crossing at 50 percent near 13.7 micrometres." caption="Power in the through (squares) and cross (circles) ports at λ = 1.35 µm versus straight coupling length Lc, gap 200 nm. Gray curves: CMT fit η sin²[κ(Lc + L0)] and its complement. The curves extrapolate to zero cross power at Lc = −L0 = −2.46 µm, not at 0, because the S-bends also couple. Diamond: the saved 50:50 design. Data: 17-point sweep in notebooks/06_directional_coupler.ipynb, Section 10." number={4} />
+<Figure src={fig4} alt="Cross-port and through-port power versus coupling length from 0 to 26 micrometres: FDTD points follow sine-squared and cosine-squared curves, crossing at 50 percent near 13.7 micrometres." caption="Power in the through (squares) and cross (circles) ports at λ = 1.35 µm versus straight coupling length Lc, gap 200 nm. Gray curves: CMT fit η sin²[κ(Lc + L0)] and its complement. The curves extrapolate to zero cross power at Lc = −L0 = −2.46 µm, not at 0, because the S-bends also couple. Diamond: the saved 50:50 design. Data: 17-point sweep in si/notebooks/06_directional_coupler.ipynb, Section 10." number={4} />
 
 #### Gap dependence: exponential sensitivity
 
@@ -314,13 +314,13 @@ At fixed wavelength, $\kappa$ is set almost entirely by the gap. The toolkit's 5
 - **The decay is exponential.** The slope of $\ln\kappa$ versus $g$ is $-9.02\ \mu\text{m}^{-1}$, against $\gamma=9.04\ \mu\text{m}^{-1}$ from the isolated-mode tail. That is the evanescent-coupling picture made quantitative, and it confirms the gap-tolerance estimate of the Theory section. Strictly, $\kappa\propto e^{-\gamma g}$ is an asymptotic result for weak coupling (gaps of several decay lengths), as in Marcatili's analysis.[^marcatili]
 - **Supermode theory tracks the FDTD values.** It agrees to within 1–5 %. The largest difference is at the widest gap, where the coupled power stays below 13 % over the swept lengths, so the fit is least constrained.
 
-<Figure src={fig5} alt="Semilog plot of coupling coefficient versus gap from 0.15 to 0.35 micrometres: FDTD points fall on a straight line that matches both supermode theory and an exponential with the evanescent decay constant." caption="Coupling coefficient κ versus gap at λ = 1.35 µm (left axis) and the corresponding full-transfer length Lπ = π/2κ (right axis). Points: κ from CMT fits to the FDTD length sweep at each gap. Solid line: supermode theory π(nₑ − nₒ)/λ. Dashed line: e^(−γg) with γ = 9.04 µm⁻¹ from the isolated mode. Data: notebooks/06b_directional_coupler_gap_sweep.ipynb." number={5} />
+<Figure src={fig5} alt="Semilog plot of coupling coefficient versus gap from 0.15 to 0.35 micrometres: FDTD points fall on a straight line that matches both supermode theory and an exponential with the evanescent decay constant." caption="Coupling coefficient κ versus gap at λ = 1.35 µm (left axis) and the corresponding full-transfer length Lπ = π/2κ (right axis). Points: κ from CMT fits to the FDTD length sweep at each gap. Solid line: supermode theory π(nₑ − nₒ)/λ. Dashed line: e^(−γg) with γ = 9.04 µm⁻¹ from the isolated mode. Data: si/notebooks/06b_directional_coupler_gap_sweep.ipynb." number={5} />
 
 #### Wavelength dependence: why simple couplers are narrowband
 
 Fig. 6 shows the 50:50 design across the 100 nm band. The cross-port power rises from 0.385 at 1300 nm to 0.632 at 1400 nm, while the total stays near 1. This is the growth of $\kappa$ with wavelength predicted in the Theory section. An MZI built from such couplers therefore has a fringe contrast that changes with wavelength.
 
-<Figure src={fig6} alt="Through and cross power versus wavelength from 1300 to 1400 nanometres for the 50:50 design: the two lines cross at 1350 nanometres and diverge on either side, while their sum stays at one." caption="Spectrum of the saved 50:50 coupler (Lc = 13.71 µm, gap 200 nm). The split is exactly balanced only near the 1.35 µm design wavelength (dotted line). The dashed line is through + cross + reflection, which stays above 0.998. Data: data/sparams/coupler/selected, from notebooks/06_directional_coupler.ipynb, Section 11." number={6} />
+<Figure src={fig6} alt="Through and cross power versus wavelength from 1300 to 1400 nanometres for the 50:50 design: the two lines cross at 1350 nanometres and diverge on either side, while their sum stays at one." caption="Spectrum of the saved 50:50 coupler (Lc = 13.71 µm, gap 200 nm). The split is exactly balanced only near the 1.35 µm design wavelength (dotted line). The dashed line is through + cross + reflection, which stays above 0.998. Data: data/sparams/coupler/selected, from si/notebooks/06_directional_coupler.ipynb, Section 11." number={6} />
 
 #### Theory versus simulation
 
@@ -336,9 +336,9 @@ Coupled-mode theory gets the essentials right for this symmetric, weakly coupled
 
 ### Code and data
 
-- Coupler notebook (baseline, length sweep, 50:50 design): [`notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/06_directional_coupler.ipynb)
-- Gap × length sweep: [`notebooks/06b_directional_coupler_gap_sweep.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/06b_directional_coupler_gap_sweep.ipynb)
-- Simulation module: [`src/pic_toolkit/meep_sim/coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/coupler.py); compact (SAX) model: [`src/pic_toolkit/models/coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/coupler.py); design point: [`data/design_points/coupler.yaml`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/data/design_points/coupler.yaml)
+- Coupler notebook (baseline, length sweep, 50:50 design): [`si/notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/06_directional_coupler.ipynb)
+- Gap × length sweep: [`si/notebooks/06b_directional_coupler_gap_sweep.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/06b_directional_coupler_gap_sweep.ipynb)
+- Simulation module: [`src/pic_toolkit/meep_sim/coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/coupler.py); compact (SAX) model: [`src/pic_toolkit/models/coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/coupler.py); design point: [`si/data/design_points/coupler.yaml`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/data/design_points/coupler.yaml)
 - Figures 1, 2, 4–6, the CMT fits and the supermode solve are produced from the saved data by `scripts/blog_figures/article1_coupler.py` in the same repository. No new FDTD runs were needed.
 
 ---
@@ -359,7 +359,7 @@ Coupled-mode theory gets the essentials right for this symmetric, weakly coupled
 
 2本の導波路がS字ベンドで近づき、端面間の**ギャップ** $g$ を保ったまま**結合長** $L$ だけ平行に走り、再び離れます(図1)。設計者が選ぶのは、ギャップ、結合長、導波路の断面の3つです。以下の理論では、これらの選択が分岐比、その波長依存性、作製誤差への感度をどう決めるかを説明します。
 
-<Figure src={fig1} alt="S字ベンドで近づいた2本の導波路が、ギャップ200 nmで13.71マイクロメートル平行に走り、再び離れる上面図。" caption="ツールキットのdesign pointに保存された50:50カプラの形状。導波路幅500 nm、ギャップ200 nm、直線結合部13.71 µm(網掛け)、長さ6 µmのraised-cosine型S字ベンドでポート間隔2 µmまで広がる。data/design_points/coupler.yaml のパラメータから描画。" number={1} size="wide" />
+<Figure src={fig1} alt="S字ベンドで近づいた2本の導波路が、ギャップ200 nmで13.71マイクロメートル平行に走り、再び離れる上面図。" caption="ツールキットのdesign pointに保存された50:50カプラの形状。導波路幅500 nm、ギャップ200 nm、直線結合部13.71 µm(網掛け)、長さ6 µmのraised-cosine型S字ベンドでポート間隔2 µmまで広がる。si/data/design_points/coupler.yaml のパラメータから描画。" number={1} size="wide" />
 
 <Glossary title="用語">
 <Def id="ja-evanescent" n={1} term="エバネッセント場とエバネッセント結合">
@@ -558,7 +558,7 @@ $\gamma = 9.04\ \mu\text{m}^{-1}$ では、ギャップが10 nmずれると $\ka
 
 #### 本記事のモデル
 
-本記事のシミュレーションはすべて**2次元**で、シリコン細線導波路を<Term id="ja-eim" n={6}>等価屈折率法</Term>で近似しています[^eim]。コアの屈折率は $n_\text{core}=2.7$(簡略化したコア屈折率で、厚さ220 nmのシリコンスラブのTE実効屈折率(1.35 µmで約2.95)より低く、バルクシリコンの約3.45よりはるかに低いため、2次元モードの閉じ込めは実際の細線よりやや弱くなります)、クラッドはシリカ相当の $n_\text{clad}=1.44$、導波路幅は500 nm、材料分散は無視しています。等価屈折率法は近似であり、弱導波構造に比べて高屈折率差のシリコン細線では精度が落ちることが知られています。波長帯は1.30–1.40 µm(Oバンド)、設計波長は $\lambda_0=1.35$ µmです。偏波はMeepの2次元TE($H_z$ が面外、$\mathbf{E}$ が面内)で、すべての光源とモニタで明示的に指定しています。
+本記事のシミュレーションはすべて**2次元**で、シリコン細線導波路を<Term id="ja-eim" n={6}>等価屈折率法</Term>で近似しています[^eim]。コアの屈折率は $n_\text{core}=2.7$(簡略化したコア屈折率で、厚さ220 nmのシリコンスラブのTE実効屈折率(1.35 µmで約2.95)より低く、バルクシリコンの約3.45よりはるかに低いため、2次元モードの閉じ込めは実際の細線より弱くなります。1.35 µmで $n_\text{eff}=2.418$ で、実際の500 × 220 nm細線の2.65より小さいため、ここで求める結合長はこのモデル固有の値です)、クラッドはシリカ相当の $n_\text{clad}=1.44$、導波路幅は500 nm、材料分散は無視しています。等価屈折率法は近似であり、弱導波構造に比べて高屈折率差のシリコン細線では精度が落ちることが知られています。波長帯は1.30–1.40 µm(Oバンド)、設計波長は $\lambda_0=1.35$ µmです。偏波はMeepの2次元TE($H_z$ が面外、$\mathbf{E}$ が面内)で、すべての光源とモニタで明示的に指定しています。
 
 したがって、以下の数値はこのモデル固有のもので、実際に作製する3次元デバイスの予測値ではありません。ただし、物理と手法はそのまま実デバイスに通用します。計算はすべてMeep[^meep]による<Term id="ja-fdtd" n={7}>時間領域差分(FDTD)法</Term>で、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)を使っています。
 
@@ -590,7 +590,7 @@ T_through, T_cross = abs(S_through)**2, abs(S_cross)**2   # パワーの割合
 
 (モジュールのコードを少し簡略化しています。)各入力ポートは別々のランで励振します。また、使う前にすべての計算点で、エネルギー保存、上下対称性、受動性を確認しています。次の長さスイープでは、すべての点で波長1.35 µmにおけるスルー + クロス + 反射の和が0.997–0.999に収まります。足りない約0.2 %は主にS字ベンドからの放射です。反射はごくわずかで、50:50設計では帯域全体で0.04 %未満です。
 
-<Figure src={fig3} alt="Hz場の実部の計算結果。左上の導波路から入った光が、右端では両方の出力導波路に現れている。" caption="FDTDによるRe(Hz)。左上ポートから入射(λ = 1.35 µm、ノートブックのベースライン計算、Lc = 13 µm)。結合部に沿って下側の導波路の場が育ち、両出力がほぼ半分ずつパワーを運ぶ。灰色の帯は完全整合層(PML)。notebooks/06_directional_coupler.ipynb、6節より。" number={3} size="wide" />
+<Figure src={fig3} alt="Hz場の実部の計算結果。左上の導波路から入った光が、右端では両方の出力導波路に現れている。" caption="FDTDによるRe(Hz)。左上ポートから入射(λ = 1.35 µm、ノートブックのベースライン計算、Lc = 13 µm)。結合部に沿って下側の導波路の場が育ち、両出力がほぼ半分ずつパワーを運ぶ。灰色の帯は完全整合層(PML)。si/notebooks/06_directional_coupler.ipynb、6節より。" number={3} size="wide" />
 
 <Glossary title="用語">
 <Def id="ja-sparam" n={8} term="Sパラメータ">
@@ -624,7 +624,7 @@ $$
 
 保存された50:50設計は $L_c = 13.71$ µmで、スイープの補間で求めた後に再計算して検証したものです。この長さでは、1.35 µmで $P_\text{through}=0.498$、$P_\text{cross}=0.500$ です。さらに、クロスとスルーの位相差は帯域全体で90.01°–90.06°となり、CMTが予測する直交位相そのものです。
 
-<Figure src={fig4} alt="結合長0から26マイクロメートルに対するクロス・スルー出力パワー。FDTDの点がsin²とcos²の曲線に乗り、13.7マイクロメートル付近で50%で交差する。" caption="λ = 1.35 µmにおけるスルー(四角)とクロス(丸)のパワーと直線結合長Lcの関係(ギャップ200 nm)。灰色の曲線はCMTフィット η sin²[κ(Lc + L0)] とその補数。S字ベンドでも結合するため、曲線のクロスパワーがゼロになるのは Lc = 0 ではなく Lc = −L0 = −2.46 µm。菱形は保存された50:50設計。データ:notebooks/06_directional_coupler.ipynb 10節の17点スイープ。" number={4} />
+<Figure src={fig4} alt="結合長0から26マイクロメートルに対するクロス・スルー出力パワー。FDTDの点がsin²とcos²の曲線に乗り、13.7マイクロメートル付近で50%で交差する。" caption="λ = 1.35 µmにおけるスルー(四角)とクロス(丸)のパワーと直線結合長Lcの関係(ギャップ200 nm)。灰色の曲線はCMTフィット η sin²[κ(Lc + L0)] とその補数。S字ベンドでも結合するため、曲線のクロスパワーがゼロになるのは Lc = 0 ではなく Lc = −L0 = −2.46 µm。菱形は保存された50:50設計。データ:si/notebooks/06_directional_coupler.ipynb 10節の17点スイープ。" number={4} />
 
 #### ギャップ依存性:指数関数的な感度
 
@@ -633,13 +633,13 @@ $$
 - **減衰は指数関数的。** $\ln\kappa$ の $g$ に対する傾きは $-9.02\ \mu\text{m}^{-1}$ で、孤立モードのすそ野から求めた $\gamma=9.04\ \mu\text{m}^{-1}$ と一致します。エバネッセント結合の描像が定量的に裏付けられ、理論の節で見積もったギャップのトレランスも確かめられたことになります。厳密には、$\kappa\propto e^{-\gamma g}$ はMarcatiliの解析と同様、弱結合(ギャップが減衰長の数倍)での漸近的な結果です[^marcatili]。
 - **スーパーモード理論はFDTDの値を再現する。** 一致は1–5 %以内です。差が最も大きいのはギャップが最も広い点で、スイープした長さの範囲ではクロスパワーが13 %未満にとどまり、フィットの拘束が弱いためです。
 
-<Figure src={fig5} alt="ギャップ0.15から0.35マイクロメートルに対する結合係数の片対数プロット。FDTDの点が直線に乗り、スーパーモード理論およびエバネッセント減衰定数の指数関数と一致する。" caption="λ = 1.35 µmにおける結合係数κとギャップの関係(左軸)、および対応する完全移行長 Lπ = π/2κ(右軸)。点:各ギャップの長さスイープへのCMTフィットから得たκ。実線:スーパーモード理論 π(nₑ − nₒ)/λ。破線:孤立モードの γ = 9.04 µm⁻¹ を用いた e^(−γg)。データ:notebooks/06b_directional_coupler_gap_sweep.ipynb。" number={5} />
+<Figure src={fig5} alt="ギャップ0.15から0.35マイクロメートルに対する結合係数の片対数プロット。FDTDの点が直線に乗り、スーパーモード理論およびエバネッセント減衰定数の指数関数と一致する。" caption="λ = 1.35 µmにおける結合係数κとギャップの関係(左軸)、および対応する完全移行長 Lπ = π/2κ(右軸)。点:各ギャップの長さスイープへのCMTフィットから得たκ。実線:スーパーモード理論 π(nₑ − nₒ)/λ。破線:孤立モードの γ = 9.04 µm⁻¹ を用いた e^(−γg)。データ:si/notebooks/06b_directional_coupler_gap_sweep.ipynb。" number={5} />
 
 #### 波長依存性:単純なカプラが狭帯域である理由
 
 図6は50:50設計を100 nmの帯域で見たものです。クロスパワーは1300 nmの0.385から1400 nmの0.632まで増え、合計はほぼ1のままです。これは理論の節で予測した、波長とともに $\kappa$ が大きくなる効果です。そのため、このようなカプラで組んだMZIは、波長によって干渉縞のコントラストが変わります。
 
-<Figure src={fig6} alt="50:50設計の1300から1400ナノメートルにおけるスルー・クロス出力。2本の線は1350ナノメートルで交差してその両側で離れ、和は1のまま。" caption="保存された50:50カプラ(Lc = 13.71 µm、ギャップ200 nm)のスペクトル。分岐が釣り合うのは設計波長1.35 µm(点線)付近だけ。破線はスルー + クロス + 反射の和で、0.998以上を保つ。データ:data/sparams/coupler/selected(notebooks/06_directional_coupler.ipynb 11節)。" number={6} />
+<Figure src={fig6} alt="50:50設計の1300から1400ナノメートルにおけるスルー・クロス出力。2本の線は1350ナノメートルで交差してその両側で離れ、和は1のまま。" caption="保存された50:50カプラ(Lc = 13.71 µm、ギャップ200 nm)のスペクトル。分岐が釣り合うのは設計波長1.35 µm(点線)付近だけ。破線はスルー + クロス + 反射の和で、0.998以上を保つ。データ:data/sparams/coupler/selected(si/notebooks/06_directional_coupler.ipynb 11節)。" number={6} />
 
 #### 理論とシミュレーションの比較
 
@@ -655,9 +655,9 @@ $$
 
 ### コードとデータ
 
-- カプラのノートブック(ベースライン、長さスイープ、50:50設計):[`notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/06_directional_coupler.ipynb)
-- ギャップ × 長さスイープ:[`notebooks/06b_directional_coupler_gap_sweep.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/06b_directional_coupler_gap_sweep.ipynb)
-- シミュレーションモジュール:[`src/pic_toolkit/meep_sim/coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/coupler.py)、コンパクトモデル(SAX):[`src/pic_toolkit/models/coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/coupler.py)、design point:[`data/design_points/coupler.yaml`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/data/design_points/coupler.yaml)
+- カプラのノートブック(ベースライン、長さスイープ、50:50設計):[`si/notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/06_directional_coupler.ipynb)
+- ギャップ × 長さスイープ:[`si/notebooks/06b_directional_coupler_gap_sweep.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/06b_directional_coupler_gap_sweep.ipynb)
+- シミュレーションモジュール:[`src/pic_toolkit/meep_sim/coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/coupler.py)、コンパクトモデル(SAX):[`src/pic_toolkit/models/coupler.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/coupler.py)、design point:[`si/data/design_points/coupler.yaml`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/data/design_points/coupler.yaml)
 - 図1、2、4–6、CMTフィット、スーパーモード計算は、保存済みデータから同リポジトリの `scripts/blog_figures/article1_coupler.py` で作成しました。新たなFDTD計算は行っていません。
 
 ---

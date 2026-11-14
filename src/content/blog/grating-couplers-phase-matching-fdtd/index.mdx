@@ -353,7 +353,7 @@ For a single-etch 400 nm SiN grating the result is −4.1 dB in 2D, limited by w
 - Model validation, mesh, BOX sweep and the Korček benchmark: [`meta/notebooks/01_sin_validation_mesh.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/01_sin_validation_mesh.ipynb)
 - Optimized single-etch grating: [`meta/notebooks/02_uniform_adam.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/02_uniform_adam.ipynb); a-Si overlay: [`meta/notebooks/04_asi_overlay.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/04_asi_overlay.ipynb)
 - Simulation modules: [`sin_grating.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/sin_grating.py), [`asi_grating.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/asi_grating.py)
-- The toolkit also contains a 2D model of a 220 nm silicon grating ([`notebooks/09_grating_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/09_grating_coupler.ipynb)). Its numbers are not used here because its resolution convergence has not yet been checked.
+- The toolkit also contains a 2D model of a 220 nm silicon grating ([`si/notebooks/09_grating_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/09_grating_coupler.ipynb)). Its numbers are not used here because its resolution convergence has not yet been checked.
 - Figures 1, 2, 4–6 and all numbers above were produced from the saved simulation data by `scripts/blog_figures/grating_coupler.py` in the same repository; Fig. 3 shows the saved field map. No new FDTD runs were needed.
 
 ---
@@ -687,7 +687,7 @@ def eta_overlap(x, ez, hx, wl, p_in, p, x0):
 - モデル検証、メッシュ、BOX掃引、Korčekベンチマーク:[`meta/notebooks/01_sin_validation_mesh.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/01_sin_validation_mesh.ipynb)
 - 最適化した単一エッチグレーティング:[`meta/notebooks/02_uniform_adam.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/02_uniform_adam.ipynb)、a-Siオーバーレイ:[`meta/notebooks/04_asi_overlay.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/04_asi_overlay.ipynb)
 - シミュレーションモジュール:[`sin_grating.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/sin_grating.py)、[`asi_grating.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/asi_grating.py)
-- ツールキットには220 nmシリコングレーティングの2次元モデル([`notebooks/09_grating_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/09_grating_coupler.ipynb))もありますが、解像度収束をまだ確認していないため、本記事では数値を使っていません。
+- ツールキットには220 nmシリコングレーティングの2次元モデル([`si/notebooks/09_grating_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/09_grating_coupler.ipynb))もありますが、解像度収束をまだ確認していないため、本記事では数値を使っていません。
 - 図1、2、4–6と本文の数値は、保存済みのシミュレーションデータから同リポジトリの `scripts/blog_figures/grating_coupler.py` で作成しました。図3は保存済みの電場分布です。新たなFDTD計算は行っていません。
 
 ---

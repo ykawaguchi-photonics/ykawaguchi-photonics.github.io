@@ -2,7 +2,7 @@
 title: "Mach–Zehnder Interferometers"
 description: "A Mach–Zehnder interferometer splits and recombines light so that the arm phase difference picks the output. Transfer function, FSR, extinction, switching."
 date: 2026-10-20
-updated: 2026-10-23
+updated: 2026-10-29
 category: technical-notes
 tags: [silicon photonics, Mach-Zehnder interferometer, modulator, interference, Meep, FDTD]
 areas: [silicon-photonics]
@@ -42,7 +42,7 @@ There are two ways to use this.
 
 An MZI consists of a splitter, two arms and a combiner (Fig. 1). Here both the splitter and the combiner are 50:50 [directional couplers](/blog/directional-couplers-cmt-fdtd/), whose two outputs carry equal power and a fixed 90° phase difference. The designer chooses the coupler split ratio, the arm-length difference $\Delta L$ and, for an active device, the length and strength of the phase shifter.
 
-<Figure src={fig1} alt="Layout of a Mach–Zehnder interferometer: two directional couplers at the ends, a straight upper arm, and a lower arm with a deep smooth bump that makes it 12.5 micrometres longer." caption="The simulated MZI (saved design point, ΔL = 12.5 µm). Two copies of a 50:50 directional coupler are joined by a straight reference arm and a delay arm whose raised-cosine bump (17.3 µm deep) adds 12.5 µm of path. Ports: light enters at 1; outputs 3 (bar) and 4 (cross). Drawn from data/design_points/mzi.yaml." number={1} size="wide" />
+<Figure src={fig1} alt="Layout of a Mach–Zehnder interferometer: two directional couplers at the ends, a straight upper arm, and a lower arm with a deep smooth bump that makes it 12.5 micrometres longer." caption="The simulated MZI (saved design point, ΔL = 12.5 µm). Two copies of a 50:50 directional coupler are joined by a straight reference arm and a delay arm whose raised-cosine bump (17.3 µm deep) adds 12.5 µm of path. Ports: light enters at 1; outputs 3 (bar) and 4 (cross). Drawn from si/data/design_points/mzi.yaml." number={1} size="wide" />
 
 ### Theory
 
@@ -238,7 +238,7 @@ In silicon, free electrons and holes lower the refractive index and add absorpti
 
 #### The model used here
 
-The simulations are **2D** and use an effective-index description of a silicon strip waveguide: core index $n_\text{core}=2.7$ (a simplified core index, lower than the TE effective index of a 220 nm silicon slab, about 2.95 at 1.35 µm, so the 2D mode is somewhat less confined than in a real strip), cladding $n_\text{clad}=1.44$, 500 nm wide, non-dispersive materials, TE polarization ($H_z$ out of plane), 1.30–1.40 µm with $\lambda_0=1.35$ µm. Both couplers are a saved 50:50 directional-coupler design (gap 200 nm, coupling length 13.71 µm). The simulations use the finite-difference time-domain (FDTD) method in Meep, run with my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit). The numbers are specific to this model, not to a fabricated device.
+The simulations are **2D** and use an effective-index description of a silicon strip waveguide: core index $n_\text{core}=2.7$ (a simplified core index, lower than the TE effective index of a 220 nm silicon slab, about 2.95 at 1.35 µm, so the 2D mode is less confined than in a real strip: $n_\text{eff}=2.418$ and $n_g=2.93$ at 1.35 µm, against 2.65 and 3.96 for a real 500 × 220 nm strip, which makes every FSR here about 1.35 times that of a real strip of the same length), cladding $n_\text{clad}=1.44$, 500 nm wide, non-dispersive materials, TE polarization ($H_z$ out of plane), 1.30–1.40 µm with $\lambda_0=1.35$ µm. Both couplers are a saved 50:50 directional-coupler design (gap 200 nm, coupling length 13.71 µm). The simulations use the finite-difference time-domain (FDTD) method in Meep, run with my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit). The numbers are specific to this model, not to a fabricated device.
 
 #### A passive MZI in FDTD
 
@@ -256,7 +256,7 @@ This is the imperfect-coupler result of the Theory section in action. The cross 
 
 The comparison can be made complete with a <Term id="en-circuit" n={9}>circuit model</Term>. Take the separately simulated coupler S-parameters, a phase factor for the arm from the waveguide's mode index $n_\text{eff}(\lambda)$, and the matrix product $\mathbf{C}\mathbf{A}\mathbf{C}$. The only fitted parameter is a constant phase offset, which absorbs the extra phase of the bends and of the coupler reference planes. The dashed curves in Fig. 3 are this model: it reproduces the full-device FDTD spectrum to an rms difference of 0.013 in power. This kind of composition, small simulated building blocks combined by their S-matrices, is how circuits are designed in practice (see [Coupling, Interference, and Resonance](/blog/coupling-interference-resonance-pic/)).
 
-<Figure src={fig3} alt="Bar and cross transmission in dB versus wavelength from 1300 to 1400 nm. Both oscillate in antiphase with a period near 50 nm; the cross port has nulls near minus 37 dB, the bar port has shallower minima of minus 15 and minus 26 dB. Dashed gray curves of a circuit model lie on top of the FDTD curves." caption="FDTD transmission of the ΔL = 12.5 µm MZI to the bar (out 3) and cross (out 4) ports. Dashed: circuit model built from the separately simulated coupler S-parameters and the arm phase, with one fitted constant phase offset. Very deep nulls are sensitive to tiny errors, so the curves differ most there. From notebooks/07_mzi.ipynb." number={3} />
+<Figure src={fig3} alt="Bar and cross transmission in dB versus wavelength from 1300 to 1400 nm. Both oscillate in antiphase with a period near 50 nm; the cross port has nulls near minus 37 dB, the bar port has shallower minima of minus 15 and minus 26 dB. Dashed gray curves of a circuit model lie on top of the FDTD curves." caption="FDTD transmission of the ΔL = 12.5 µm MZI to the bar (out 3) and cross (out 4) ports. Dashed: circuit model built from the separately simulated coupler S-parameters and the arm phase, with one fitted constant phase offset. Very deep nulls are sensitive to tiny errors, so the curves differ most there. From si/notebooks/07_mzi.ipynb." number={3} />
 
 <Glossary>
 <Def id="en-sparam" n={8} term="S-parameters">
@@ -284,7 +284,7 @@ $$
 
 Applied to five pairs, it gives $n_g = 2.91 \pm 0.04$, within 0.7 % of the mode-solver value. (Using $\lambda^2$ at a fixed 1.35 µm instead of the actual fringe wavelengths biases the estimate by a few percent; the fringes here lie between 1.31 and 1.40 µm.)
 
-<Figure src={fig4} alt="Six cross-port spectra, offset vertically, for arm differences from 2.5 to 15 micrometres. Short arm differences give slow variations across the band; longer ones show two or three full fringes." caption="Cross-port power versus wavelength for six arm-length differences (curves offset vertically by 1.1). The fringe period shrinks as 1/ΔL. From notebooks/07_mzi.ipynb, Section 10." number={4} />
+<Figure src={fig4} alt="Six cross-port spectra, offset vertically, for arm differences from 2.5 to 15 micrometres. Short arm differences give slow variations across the band; longer ones show two or three full fringes." caption="Cross-port power versus wavelength for six arm-length differences (curves offset vertically by 1.1). The fringe period shrinks as 1/ΔL. From si/notebooks/07_mzi.ipynb, Section 10." number={4} />
 
 #### Switching by a push-pull index change
 
@@ -292,7 +292,7 @@ The toolkit's modulator model uses $\Delta n = 2\times10^{-3}$ and a 331 µm pha
 
 The value $\Delta n = 2\times10^{-3}$ is a convenient choice for a compact simulation, not a model of a specific junction. It is more than ten times larger than what a depletion-mode phase shifter achieves, which is why real depletion-mode devices are millimetres long rather than 331 µm.
 
-<Figure src={fig5} alt="Bar and cross output power versus push-pull index change from 0 to 2 times ten to the minus three: the cross output falls from 0.99 to near zero while the bar output rises to 0.98; gray curves of sine and cosine squared pass through the points. A top axis shows the phase difference reaching about 1.04 pi." caption="Switching by a push-pull index change in the modulator model (331 µm phase shifter, λ = 1.35 µm). Points: FDTD. Gray: cos²(Δφ/2) and sin²(Δφ/2) with Δφ growing linearly with Δn (top axis). From notebooks/08_mzm.ipynb, Section 9." number={5} />
+<Figure src={fig5} alt="Bar and cross output power versus push-pull index change from 0 to 2 times ten to the minus three: the cross output falls from 0.99 to near zero while the bar output rises to 0.98; gray curves of sine and cosine squared pass through the points. A top axis shows the phase difference reaching about 1.04 pi." caption="Switching by a push-pull index change in the modulator model (331 µm phase shifter, λ = 1.35 µm). Points: FDTD. Gray: cos²(Δφ/2) and sin²(Δφ/2) with Δφ growing linearly with Δn (top axis). From si/notebooks/08_mzm.ipynb, Section 9." number={5} />
 
 #### Theory versus simulation
 
@@ -309,8 +309,8 @@ An MZI turns a phase difference into a power ratio, using the 90° phase of the 
 
 ### Code and data
 
-- MZI notebook (geometry, baseline, ΔL sweep, FSR, design point): [`notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/07_mzi.ipynb)
-- Modulator notebook (push-pull Δn sweep): [`notebooks/08_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/08_mzm.ipynb)
+- MZI notebook (geometry, baseline, ΔL sweep, FSR, design point): [`si/notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/07_mzi.ipynb)
+- Modulator notebook (push-pull Δn sweep): [`si/notebooks/08_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/08_mzm.ipynb)
 - Simulation modules: [`mzi.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/mzi.py), [`mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/mzm.py); compact (SAX) model: [`models/mzi.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/mzi.py)
 - Figures, the circuit model, the group-index extraction and the phase readout are produced from the saved data by `scripts/blog_figures/article2_mzi.py` in the same repository. No new FDTD runs were needed.
 
@@ -335,7 +335,7 @@ MZIは**位相差**を**パワー比**に変換します。2本のアームの�
 
 MZIは、分岐器、2本のアーム、合波器でできています(図1)。ここでは分岐器も合波器も50:50の[方向性結合器](/blog/directional-couplers-cmt-fdtd/)で、2つの出力は等しいパワーと一定の90°の位相差をもちます。設計者が選ぶのは、カプラの分岐比、アーム長差 $\Delta L$、能動素子では位相シフタの長さと強さです。
 
-<Figure src={fig1} alt="Mach–Zehnder干渉計のレイアウト:両端に方向性結合器、上側は直線のアーム、下側は深くなめらかなこぶで12.5マイクロメートル長くしたアーム。" caption="シミュレーションしたMZI(保存済み設計、ΔL = 12.5 µm)。50:50方向性結合器2個を、直線の参照アームと、raised-cosine型のこぶ(深さ17.3 µm)で光路を12.5 µm延ばした遅延アームでつないでいる。ポート:光は1から入り、出力は3(バー)と4(クロス)。data/design_points/mzi.yaml から描画。" number={1} size="wide" />
+<Figure src={fig1} alt="Mach–Zehnder干渉計のレイアウト:両端に方向性結合器、上側は直線のアーム、下側は深くなめらかなこぶで12.5マイクロメートル長くしたアーム。" caption="シミュレーションしたMZI(保存済み設計、ΔL = 12.5 µm)。50:50方向性結合器2個を、直線の参照アームと、raised-cosine型のこぶ(深さ17.3 µm)で光路を12.5 µm延ばした遅延アームでつないでいる。ポート:光は1から入り、出力は3(バー)と4(クロス)。si/data/design_points/mzi.yaml から描画。" number={1} size="wide" />
 
 ### 理論
 
@@ -531,7 +531,7 @@ $$
 
 #### 本記事のモデル
 
-シミュレーションは**2次元**で、シリコン細線導波路を等価屈折率で表しています。コアの屈折率 $n_\text{core}=2.7$(簡略化したコア屈折率で、厚さ220 nmのシリコンスラブのTE実効屈折率(1.35 µmで約2.95)より低いため、2次元モードの閉じ込めは実際の細線よりやや弱くなります)、クラッド $n_\text{clad}=1.44$、幅500 nm、材料分散なし、TE偏波($H_z$ が面外)、波長1.30–1.40 µm、$\lambda_0=1.35$ µmです。2つのカプラはどちらも保存済みの50:50方向性結合器の設計(ギャップ200 nm、結合長13.71 µm)です。シミュレーションはMeepによる時間領域差分(FDTD)法で、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)を使っています。数値はこのモデル固有のもので、作製したデバイスの予測値ではありません。
+シミュレーションは**2次元**で、シリコン細線導波路を等価屈折率で表しています。コアの屈折率 $n_\text{core}=2.7$(簡略化したコア屈折率で、厚さ220 nmのシリコンスラブのTE実効屈折率(1.35 µmで約2.95)より低いため、2次元モードの閉じ込めは実際の細線より弱くなります。1.35 µmで $n_\text{eff}=2.418$、$n_g=2.93$ で、実際の500 × 220 nm細線の2.65と3.96より小さいため、ここでのFSRは同じ長さの実際の細線の約1.35倍になります)、クラッド $n_\text{clad}=1.44$、幅500 nm、材料分散なし、TE偏波($H_z$ が面外)、波長1.30–1.40 µm、$\lambda_0=1.35$ µmです。2つのカプラはどちらも保存済みの50:50方向性結合器の設計(ギャップ200 nm、結合長13.71 µm)です。シミュレーションはMeepによる時間領域差分(FDTD)法で、[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)を使っています。数値はこのモデル固有のもので、作製したデバイスの予測値ではありません。
 
 #### FDTDでみる受動MZI
 
@@ -549,7 +549,7 @@ $$
 
 <Term id="ja-circuit" n={9}>回路モデル</Term>を使うと、比較を完全なものにできます。別途シミュレーションしたカプラのSパラメータ、導波路のモード屈折率 $n_\text{eff}(\lambda)$ から求めたアームの位相因子、そして行列積 $\mathbf{C}\mathbf{A}\mathbf{C}$ を使います。フィットするのは一定の位相オフセット1つだけで、これがベンドやカプラの基準面に由来する余分な位相を吸収します。図3の破線がこのモデルで、デバイス全体のFDTDスペクトルをパワーのrms差0.013で再現しています。シミュレーションした小さな部品をSマトリクスで組み合わせるこの方法は、実際の回路設計のやり方そのものです([結合・干渉・共鳴](/blog/coupling-interference-resonance-pic/)の記事を参照)。
 
-<Figure src={fig3} alt="1300から1400 nmにおけるバー・クロス透過率(dB)。両者は周期約50 nmで逆位相に振動する。クロス側の谷は約−37 dB、バー側の谷は−15 dBと−26 dBと浅い。回路モデルの灰色破線がFDTDの曲線にほぼ重なる。" caption="ΔL = 12.5 µmのMZIのバー(出力3)とクロス(出力4)へのFDTD透過率。破線:別途シミュレーションしたカプラのSパラメータとアーム位相から組み立て、一定の位相オフセットを1つだけフィットした回路モデル。非常に深い谷はわずかな誤差に敏感なので、差が最も出るのはそこである。notebooks/07_mzi.ipynb より。" number={3} />
+<Figure src={fig3} alt="1300から1400 nmにおけるバー・クロス透過率(dB)。両者は周期約50 nmで逆位相に振動する。クロス側の谷は約−37 dB、バー側の谷は−15 dBと−26 dBと浅い。回路モデルの灰色破線がFDTDの曲線にほぼ重なる。" caption="ΔL = 12.5 µmのMZIのバー(出力3)とクロス(出力4)へのFDTD透過率。破線:別途シミュレーションしたカプラのSパラメータとアーム位相から組み立て、一定の位相オフセットを1つだけフィットした回路モデル。非常に深い谷はわずかな誤差に敏感なので、差が最も出るのはそこである。si/notebooks/07_mzi.ipynb より。" number={3} />
 
 <Glossary title="用語">
 <Def id="ja-sparam" n={8} term="Sパラメータ">
@@ -577,7 +577,7 @@ $$
 
 これを5組に当てはめると $n_g = 2.91 \pm 0.04$ が得られ、モードソルバの値と0.7 %以内で一致します。(実際の干渉縞の波長ではなく1.35 µm固定の $\lambda^2$ を使うと、推定値が数%ずれます。ここでの干渉縞は1.31–1.40 µmにあります。)
 
-<Figure src={fig4} alt="アーム長差2.5から15マイクロメートルの6本のクロス側スペクトルを縦にずらして並べた図。アーム長差が小さいと帯域内でゆっくり変化し、大きいと2–3周期の干渉縞が現れる。" caption="6通りのアーム長差に対するクロス側パワーの波長依存性(各曲線を1.1ずつ縦にずらして表示)。干渉縞の周期は1/ΔLで縮む。notebooks/07_mzi.ipynb、10節より。" number={4} />
+<Figure src={fig4} alt="アーム長差2.5から15マイクロメートルの6本のクロス側スペクトルを縦にずらして並べた図。アーム長差が小さいと帯域内でゆっくり変化し、大きいと2–3周期の干渉縞が現れる。" caption="6通りのアーム長差に対するクロス側パワーの波長依存性(各曲線を1.1ずつ縦にずらして表示)。干渉縞の周期は1/ΔLで縮む。si/notebooks/07_mzi.ipynb、10節より。" number={4} />
 
 #### プッシュプル屈折率変化によるスイッチング
 
@@ -585,7 +585,7 @@ $$
 
 $\Delta n = 2\times10^{-3}$ は小さなシミュレーション領域で済ませるための便宜的な値で、特定の接合構造をモデル化したものではありません。空乏型位相シフタで得られる値の10倍以上なので、実際の空乏型デバイスは331 µmではなく数mmの長さになります。
 
-<Figure src={fig5} alt="プッシュプル屈折率変化0から2×10⁻³に対するバー・クロス出力。クロス出力は0.99からほぼ0に下がり、バー出力は0.98まで上がる。sin²とcos²の灰色の曲線が点を通る。上軸は位相差が約1.04πに達することを示す。" caption="変調器モデル(位相シフタ331 µm、λ = 1.35 µm)におけるプッシュプル屈折率変化によるスイッチング。点:FDTD。灰色:Δφ がΔnに比例して増えるとした cos²(Δφ/2) と sin²(Δφ/2)(上軸)。notebooks/08_mzm.ipynb、9節より。" number={5} />
+<Figure src={fig5} alt="プッシュプル屈折率変化0から2×10⁻³に対するバー・クロス出力。クロス出力は0.99からほぼ0に下がり、バー出力は0.98まで上がる。sin²とcos²の灰色の曲線が点を通る。上軸は位相差が約1.04πに達することを示す。" caption="変調器モデル(位相シフタ331 µm、λ = 1.35 µm)におけるプッシュプル屈折率変化によるスイッチング。点:FDTD。灰色:Δφ がΔnに比例して増えるとした cos²(Δφ/2) と sin²(Δφ/2)(上軸)。si/notebooks/08_mzm.ipynb、9節より。" number={5} />
 
 #### 理論とシミュレーションの比較
 
@@ -602,8 +602,8 @@ MZIは、方向性結合器の90°の位相を使って、位相差をパワー�
 
 ### コードとデータ
 
-- MZIのノートブック(形状、ベースライン、ΔL掃引、FSR、設計値):[`notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/07_mzi.ipynb)
-- 変調器のノートブック(プッシュプルΔn掃引):[`notebooks/08_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/08_mzm.ipynb)
+- MZIのノートブック(形状、ベースライン、ΔL掃引、FSR、設計値):[`si/notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/07_mzi.ipynb)
+- 変調器のノートブック(プッシュプルΔn掃引):[`si/notebooks/08_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/08_mzm.ipynb)
 - シミュレーションモジュール:[`mzi.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/mzi.py)、[`mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/mzm.py)、コンパクトモデル(SAX):[`models/mzi.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/mzi.py)
 - 図、回路モデル、群屈折率の抽出、位相の読み取りは、保存済みデータから同リポジトリの `scripts/blog_figures/article2_mzi.py` で作成しました。新たなFDTD計算は行っていません。
 

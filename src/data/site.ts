@@ -4,10 +4,10 @@
 export const site = {
   name: "Yuma Kawaguchi",
   title: "Photonics Design Engineer",
-  tagline: "Silicon Photonics · Metasurfaces · Topological Photonics",
+  tagline: "Silicon Photonics · Inverse Design · Metasurfaces · Topological Photonics",
   // One line under the name on the Home page.
   headline:
-    "Photonics Design Engineer — silicon photonics and metasurface design, from FEM- and FDTD-verified components to GDS layout.",
+    "Photonics Design Engineer — silicon photonics and metasurface design, adjoint inverse design, and FEM- and FDTD-verified components through to GDS layout.",
   description:
     "Yuma Kawaguchi is a photonics design engineer working on silicon photonics, metasurfaces, and topological photonics. Publications, research notes, and simulation projects.",
   position: "Researcher",
@@ -37,14 +37,23 @@ export const site = {
     "Photonics",
     "Silicon photonics",
     "Photonic integrated circuits",
+    "Photonic integrated circuit design",
+    "Inverse design",
+    "Adjoint optimization",
+    "Topology optimization",
+    "Silicon nitride photonics",
+    "Thin-film lithium niobate modulators",
+    "Photonic crystal cavities",
     "Metasurfaces",
     "Flat optics",
     "Topological photonics",
     "Nonreciprocal photonics",
     "Optical sensing",
     "FDTD simulation",
+    "Finite element method",
+    "RCWA",
   ],
-  tools: ["Lumerical FDTD", "Meep", "COMSOL", "RCWA / Meent", "Python", "GDSFactory"],
+  tools: ["Lumerical FDTD", "Meep", "MPB", "fdtdx (JAX)", "COMSOL", "RCWA / Meent", "SAX", "GDSFactory", "KLayout", "Python"],
 } as const;
 
 export const nav = [

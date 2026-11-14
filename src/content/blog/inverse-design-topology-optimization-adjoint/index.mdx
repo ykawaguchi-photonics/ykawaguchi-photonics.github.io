@@ -279,7 +279,7 @@ A robust optimization from the same starting density, maximizing the average of 
 
 (The nominal values 0.797 and 0.816 for the same single-objective design differ because the bias test uses the continuous filter-and-projection pipeline, which can be eroded and dilated, while 0.816 is the hard-thresholded fabrication mask.)
 
-<Figure src={fig4} alt="Left: transmission versus design-region size from 2 to 4.5 micrometres for an Euler bend, rising from 0.47 to 0.97, and for the topology-optimized bend, rising from 0.69 to 0.96; the gap is largest at small sizes and closes by 4 micrometres. Right: grouped bars of transmission for eroded, nominal and dilated versions: the single-objective design drops from 0.80 to 0.75 and 0.76, while the robust design stays between 0.795 and 0.81." caption="Left: transmission at 1.35 µm of an Euler bend and of the topology-optimized bend at matched footprints (resolution 40, binarized designs). Right: transmission of the single-objective and robust designs when eroded (−10 nm), nominal and dilated (+10 nm). From notebook 04 Section 3, conventional_reference.json and data/design_points/bend_topopt_robust.yaml." number={4} size="wide" />
+<Figure src={fig4} alt="Left: transmission versus design-region size from 2 to 4.5 micrometres for an Euler bend, rising from 0.47 to 0.97, and for the topology-optimized bend, rising from 0.69 to 0.96; the gap is largest at small sizes and closes by 4 micrometres. Right: grouped bars of transmission for eroded, nominal and dilated versions: the single-objective design drops from 0.80 to 0.75 and 0.76, while the robust design stays between 0.795 and 0.81." caption="Left: transmission at 1.35 µm of an Euler bend and of the topology-optimized bend at matched footprints (resolution 40, binarized designs). Right: transmission of the single-objective and robust designs when eroded (−10 nm), nominal and dilated (+10 nm). From notebook 04 Section 3, conventional_reference.json and si/data/design_points/bend_topopt_robust.yaml." number={4} size="wide" />
 
 #### Example 3: adjoint gradients for just two parameters
 
@@ -304,8 +304,8 @@ Topology optimization decides what may change, the adjoint method makes the grad
 
 ### Code and data
 
-- Bend topology optimization: [`notebooks/04_bend_topology_optimization.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/04_bend_topology_optimization.ipynb); robust version: [`notebooks/04b_bend_topopt_robust.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/04b_bend_topopt_robust.ipynb)
-- Simulation modules: [`bend_topopt.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt.py), [`bend_topopt_robust.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt_robust.py); design points `data/design_points/bend_topopt*.yaml`
+- Bend topology optimization: [`si/notebooks/04_bend_topology_optimization.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/04_bend_topology_optimization.ipynb); robust version: [`si/notebooks/04b_bend_topopt_robust.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/04b_bend_topopt_robust.ipynb)
+- Simulation modules: [`bend_topopt.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt.py), [`bend_topopt_robust.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt_robust.py); design points `si/data/design_points/bend_topopt*.yaml`
 - Two-parameter grating optimization: [`meta/notebooks/02_uniform_adam.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/02_uniform_adam.ipynb)
 - Figures 1–5 and the numbers above are produced from the saved data by `scripts/blog_figures/optimization.py` in the same repository. No new optimizations were run.
 
@@ -568,7 +568,7 @@ $\beta$ は最適化の途中で段階的に大きくします(**$\beta$ の段�
 
 (同じ単一目的の設計の公称値が0.797と0.816で異なるのは、偏りの試験では侵食・膨張できる連続的なフィルタ・投影の表現を使い、0.816はしきい値で完全に二値化した作製用マスクの値だからです。)
 
-<Figure src={fig4} alt="左:設計領域の大きさ2から4.5マイクロメートルに対する透過率。Eulerベンドは0.47から0.97へ、トポロジー最適化したベンドは0.69から0.96へ上がり、差は小さい領域で最も大きく、4マイクロメートルでほぼなくなる。右:侵食・公称・膨張版の透過率の棒グラフ。単一目的の設計は0.80から0.75と0.76に下がり、ロバスト設計は0.795から0.81の間にとどまる。" caption="左:同じ大きさでのEulerベンドとトポロジー最適化したベンドの1.35 µmでの透過率(分解能40、二値化設計)。右:単一目的とロバストの設計を侵食(−10 nm)、公称、膨張(+10 nm)したときの透過率。ノートブック04の3節、conventional_reference.json、data/design_points/bend_topopt_robust.yaml より。" number={4} size="wide" />
+<Figure src={fig4} alt="左:設計領域の大きさ2から4.5マイクロメートルに対する透過率。Eulerベンドは0.47から0.97へ、トポロジー最適化したベンドは0.69から0.96へ上がり、差は小さい領域で最も大きく、4マイクロメートルでほぼなくなる。右:侵食・公称・膨張版の透過率の棒グラフ。単一目的の設計は0.80から0.75と0.76に下がり、ロバスト設計は0.795から0.81の間にとどまる。" caption="左:同じ大きさでのEulerベンドとトポロジー最適化したベンドの1.35 µmでの透過率(分解能40、二値化設計)。右:単一目的とロバストの設計を侵食(−10 nm)、公称、膨張(+10 nm)したときの透過率。ノートブック04の3節、conventional_reference.json、si/data/design_points/bend_topopt_robust.yaml より。" number={4} size="wide" />
 
 #### 例3:2つのパラメータだけに随伴法の勾配を使う
 
@@ -593,8 +593,8 @@ $\beta$ は最適化の途中で段階的に大きくします(**$\beta$ の段�
 
 ### コードとデータ
 
-- ベンドのトポロジー最適化:[`notebooks/04_bend_topology_optimization.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/04_bend_topology_optimization.ipynb)、ロバスト版:[`notebooks/04b_bend_topopt_robust.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/04b_bend_topopt_robust.ipynb)
-- シミュレーションモジュール:[`bend_topopt.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt.py)、[`bend_topopt_robust.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt_robust.py)、設計値 `data/design_points/bend_topopt*.yaml`
+- ベンドのトポロジー最適化:[`si/notebooks/04_bend_topology_optimization.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/04_bend_topology_optimization.ipynb)、ロバスト版:[`si/notebooks/04b_bend_topopt_robust.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/04b_bend_topopt_robust.ipynb)
+- シミュレーションモジュール:[`bend_topopt.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt.py)、[`bend_topopt_robust.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/bend_topopt_robust.py)、設計値 `si/data/design_points/bend_topopt*.yaml`
 - 2パラメータのグレーティング最適化:[`meta/notebooks/02_uniform_adam.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/meta/notebooks/02_uniform_adam.ipynb)
 - 図1–5と本文の数値は、保存済みデータから同リポジトリの `scripts/blog_figures/optimization.py` で作成しました。新たな最適化は行っていません。
 

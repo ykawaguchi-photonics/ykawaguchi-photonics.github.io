@@ -2,6 +2,7 @@
 title: "WDM Demultiplexers"
 description: "A WDM demultiplexer sends each wavelength channel to its own waveguide. How cascaded Mach–Zehnder lattice filters set channel spacing, passband and crosstalk."
 date: 2026-10-25
+updated: 2026-10-29
 category: technical-notes
 tags: [silicon photonics, WDM, demultiplexer, lattice filter, Mach-Zehnder interferometer, directional coupler, circuit simulation, FDTD]
 areas: [silicon-photonics]
@@ -229,7 +230,7 @@ Insertion loss is the power a channel loses on its way to its own output, in dB.
 
 #### The model used here
 
-The circuits are built from components of my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit), in its 2D model of a silicon strip: a 500 nm wide core of index 2.7 in a 1.44 cladding, non-dispersive materials, TE polarization, 1.30–1.40 µm. The mode solver gives $n_\text{eff} = 2.418$ and $n_g = 2.928$ at 1.35 µm. The channel grid has four channels 20 nm apart, like CWDM, but placed at 1320–1380 nm inside the band of the simulations. Hence $\Delta L_1 = 15.56$ µm ($\mathrm{FSR}_1$ = 40 nm) and $\Delta L_2 = 7.78$ µm.
+The circuits are built from components of my [photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit), in its 2D model of a silicon strip: a 500 nm wide core of index 2.7 in a 1.44 cladding, non-dispersive materials, TE polarization, 1.30–1.40 µm. The mode solver gives $n_\text{eff} = 2.418$ and $n_g = 2.928$ at 1.35 µm. A real 500 × 220 nm strip has 2.65 and 3.96, so the arm differences for the same grid would be about 26 % shorter; the method carries over, the lengths belong to this model. The channel grid has four channels 20 nm apart, like CWDM, but placed at 1320–1380 nm inside the band of the simulations. Hence $\Delta L_1 = 15.56$ µm ($\mathrm{FSR}_1$ = 40 nm) and $\Delta L_2 = 7.78$ µm.
 
 Each stage is a <Term id="en-circuit" n={8}>circuit model</Term>: the product of 2×2 transfer matrices of the couplers and arm pairs, in the forward direction (reflections, below −30 dB in these components, are neglected). Two kinds of coupler are compared:
 
@@ -248,7 +249,7 @@ A description of a circuit by the S-matrices or transfer matrices of its compone
 
 The circuit model is only useful if it reproduces the real device. Fig. 3 compares it with an MZI ($\Delta L = 15$ µm) simulated whole in 2D FDTD, couplers, bends and arms together. With one fitted constant offset, the model follows both outputs to an rms difference of 0.015 in power. It reproduces the shallow bar-port minima near 1300 and 1383 nm, where the coupler is far from 50:50. Only the deepest nulls, which are sensitive to tiny errors, differ visibly.
 
-<Figure src={fig3} alt="Bar and cross transmission in dB from 1300 to 1400 nanometres of an MZI with a 15 micrometre arm difference, from a full-device FDTD simulation, with dashed gray curves of the circuit model on top. The curves overlap closely; the bar minima near 1300 and 1383 nanometres are shallow, around minus 12 and minus 16 dB, and the cross nulls near 1321 and 1362 nanometres are deep." caption="Circuit model (FDTD coupler S-parameters plus mode-solver arm phase, one fitted constant offset) versus a full-device 2D FDTD simulation of the same MZI (ΔL = 15 µm); rms difference 0.015 in power. From notebooks/07_mzi.ipynb, Section 10 (full device) and notebooks/06_directional_coupler.ipynb (coupler)." number={3} />
+<Figure src={fig3} alt="Bar and cross transmission in dB from 1300 to 1400 nanometres of an MZI with a 15 micrometre arm difference, from a full-device FDTD simulation, with dashed gray curves of the circuit model on top. The curves overlap closely; the bar minima near 1300 and 1383 nanometres are shallow, around minus 12 and minus 16 dB, and the cross nulls near 1321 and 1362 nanometres are deep." caption="Circuit model (FDTD coupler S-parameters plus mode-solver arm phase, one fitted constant offset) versus a full-device 2D FDTD simulation of the same MZI (ΔL = 15 µm); rms difference 0.015 in power. From si/notebooks/07_mzi.ipynb, Section 10 (full device) and si/notebooks/06_directional_coupler.ipynb (coupler)." number={3} />
 
 #### The four-channel tree
 
@@ -265,13 +266,13 @@ The flat-top design is clearly better with ideal couplers. With the FDTD coupler
 
 The cause is the wavelength dependence of the directional couplers. Their power coupling changes strongly across the band: the 50:50 design goes from 0.39 at 1300 nm to 0.63 at 1400 nm, and the 24 µm coupler from 0.79 to 0.99. The synthesis assumes the same ratio at every channel. A diagnostic separates the two possible culprits. The same $N = 4$ tree with each FDTD coupler frozen at its 1.35 µm ratio, so that only the mismatch to the target remains, reaches −18.1 dB worst crosstalk and 0.11 dB worst loss, close to the ideal design. The small mismatch of the coupler ratios costs about 2 dB; their wavelength dependence costs the rest. A single MZI is less affected, because its cross output nulls for any split ratio and its passband never relied on a precise ratio.
 
-<Figure src={fig4} alt="Four panels of channel transmission in dB versus wavelength from 1300 to 1400 nanometres for the four outputs of the tree. Top row, ideal couplers: N equals 2 shows rounded passbands with crosstalk side lobes near minus 11 dB; N equals 4 shows flat-topped passbands with side lobes near minus 15 dB and wide deep stopbands. Bottom row, FDTD couplers: N equals 2 looks nearly the same as the ideal one but with shallower nulls; N equals 4 has flat passbands near 1320 and 1340 nanometres but distorted, shallow stopbands and higher leakage near 1360 to 1400 nanometres. Gray bands mark plus and minus 3 nanometres around each channel centre." caption="Transmission of the four outputs of the binary-tree demultiplexer (20 nm grid at 1320–1380 nm). Columns: N = 2 and N = 4 couplers per stage. Rows: ideal couplers and FDTD-simulated directional couplers. Gray bands: the ±3 nm windows used for the metrics. Circuit models built from the coupler data of notebooks/06_directional_coupler.ipynb." number={4} size="wide" />
+<Figure src={fig4} alt="Four panels of channel transmission in dB versus wavelength from 1300 to 1400 nanometres for the four outputs of the tree. Top row, ideal couplers: N equals 2 shows rounded passbands with crosstalk side lobes near minus 11 dB; N equals 4 shows flat-topped passbands with side lobes near minus 15 dB and wide deep stopbands. Bottom row, FDTD couplers: N equals 2 looks nearly the same as the ideal one but with shallower nulls; N equals 4 has flat passbands near 1320 and 1340 nanometres but distorted, shallow stopbands and higher leakage near 1360 to 1400 nanometres. Gray bands mark plus and minus 3 nanometres around each channel centre." caption="Transmission of the four outputs of the binary-tree demultiplexer (20 nm grid at 1320–1380 nm). Columns: N = 2 and N = 4 couplers per stage. Rows: ideal couplers and FDTD-simulated directional couplers. Gray bands: the ±3 nm windows used for the metrics. Circuit models built from the coupler data of si/notebooks/06_directional_coupler.ipynb." number={4} size="wide" />
 
 #### Tolerance to laser drift
 
 The reason for a flat passband is tolerance. Fig. 5 shifts every laser by the same offset $\pm d$ from its channel centre and records the worst channel over both directions. With ideal couplers, $N = 4$ keeps the crosstalk near −20 dB out to 3 nm of offset and the loss below 0.2 dB out to 4 nm, while $N = 2$ already reaches −17 dB and 0.19 dB at 2 nm. With FDTD couplers, both start from a worse floor ($N = 2$: −16 dB, $N = 4$: −15 dB at zero offset), and the $N = 4$ tree now degrades faster: at ±3 nm it reaches −9.7 dB and 0.70 dB, against −12.7 dB and 0.53 dB for $N = 2$, the values of the table above.
 
-<Figure src={fig5} alt="Worst-channel insertion loss (left) and crosstalk (right) versus laser offset from 0 to 8 nanometres for four cases. Ideal N equals 4 has the lowest loss and crosstalk, about minus 20 dB at 3 nanometres. Ideal N equals 2 degrades faster. With FDTD couplers, both start near minus 15 dB crosstalk, and the N equals 4 curve rises faster than N equals 2." caption="Worst-channel insertion loss and crosstalk when all lasers are offset by ±d from their channel centres (worst of both directions). Dashed: ideal couplers; solid: FDTD-simulated couplers. Circuit models built from the coupler data of notebooks/06_directional_coupler.ipynb." number={5} size="wide" />
+<Figure src={fig5} alt="Worst-channel insertion loss (left) and crosstalk (right) versus laser offset from 0 to 8 nanometres for four cases. Ideal N equals 4 has the lowest loss and crosstalk, about minus 20 dB at 3 nanometres. Ideal N equals 2 degrades faster. With FDTD couplers, both start near minus 15 dB crosstalk, and the N equals 4 curve rises faster than N equals 2." caption="Worst-channel insertion loss and crosstalk when all lasers are offset by ±d from their channel centres (worst of both directions). Dashed: ideal couplers; solid: FDTD-simulated couplers. Circuit models built from the coupler data of si/notebooks/06_directional_coupler.ipynb." number={5} size="wide" />
 
 <Callout kind="design" title="What this means for design">
 
@@ -297,7 +298,7 @@ A cascaded-MZI demultiplexer is built from two components and one idea: each sta
 ### Code and data
 
 - Lattice-filter and binary-tree notebooks (SAX circuits, GDS layouts): [`circuits/wdm_sax.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/circuits/wdm_sax.ipynb), [`circuits/wdm_mux4_sax.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/circuits/wdm_mux4_sax.ipynb)
-- Coupler sweep (FDTD S-parameters): [`notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/06_directional_coupler.ipynb); full-device MZI: [`notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/07_mzi.ipynb)
+- Coupler sweep (FDTD S-parameters): [`si/notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/06_directional_coupler.ipynb); full-device MZI: [`si/notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/07_mzi.ipynb)
 - Lattice synthesis: [`circuits/mzi_lattice.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/circuits/mzi_lattice.py)
 - The circuit models, figures and all numbers in this article are produced from the saved component data by `scripts/blog_figures/wdm_demultiplexers.py` in the same repository (transfer matrices in the forward direction). No new FDTD runs were needed.
 
@@ -510,7 +511,7 @@ $$
 
 #### 本記事のモデル
 
-回路は[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)の部品から、シリコンストリップの2次元モデルで組み立てています。屈折率1.44のクラッド中の幅500 nm、屈折率2.7のコア、材料分散なし、TE偏波、1.30–1.40 µmです。モードソルバの値は1.35 µmで $n_\text{eff} = 2.418$、$n_g = 2.928$ です。チャネルグリッドはCWDMと同じく20 nm間隔の4チャネルですが、シミュレーションの帯域内の1320–1380 nmに置いています。したがって $\Delta L_1 = 15.56$ µm($\mathrm{FSR}_1$ = 40 nm)、$\Delta L_2 = 7.78$ µmです。
+回路は[photonics simulation toolkit](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit)の部品から、シリコンストリップの2次元モデルで組み立てています。屈折率1.44のクラッド中の幅500 nm、屈折率2.7のコア、材料分散なし、TE偏波、1.30–1.40 µmです。モードソルバの値は1.35 µmで $n_\text{eff} = 2.418$、$n_g = 2.928$ です。実際の500 × 220 nm細線では2.65と3.96なので、同じグリッドに必要なアーム長差は約26 %短くなります。設計方法はそのまま使えますが、長さの値はこのモデルのものです。チャネルグリッドはCWDMと同じく20 nm間隔の4チャネルですが、シミュレーションの帯域内の1320–1380 nmに置いています。したがって $\Delta L_1 = 15.56$ µm($\mathrm{FSR}_1$ = 40 nm)、$\Delta L_2 = 7.78$ µmです。
 
 各段は<Term id="ja-circuit" n={8}>回路モデル</Term>で、カプラとアーム対の2×2伝達行列の積を順方向に計算します(これらの部品で−30 dB以下の反射は無視します)。2種類のカプラを比べます。
 
@@ -529,7 +530,7 @@ $$
 
 回路モデルが役に立つのは、実際のデバイスを再現できる場合だけです。図3では、カプラ、曲げ、アームをまとめて2次元FDTDで計算したMZI($\Delta L = 15$ µm)と比べています。一定のオフセットを1つフィットするだけで、モデルは両方の出力をパワーのrms差0.015で再現します。カプラが50:50から大きくずれる1300 nmと1383 nm付近の浅いバー側の極小も再現しています。目に見えて違うのは、わずかな誤差に敏感な最も深いゼロだけです。
 
-<Figure src={fig3} alt="アーム長差15マイクロメートルのMZIの1300から1400ナノメートルでのバーとクロスの透過率(dB)。全体FDTD計算の曲線の上に回路モデルの灰色破線が重なる。曲線はよく一致し、1300と1383ナノメートル付近のバーの極小は約−12と−16 dBと浅く、1321と1362ナノメートル付近のクロスのゼロは深い。" caption="回路モデル(FDTDカプラのSパラメータとモードソルバのアーム位相、一定オフセット1つをフィット)と、同じMZI(ΔL = 15 µm)の2次元FDTD全体計算の比較。パワーのrms差は0.015。notebooks/07_mzi.ipynb、10節(全体計算)とnotebooks/06_directional_coupler.ipynb(カプラ)より。" number={3} />
+<Figure src={fig3} alt="アーム長差15マイクロメートルのMZIの1300から1400ナノメートルでのバーとクロスの透過率(dB)。全体FDTD計算の曲線の上に回路モデルの灰色破線が重なる。曲線はよく一致し、1300と1383ナノメートル付近のバーの極小は約−12と−16 dBと浅く、1321と1362ナノメートル付近のクロスのゼロは深い。" caption="回路モデル(FDTDカプラのSパラメータとモードソルバのアーム位相、一定オフセット1つをフィット)と、同じMZI(ΔL = 15 µm)の2次元FDTD全体計算の比較。パワーのrms差は0.015。si/notebooks/07_mzi.ipynb、10節(全体計算)とnotebooks/06_directional_coupler.ipynb(カプラ)より。" number={3} />
 
 #### 4チャネルのツリー
 
@@ -546,13 +547,13 @@ $$
 
 原因は方向性結合器の波長依存性です。そのパワー結合は帯域内で大きく変わり、50:50設計は1300 nmの0.39から1400 nmの0.63へ、24 µmのカプラは0.79から0.99へ変わります。合成はすべてのチャネルで同じ結合比を仮定しています。診断計算で2つの原因候補を切り分けられます。各FDTDカプラを1.35 µmでの結合比に固定し、目標とのずれだけを残した同じ $N = 4$ ツリーでは、最悪のクロストークは−18.1 dB、最悪の損失は0.11 dBで、理想設計に近くなります。結合比のわずかなずれのコストは約2 dBで、残りは波長依存性によるものです。1つのMZIは影響を受けにくくなっています。クロス出力はどんな分岐比でもゼロになり、その通過帯域はもともと正確な結合比に頼っていないからです。
 
-<Figure src={fig4} alt="ツリーの4つの出力について、1300から1400ナノメートルでのチャネル透過率(dB)を示す4パネル。上段は理想カプラ。N = 2は丸い通過帯域と約−11 dBのクロストークの側帯をもち、N = 4は平坦な通過帯域と約−15 dBの側帯、広く深い阻止帯域をもつ。下段はFDTDカプラ。N = 2は理想とほぼ同じだがゼロが浅い。N = 4は1320と1340ナノメートル付近で平坦な通過帯域をもつが、阻止帯域は歪んで浅く、1360から1400ナノメートル付近で漏れが大きい。灰色の帯は各チャネル中心の±3ナノメートル。" caption="バイナリツリー分波器の4つの出力の透過率(1320–1380 nmの20 nmグリッド)。列:1段あたりのカプラ数N = 2とN = 4。行:理想カプラとFDTDで計算した方向性結合器。灰色の帯:評価に使った±3 nmの窓。notebooks/06_directional_coupler.ipynb のカプラデータから組んだ回路モデル。" number={4} size="wide" />
+<Figure src={fig4} alt="ツリーの4つの出力について、1300から1400ナノメートルでのチャネル透過率(dB)を示す4パネル。上段は理想カプラ。N = 2は丸い通過帯域と約−11 dBのクロストークの側帯をもち、N = 4は平坦な通過帯域と約−15 dBの側帯、広く深い阻止帯域をもつ。下段はFDTDカプラ。N = 2は理想とほぼ同じだがゼロが浅い。N = 4は1320と1340ナノメートル付近で平坦な通過帯域をもつが、阻止帯域は歪んで浅く、1360から1400ナノメートル付近で漏れが大きい。灰色の帯は各チャネル中心の±3ナノメートル。" caption="バイナリツリー分波器の4つの出力の透過率(1320–1380 nmの20 nmグリッド)。列:1段あたりのカプラ数N = 2とN = 4。行:理想カプラとFDTDで計算した方向性結合器。灰色の帯:評価に使った±3 nmの窓。si/notebooks/06_directional_coupler.ipynb のカプラデータから組んだ回路モデル。" number={4} size="wide" />
 
 #### レーザーのずれへの耐性
 
 平坦な通過帯域の目的は耐性です。図5では、すべてのレーザーをチャネル中心から同じだけ($\pm d$)ずらし、両方向のうち最悪のチャネルを記録しています。理想カプラでは、$N = 4$ は3 nmのずれまでクロストークを約−20 dBに、4 nmまで損失を0.2 dB以下に保ちますが、$N = 2$ は2 nmですでに−17 dB、0.19 dBに達します。FDTDカプラでは、どちらもずれゼロの時点で悪い下限($N = 2$:−16 dB、$N = 4$:−15 dB)から始まり、今度は $N = 4$ のツリーの方が速く悪化します。±3 nmでは−9.7 dB、0.70 dBに達し、$N = 2$ の−12.7 dB、0.53 dBより悪くなります。これは上の表の値と同じです。
 
-<Figure src={fig5} alt="4つの場合について、レーザーのずれ0から8ナノメートルに対する最悪チャネルの挿入損失(左)とクロストーク(右)。理想カプラのN = 4は損失もクロストークも最も低く、3ナノメートルで約−20 dB。理想カプラのN = 2はより速く悪化する。FDTDカプラでは、どちらもクロストーク約−15 dBから始まり、N = 4の曲線の方がN = 2より速く上がる。" caption="すべてのレーザーをチャネル中心から±dずらしたときの最悪チャネルの挿入損失とクロストーク(両方向のうち最悪)。破線:理想カプラ。実線:FDTDで計算したカプラ。notebooks/06_directional_coupler.ipynb のカプラデータから組んだ回路モデル。" number={5} size="wide" />
+<Figure src={fig5} alt="4つの場合について、レーザーのずれ0から8ナノメートルに対する最悪チャネルの挿入損失(左)とクロストーク(右)。理想カプラのN = 4は損失もクロストークも最も低く、3ナノメートルで約−20 dB。理想カプラのN = 2はより速く悪化する。FDTDカプラでは、どちらもクロストーク約−15 dBから始まり、N = 4の曲線の方がN = 2より速く上がる。" caption="すべてのレーザーをチャネル中心から±dずらしたときの最悪チャネルの挿入損失とクロストーク(両方向のうち最悪)。破線:理想カプラ。実線:FDTDで計算したカプラ。si/notebooks/06_directional_coupler.ipynb のカプラデータから組んだ回路モデル。" number={5} size="wide" />
 
 <Callout kind="design" title="設計上の意味">
 
@@ -578,7 +579,7 @@ $$
 ### コードとデータ
 
 - ラティスフィルタとバイナリツリーのノートブック(SAX回路、GDSレイアウト):[`circuits/wdm_sax.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/circuits/wdm_sax.ipynb)、[`circuits/wdm_mux4_sax.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/circuits/wdm_mux4_sax.ipynb)
-- カプラの掃引(FDTDのSパラメータ):[`notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/06_directional_coupler.ipynb)、MZIの全体計算:[`notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/07_mzi.ipynb)
+- カプラの掃引(FDTDのSパラメータ):[`si/notebooks/06_directional_coupler.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/06_directional_coupler.ipynb)、MZIの全体計算:[`si/notebooks/07_mzi.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si/notebooks/07_mzi.ipynb)
 - ラティスの合成:[`circuits/mzi_lattice.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/circuits/mzi_lattice.py)
 - 本記事の回路モデル、図、すべての数値は、保存済みの部品データから同リポジトリの `scripts/blog_figures/wdm_demultiplexers.py` で作成しました(順方向の伝達行列)。新たなFDTD計算は行っていません。
 

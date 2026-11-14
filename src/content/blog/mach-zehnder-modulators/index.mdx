@@ -51,7 +51,7 @@ Three parallel metal strips: a signal conductor in the middle and a grounded con
 </Def>
 </Glossary>
 
-<Figure src={fig1} alt="Top: top view of a Mach–Zehnder modulator. Light enters on the left, splits into two waveguide arms and recombines on the right. A gold signal electrode S lies between the arms and two gold ground electrodes G lie outside them. The RF drive is applied between S and G at the input end of the electrodes and a 50 ohm termination connects S and G at the output end. Bottom: cross-section with the drive circuit: a voltage source V(t) connects the signal electrode (+V) to both ground electrodes (0 V). Each lithium niobate rib waveguide sits in one of the two gaps; arrows show that the electric field points from S towards G, to the left in the gap over arm 1 and to the right in the gap over arm 2." caption="The thin-film lithium niobate MZM of this article (schematic). Top: top view: the two waveguide arms run in the gaps of a ground–signal–ground (GSG) electrode, which is driven at the input end and terminated in 50 Ω at the output end. Bottom: cross-section with the drive circuit, not to scale: the voltage V(t) between the signal electrode and the grounds creates fields of opposite direction in the two gaps, so the index of one arm rises while the other falls (push-pull). Modelled stack: 600 nm LN film etched 300 nm into 1 µm ribs, 1 µm gold electrodes on the slab, 5 µm gaps, 2 µm buried oxide. Drawn from data/design_points/tfln_mzm.yaml." number={1} size="wide" />
+<Figure src={fig1} alt="Top: top view of a Mach–Zehnder modulator. Light enters on the left, splits into two waveguide arms and recombines on the right. A gold signal electrode S lies between the arms and two gold ground electrodes G lie outside them. The RF drive is applied between S and G at the input end of the electrodes and a 50 ohm termination connects S and G at the output end. Bottom: cross-section with the drive circuit: a voltage source V(t) connects the signal electrode (+V) to both ground electrodes (0 V). Each lithium niobate rib waveguide sits in one of the two gaps; arrows show that the electric field points from S towards G, to the left in the gap over arm 1 and to the right in the gap over arm 2." caption="The thin-film lithium niobate MZM of this article (schematic). Top: top view: the two waveguide arms run in the gaps of a ground–signal–ground (GSG) electrode, which is driven at the input end and terminated in 50 Ω at the output end. Bottom: cross-section with the drive circuit, not to scale: the voltage V(t) between the signal electrode and the grounds creates fields of opposite direction in the two gaps, so the index of one arm rises while the other falls (push-pull). Modelled stack: 600 nm LN film etched 300 nm into 1 µm ribs, 1 µm gold electrodes on the slab, 5 µm gaps, 2 µm buried oxide. Drawn from si/data/design_points/tfln_mzm.yaml." number={1} size="wide" />
 
 ### Theory
 
@@ -152,7 +152,7 @@ The fraction of the ideal electro-optic effect that the optical mode actually ex
 </Def>
 </Glossary>
 
-<Figure src={fig3} alt="Map of the magnitude of the lateral electrode field across one 5 micrometre gap, with the ground electrode (0 V) on the left and the signal electrode (+V) on the right, both labelled above the plot. The field is strongest at the electrode edges and weaker inside the lithium niobate rib in the middle, which is labelled LN rib waveguide. White contour lines of the optical mode intensity sit inside and just below the rib. An arrow above the plot shows that the field points from the signal electrode towards the ground electrode." caption="Magnitude of the lateral electrode field |E_x| for 1 V across one gap (colour), with contours of the TE optical mode intensity at 10 %, 40 % and 80 % of its peak (white); dashed outline: the rib. The field inside the high-permittivity LN rib is weaker than in the air beside it, one reason why Γ = 0.53 here. From notebooks/11_tfln_mzm.ipynb, Sections 3 and 5." number={3} size="wide" />
+<Figure src={fig3} alt="Map of the magnitude of the lateral electrode field across one 5 micrometre gap, with the ground electrode (0 V) on the left and the signal electrode (+V) on the right, both labelled above the plot. The field is strongest at the electrode edges and weaker inside the lithium niobate rib in the middle, which is labelled LN rib waveguide. White contour lines of the optical mode intensity sit inside and just below the rib. An arrow above the plot shows that the field points from the signal electrode towards the ground electrode." caption="Magnitude of the lateral electrode field |E_x| for 1 V across one gap (colour), with contours of the TE optical mode intensity at 10 %, 40 % and 80 % of its peak (white); dashed outline: the rib. The field inside the high-permittivity LN rib is weaker than in the air beside it, one reason why Γ = 0.53 here. From tfln/notebooks/01_tfln_mzm.ipynb, Sections 3 and 5." number={3} size="wide" />
 
 #### Push-pull and the voltage–length product
 
@@ -277,7 +277,7 @@ The TE mode of the rib has $n_\text{eff} = 1.926$ and a group index of 2.251, or
 
 Combining this mode with the electrode field of Fig. 3 by first-order perturbation theory gives $\Gamma = 0.528$ and $\partial n_\text{eff}/\partial V = 1.61\times10^{-5}$ V⁻¹. An independent check, re-solving the mode with the field-induced index change inserted directly into the permittivity, agrees to 0.18 %. The push-pull voltage–length product of the modelled device is therefore $V_\pi L = 2.10$ V·cm. With $r_{33} = 26.9$ pm/V, a lower value sometimes used for microwave drive, it would be 2.41 V·cm. Sweeping the gap (Fig. 4) shows the trade-off of the Theory section: from 3 to 8 µm, $V_\pi L$ rises from 1.17 to 3.72 V·cm, nearly in proportion to $g$ ($\Gamma$ falls only from 0.57 to 0.48). Meanwhile, the mode's intensity at the electrode corner falls from $1.1\times10^{-4}$ to $4.7\times10^{-9}$ of its peak. At the chosen 5 µm it is $2.4\times10^{-7}$, so the metal sits in the far tail of the mode.
 
-<Figure src={fig4} alt="Left: push-pull V pi L rising almost linearly from 1.17 volt centimetres at a 3 micrometre gap to 3.72 at 8 micrometres. Right: on a log scale, the optical mode intensity at the electrode corner falling from about 1e-4 at 3 micrometres to about 5e-9 at 8 micrometres. A vertical line marks the design gap of 5 micrometres." caption="Electrode-gap trade-off. Left: push-pull V_πL. Right: optical intensity at the electrode's bottom corner relative to the mode peak, a proxy for metal absorption. Vertical line: the chosen 5 µm gap. From notebooks/11_tfln_mzm.ipynb, Section 6.5." number={4} size="wide" />
+<Figure src={fig4} alt="Left: push-pull V pi L rising almost linearly from 1.17 volt centimetres at a 3 micrometre gap to 3.72 at 8 micrometres. Right: on a log scale, the optical mode intensity at the electrode corner falling from about 1e-4 at 3 micrometres to about 5e-9 at 8 micrometres. A vertical line marks the design gap of 5 micrometres." caption="Electrode-gap trade-off. Left: push-pull V_πL. Right: optical intensity at the electrode's bottom corner relative to the mode peak, a proxy for metal absorption. Vertical line: the chosen 5 µm gap. From tfln/notebooks/01_tfln_mzm.ipynb, Section 6.5." number={4} size="wide" />
 
 #### The interferometer in 2D FDTD
 
@@ -285,7 +285,7 @@ A real arm is millimetres long, far beyond a 2D FDTD cell. The interferometer is
 
 Fig. 5 shows the result. Without drive, all the light leaves the cross port (bar $5\times10^{-5}$, −43 dB). At the $V_\pi$ point, 98.8 % leaves the bar port and the cross port drops to $5\times10^{-4}$ (−33 dB). The intermediate points follow $\sin^2$ and $\cos^2$. The realized phase at the $V_\pi$ point is $1.015\pi$: the ratio of the two outputs changes sign there, which shows that the phase has just passed $\pi$. The interferometer thus converts phase into intensity as the transfer function assumes. What the 2D model cannot do is the volts-to-phase step, which only exists in the real cross-section and comes from the overlap calculation above.
 
-<Figure src={fig5} alt="Bar and cross output power versus equivalent drive from 0 to 1.1 V pi. Four FDTD points per output, at 0, one third, two thirds and one V pi, lie on gray sine-squared and cosine-squared curves; the bar output rises from 0 to 0.99 and the cross output falls from 0.99 to near 0." caption="Switching of the TFLN interferometer in 2D FDTD (phase-equivalent 188 µm arm, λ = 1.35 µm). Points: FDTD bar and cross outputs. Gray: ideal sin² and cos² of πV/(2V_π). From notebooks/11_tfln_mzm.ipynb, Section 8." number={5} />
+<Figure src={fig5} alt="Bar and cross output power versus equivalent drive from 0 to 1.1 V pi. Four FDTD points per output, at 0, one third, two thirds and one V pi, lie on gray sine-squared and cosine-squared curves; the bar output rises from 0 to 0.99 and the cross output falls from 0.99 to near 0." caption="Switching of the TFLN interferometer in 2D FDTD (phase-equivalent 188 µm arm, λ = 1.35 µm). Points: FDTD bar and cross outputs. Gray: ideal sin² and cos² of πV/(2V_π). From tfln/notebooks/01_tfln_mzm.ipynb, Section 8." number={5} />
 
 #### Bandwidth of the traveling-wave electrode
 
@@ -295,7 +295,7 @@ Fig. 6 (left) separates the three limits for a 1 cm electrode. Velocity mismatch
 
 Fig. 6 (right) is the design trade-off. Shortening the electrode from 20 mm to 2 mm raises the bandwidth from 6 GHz to over 200 GHz, while $V_\pi$ rises from 1.05 V to 10.5 V. For a 67 GHz target, a class suited to about 200 Gbit/s per lane, the longest electrode that meets it is 4.5 mm, with $V_\pi = 4.67$ V and a bandwidth of 79 GHz.
 
-<Figure src={fig6} alt="Left: electro-optic response in dB versus frequency to 200 gigahertz for a 1 centimetre electrode: velocity mismatch alone falls to minus 3 dB at 85 gigahertz; conductor loss alone at 54; impedance mismatch alone stays within about 0.9 dB; all three together reach minus 3 dB at 22 gigahertz. Right: V pi versus 3 dB bandwidth as the electrode length varies from 2 to 20 millimetres; a dashed line marks 67 gigahertz and a dot marks the design point at 4.5 millimetres, 4.67 volts and 79 gigahertz." caption="Traveling-wave bandwidth. Left: EO response of a 1 cm electrode with each limit alone and all three together (n_RF = 2.141, n_g = 2.297, Z₀ = 41.2 Ω, conductor loss ∝ √f). Right: V_π versus EO 3 dB bandwidth for electrode lengths of 2–20 mm, with the 67 GHz target and the chosen design point. Closed-form traveling-wave model; line constants from notebooks/11_tfln_mzm.ipynb, Section 9." number={6} size="wide" />
+<Figure src={fig6} alt="Left: electro-optic response in dB versus frequency to 200 gigahertz for a 1 centimetre electrode: velocity mismatch alone falls to minus 3 dB at 85 gigahertz; conductor loss alone at 54; impedance mismatch alone stays within about 0.9 dB; all three together reach minus 3 dB at 22 gigahertz. Right: V pi versus 3 dB bandwidth as the electrode length varies from 2 to 20 millimetres; a dashed line marks 67 gigahertz and a dot marks the design point at 4.5 millimetres, 4.67 volts and 79 gigahertz." caption="Traveling-wave bandwidth. Left: EO response of a 1 cm electrode with each limit alone and all three together (n_RF = 2.141, n_g = 2.297, Z₀ = 41.2 Ω, conductor loss ∝ √f). Right: V_π versus EO 3 dB bandwidth for electrode lengths of 2–20 mm, with the 67 GHz target and the chosen design point. Closed-form traveling-wave model; line constants from tfln/notebooks/01_tfln_mzm.ipynb, Section 9." number={6} size="wide" />
 
 <Callout kind="design" title="What this means for design">
 
@@ -320,7 +320,7 @@ An MZM is a chain: an electro-optic effect turns volts into a material index cha
 
 ### Code and data
 
-- TFLN modulator notebook (Pockels primer, MPB cross-section, electrostatics, overlap, $V_\pi L$, coupler and interferometer FDTD, traveling-wave bandwidth): [`notebooks/11_tfln_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/11_tfln_mzm.ipynb)
+- TFLN modulator notebook (Pockels primer, MPB cross-section, electrostatics, overlap, $V_\pi L$, coupler and interferometer FDTD, traveling-wave bandwidth): [`tfln/notebooks/01_tfln_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/tfln/notebooks/01_tfln_mzm.ipynb)
 - Simulation modules: [`tfln_waveguide.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_waveguide.py), [`tfln_electrostatics.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_electrostatics.py), [`tfln_mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_mzm.py); compact (SAX) model: [`models/tfln_mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/tfln_mzm.py)
 - The mode, electrode, gap and RF solves are re-run by `scripts/blog_figures/mach_zehnder_modulators_data.py` (MPB and electrostatics only; the numbers reproduce the notebook's saved outputs) and saved in `data/blog_figures/mach_zehnder_modulators.npz`. The figures and all numbers are produced by `scripts/blog_figures/mach_zehnder_modulators.py` from that file and the notebook's saved FDTD data. No new FDTD runs were needed.
 
@@ -354,7 +354,7 @@ MZMは、アームに沿って電極を備えた[Mach–Zehnder干渉計](/blog/
 </Def>
 </Glossary>
 
-<Figure src={fig1} alt="上:Mach–Zehnder変調器の上面図。光は左から入り、2本の導波路アームに分かれ、右で再び合わさる。金の信号電極Sがアームの間に、2本の金の接地電極Gがアームの外側にある。RF駆動は電極の入力側の端でSとGの間に加えられ、出力側の端では50オームの終端がSとGをつなぐ。下:駆動回路を含む断面図。電圧源V(t)が信号電極(+V)と両側の接地電極(0 V)をつなぐ。ニオブ酸リチウムのリブ導波路は2つのギャップに1本ずつあり、矢印は電界がSからGへ向かうこと、つまりアーム1上のギャップでは左向き、アーム2上のギャップでは右向きであることを示す。" caption="本記事の薄膜ニオブ酸リチウムMZM(模式図)。上:上面図。2本の導波路アームはグラウンド–信号–グラウンド(GSG)電極のギャップを通り、電極は入力側の端で駆動され、出力側の端で50 Ωで終端される。下:駆動回路を含む断面図(縮尺は正確でない)。信号電極と接地電極の間の電圧V(t)が2つのギャップに逆向きの電界をつくるので、一方のアームの屈折率が上がり、もう一方は下がる(プッシュプル)。モデルの積層:厚さ600 nmのLN膜を300 nmエッチングした幅1 µmのリブ、スラブ上の厚さ1 µmの金電極、5 µmのギャップ、厚さ2 µmの埋め込み酸化膜。data/design_points/tfln_mzm.yaml から描画。" number={1} size="wide" />
+<Figure src={fig1} alt="上:Mach–Zehnder変調器の上面図。光は左から入り、2本の導波路アームに分かれ、右で再び合わさる。金の信号電極Sがアームの間に、2本の金の接地電極Gがアームの外側にある。RF駆動は電極の入力側の端でSとGの間に加えられ、出力側の端では50オームの終端がSとGをつなぐ。下:駆動回路を含む断面図。電圧源V(t)が信号電極(+V)と両側の接地電極(0 V)をつなぐ。ニオブ酸リチウムのリブ導波路は2つのギャップに1本ずつあり、矢印は電界がSからGへ向かうこと、つまりアーム1上のギャップでは左向き、アーム2上のギャップでは右向きであることを示す。" caption="本記事の薄膜ニオブ酸リチウムMZM(模式図)。上:上面図。2本の導波路アームはグラウンド–信号–グラウンド(GSG)電極のギャップを通り、電極は入力側の端で駆動され、出力側の端で50 Ωで終端される。下:駆動回路を含む断面図(縮尺は正確でない)。信号電極と接地電極の間の電圧V(t)が2つのギャップに逆向きの電界をつくるので、一方のアームの屈折率が上がり、もう一方は下がる(プッシュプル)。モデルの積層:厚さ600 nmのLN膜を300 nmエッチングした幅1 µmのリブ、スラブ上の厚さ1 µmの金電極、5 µmのギャップ、厚さ2 µmの埋め込み酸化膜。si/data/design_points/tfln_mzm.yaml から描画。" number={1} size="wide" />
 
 ### 理論
 
@@ -455,7 +455,7 @@ $\Gamma$ が1を大きく下回る理由は2つあります。光モードの一
 </Def>
 </Glossary>
 
-<Figure src={fig3} alt="5マイクロメートルのギャップ1つにわたる横方向の電極電界の大きさの分布。左に接地電極(0 V)、右に信号電極(+V)があり、どちらも図の上にラベルがある。電界は電極の縁で最も強く、中央のニオブ酸リチウムのリブ(LN rib waveguide)の中では弱い。光モード強度の白い等高線がリブの中とそのすぐ下にある。図の上の矢印は、電界が信号電極から接地電極へ向かうことを示す。" caption="ギャップ1つに1 Vをかけたときの横方向の電極電界の大きさ|E_x|(色)と、TE光モード強度のピークの10 %、40 %、80 %の等高線(白)。破線はリブ。高誘電率のLNリブの中の電界は横の空気中より弱く、ここでΓ = 0.53となる理由の1つである。notebooks/11_tfln_mzm.ipynb、3節と5節より。" number={3} size="wide" />
+<Figure src={fig3} alt="5マイクロメートルのギャップ1つにわたる横方向の電極電界の大きさの分布。左に接地電極(0 V)、右に信号電極(+V)があり、どちらも図の上にラベルがある。電界は電極の縁で最も強く、中央のニオブ酸リチウムのリブ(LN rib waveguide)の中では弱い。光モード強度の白い等高線がリブの中とそのすぐ下にある。図の上の矢印は、電界が信号電極から接地電極へ向かうことを示す。" caption="ギャップ1つに1 Vをかけたときの横方向の電極電界の大きさ|E_x|(色)と、TE光モード強度のピークの10 %、40 %、80 %の等高線(白)。破線はリブ。高誘電率のLNリブの中の電界は横の空気中より弱く、ここでΓ = 0.53となる理由の1つである。tfln/notebooks/01_tfln_mzm.ipynb、3節と5節より。" number={3} size="wide" />
 
 #### プッシュプルと電圧–長さ積
 
@@ -580,7 +580,7 @@ $$
 
 このモードと図3の電極電界を1次の摂動論で組み合わせると、$\Gamma = 0.528$、$\partial n_\text{eff}/\partial V = 1.61\times10^{-5}$ V⁻¹が得られます。電界による屈折率変化を誘電率に直接入れてモードを解き直す独立な確認とは、0.18 %で一致します。したがって、モデルのプッシュプルの電圧–長さ積は $V_\pi L = 2.10$ V·cmです。マイクロ波駆動に使われることのある低めの値 $r_{33} = 26.9$ pm/Vでは2.41 V·cmになります。ギャップを掃引すると(図4)、理論の節のトレードオフが現れます。3 µmから8 µmまでで $V_\pi L$ は1.17から3.72 V·cmへ、ほぼ $g$ に比例して増えます($\Gamma$ は0.57から0.48へわずかに下がるだけです)。一方、電極の角でのモードの強度は、ピークの $1.1\times10^{-4}$ から $4.7\times10^{-9}$ へ下がります。選んだ5 µmでは $2.4\times10^{-7}$ で、金属はモードの遠い裾にあります。
 
-<Figure src={fig4} alt="左:プッシュプルのV_πLが、ギャップ3マイクロメートルでの1.17 V·cmから8マイクロメートルでの3.72へほぼ直線的に増える。右:対数目盛で、電極の角での光モード強度が3マイクロメートルでの約1e-4から8マイクロメートルでの約5e-9へ下がる。縦線は設計ギャップ5マイクロメートル。" caption="電極ギャップのトレードオフ。左:プッシュプルのV_πL。右:電極の下側の角での光強度(モードのピークに対する比)で、金属吸収の目安。縦線:選んだ5 µmのギャップ。notebooks/11_tfln_mzm.ipynb、6.5節より。" number={4} size="wide" />
+<Figure src={fig4} alt="左:プッシュプルのV_πLが、ギャップ3マイクロメートルでの1.17 V·cmから8マイクロメートルでの3.72へほぼ直線的に増える。右:対数目盛で、電極の角での光モード強度が3マイクロメートルでの約1e-4から8マイクロメートルでの約5e-9へ下がる。縦線は設計ギャップ5マイクロメートル。" caption="電極ギャップのトレードオフ。左:プッシュプルのV_πL。右:電極の下側の角での光強度(モードのピークに対する比)で、金属吸収の目安。縦線:選んだ5 µmのギャップ。tfln/notebooks/01_tfln_mzm.ipynb、6.5節より。" number={4} size="wide" />
 
 #### 2次元FDTDでみる干渉計
 
@@ -588,7 +588,7 @@ $$
 
 結果を図5に示します。駆動なしでは光はすべてクロスポートから出ます(バーは $5\times10^{-5}$、−43 dB)。$V_\pi$ 点では98.8 %がバーポートから出て、クロスポートは $5\times10^{-4}$(−33 dB)まで下がります。中間の点は $\sin^2$ と $\cos^2$ に従います。$V_\pi$ 点で実現した位相は $1.015\pi$ です。2つの出力の比の符号がそこで反転しており、位相がちょうど $\pi$ を越えたことを示しています。干渉計は伝達関数の仮定どおりに位相を強度に変換しています。2次元モデルでできないのは電圧から位相への段階で、これは実際の断面にしか存在せず、上の重なりの計算から得られます。
 
-<Figure src={fig5} alt="等価駆動0から1.1 V_πに対するバーとクロスの出力パワー。0、1/3、2/3、1 V_πでの各出力4点のFDTD結果が、灰色のsin²とcos²の曲線に乗る。バー出力は0から0.99へ上がり、クロス出力は0.99からほぼ0へ下がる。" caption="2次元FDTDによるTFLN干渉計のスイッチング(位相等価な188 µmのアーム、λ = 1.35 µm)。点:FDTDのバーとクロスの出力。灰色:πV/(2V_π)の理想的なsin²とcos²。notebooks/11_tfln_mzm.ipynb、8節より。" number={5} />
+<Figure src={fig5} alt="等価駆動0から1.1 V_πに対するバーとクロスの出力パワー。0、1/3、2/3、1 V_πでの各出力4点のFDTD結果が、灰色のsin²とcos²の曲線に乗る。バー出力は0から0.99へ上がり、クロス出力は0.99からほぼ0へ下がる。" caption="2次元FDTDによるTFLN干渉計のスイッチング(位相等価な188 µmのアーム、λ = 1.35 µm)。点:FDTDのバーとクロスの出力。灰色:πV/(2V_π)の理想的なsin²とcos²。tfln/notebooks/01_tfln_mzm.ipynb、8節より。" number={5} />
 
 #### 進行波電極の帯域
 
@@ -623,7 +623,7 @@ MZMは変換の連鎖として理解できます。電気光学効果が電圧�
 
 ### コードとデータ
 
-- TFLN変調器のノートブック(Pockels効果の入門、MPBによる断面、静電界、重なり、$V_\pi L$、カプラと干渉計のFDTD、進行波電極の帯域):[`notebooks/11_tfln_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/notebooks/11_tfln_mzm.ipynb)
+- TFLN変調器のノートブック(Pockels効果の入門、MPBによる断面、静電界、重なり、$V_\pi L$、カプラと干渉計のFDTD、進行波電極の帯域):[`tfln/notebooks/01_tfln_mzm.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/tfln/notebooks/01_tfln_mzm.ipynb)
 - シミュレーションモジュール:[`tfln_waveguide.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_waveguide.py)、[`tfln_electrostatics.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_electrostatics.py)、[`tfln_mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/meep_sim/tfln_mzm.py)、コンパクトモデル(SAX):[`models/tfln_mzm.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/tfln_mzm.py)
 - モード、電極、ギャップ、RFの計算は `scripts/blog_figures/mach_zehnder_modulators_data.py` で再実行し(MPBと静電界のみ。数値はノートブックの保存済み出力を再現します)、`data/blog_figures/mach_zehnder_modulators.npz` に保存しました。図とすべての数値は、このファイルとノートブックの保存済みFDTDデータから `scripts/blog_figures/mach_zehnder_modulators.py` で作成しました。新たなFDTD計算は行っていません。
 

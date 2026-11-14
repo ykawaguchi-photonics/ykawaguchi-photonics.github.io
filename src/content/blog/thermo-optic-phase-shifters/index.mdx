@@ -1,0 +1,774 @@
+---
+title: "Thermo-Optic Phase Shifters"
+description: "A thermo-optic phase shifter heats a waveguide to change its phase. P_π, thermal time constant, crosstalk, trenches, TiN vs doped-silicon heaters."
+date: 2026-11-14
+category: technical-notes
+tags: [silicon photonics, thermo-optic phase shifter, heater, thermal crosstalk, ring resonator, Mach-Zehnder interferometer, heat conduction, MPB]
+areas: [silicon-photonics]
+draft: true
+---
+
+import Figure from "@/components/Figure.astro";
+import Term from "@/components/Term.astro";
+import Glossary from "@/components/Glossary.astro";
+import Def from "@/components/Def.astro";
+import Symbols from "@/components/Symbols.astro";
+import Callout from "@/components/Callout.astro";
+import fig1 from "./fig1_cross_sections.png";
+import fig2 from "./fig2_temperature.png";
+import fig3 from "./fig3_dynamics.png";
+import fig4 from "./fig4_trench_tradeoff.png";
+import fig5 from "./fig5_npp_tradeoff.png";
+import fig6 from "./fig6_crosstalk.png";
+import fig7 from "./fig7_tradeoff_map.png";
+
+**Language:** [English](#english) · [日本語](#日本語)
+
+## English
+
+A **thermo-optic phase shifter** is a waveguide section with a small heater next to it: an electric current warms the waveguide, the refractive index of silicon rises with temperature, and the light passing through picks up extra phase. It is the most common way to tune a silicon photonic circuit: it sets the bias of modulators, steers the light in switch matrices and programmable meshes, and keeps ring resonators on their wavelength.
+
+### Overview
+
+#### What a phase shifter does
+
+Interferometers and resonators work by adding light waves with a definite phase. A [Mach–Zehnder interferometer](/blog/mach-zehnder-interferometers/) sends light to one output or the other depending on the phase difference between its arms; a [ring resonator](/blog/ring-resonators/) is on resonance when the light returns to its starting point in phase. A fabricated chip never has exactly the designed phases: a few nanometres of width or thickness error shift the effective index, and the phase errors add up over hundreds of micrometres. A phase shifter lets the circuit be corrected, reconfigured and locked after fabrication.
+
+There are two families. **Electro-optic** phase shifters change the index with a voltage, through free carriers in silicon or the Pockels effect in crystals such as lithium niobate (see [Mach–Zehnder Modulators](/blog/mach-zehnder-modulators/)). They are fast, but the index change is small. **Thermo-optic** phase shifters change the index with heat. They are slow, microseconds rather than picoseconds, but the effect in silicon is large, the device is short and simple, and it adds almost no optical loss. That is why nearly every silicon photonic chip uses heaters for everything that does not need to change at gigahertz rates.
+
+#### Basic structure
+
+A heater is a resistor. The current $I$ through a resistance $R$ dissipates $P = I^2 R$ as heat, which flows from the heater through the surrounding oxide into the silicon substrate, the chip's heat sink. On the way it warms the waveguide. This article compares three designs on standard 220 nm silicon-on-insulator (Fig. 1):
+
+- **(a) TiN heater**: a strip of titanium nitride, 2 µm wide and 200 nm thick, in the top oxide 2 µm above a 400 × 220 nm silicon strip waveguide.
+- **(b) TiN heater with deep trenches**: the same heater, with 1.5 µm wide air trenches etched through the top oxide and the buried oxide on both sides of the waveguide.
+- **(c) N++ slab heater**: a rib waveguide (90 nm slab) whose slab is heavily n-doped in two 1 µm wide strips, starting 0.8 µm from the rib. The current flows through the doped silicon itself.
+
+The designer chooses the heater material and its position, the waveguide (strip or rib), any trenches, the spacing to neighbouring waveguides and the heater length. The foundry fixes the layer stack: the silicon thickness, the 2 µm buried oxide (BOX) and the cladding.
+
+<Figure src={fig1} alt="Three cross-sections of silicon-on-insulator, 12 micrometres wide. Each shows a grey silicon substrate at the bottom, a light blue oxide layer about 4.5 micrometres thick, and a small dark blue silicon waveguide at the bottom of the oxide. (a) A gold-coloured TiN heater strip sits in the oxide 2 micrometres above the waveguide. (b) The same, with two white air trenches cut through the full oxide thickness on both sides of the waveguide. (c) A rib waveguide with a thin silicon slab; two purple N++ doped strips lie in the slab on both sides of the rib." caption="The three heater designs of this article, drawn to scale. (a) TiN heater (2 µm × 200 nm) 2 µm above a 400 × 220 nm Si strip. (b) The same with air trenches 1.5 µm wide, their inner edges 3 µm from the waveguide centre, cut through the top oxide and the 2 µm BOX down to the substrate. (c) Rib waveguide, 400 nm wide with a 90 nm slab; N++ strips 1 µm wide in the slab, 0.8 µm from the rib edges. Oxide surface 2.5 µm above the BOX, air above. Geometry after Jacques et al.,[^jacques] at 1.31 µm." number={1} size="wide" />
+
+### Theory
+
+#### The thermo-optic effect
+
+The refractive index of silicon rises with temperature. The rate is the <Term id="en-to" n={1}>thermo-optic coefficient</Term>, $dn/dT = 1.94\times10^{-4}$ K⁻¹ at 1.3 µm and room temperature (Frey et al.[^frey]; about $1.8\times10^{-4}$ K⁻¹ at 1.55 µm[^komma]). Silica's is twenty times smaller, about $1\times10^{-5}$ K⁻¹.[^jacques] Light crossing a heated length $L$ picks up the extra phase:
+
+$$
+\Delta\phi = \frac{2\pi}{\lambda}\, \Delta n_\text{eff}\, L .
+$$
+
+<Symbols>
+
+- $\Delta\phi$ — extra phase from the heater (rad)
+- $\lambda$ — vacuum wavelength (m)
+- $\Delta n_\text{eff}$ — change of the waveguide's effective index (dimensionless)
+- $L$ — heated length (m)
+
+</Symbols>
+
+The first design target is a phase shift of $\pi$, which switches an MZI from one output to the other. With $\Delta n_\text{eff} \approx (dn/dT)\,\Delta T$, the temperature rise it needs is $\Delta T_\pi = \lambda / (2L\, dn/dT)$. At 1.31 µm and $L$ = 100 µm that is about 34 K, and about 3.4 K for $L$ = 1 mm. No other common effect in silicon gives an index change of $10^{-3}$–$10^{-2}$ this easily. The cost is that heat is slow and spreads.
+
+<Glossary>
+<Def id="en-to" n={1} term="Thermo-optic coefficient (dn/dT)">
+The change of a material's refractive index per kelvin. For silicon near room temperature it is about $2\times10^{-4}$ K⁻¹ in the telecom bands, among the largest of the common photonic materials; for silica it is about $1\times10^{-5}$ K⁻¹.
+</Def>
+</Glossary>
+
+#### From the material to the mode
+
+The guided mode is not entirely inside the silicon, and the temperature is not uniform. The <Term id="en-neff" n={2}>effective index</Term> therefore changes by a weighted average of the local index change. For a small index change $\Delta n(x, y)$ at fixed frequency, first-order perturbation theory gives:[^kogelnik]
+
+$$
+\Delta n_\text{eff} = n_g\, \frac{\iint n\, \Delta n\, |\mathbf{E}|^2 \, dx\, dy}{\iint n^2\, |\mathbf{E}|^2 \, dx\, dy} .
+$$
+
+<Symbols>
+
+- $n_g$ — group index of the mode (dimensionless)
+- $n(x, y)$ — refractive index of the cross-section (dimensionless)
+- $\Delta n(x, y)$ — local index change, here $(dn/dT)\,\Delta T(x, y)$ (dimensionless)
+- $\mathbf{E}(x, y)$ — electric field of the mode (arbitrary units)
+
+</Symbols>
+
+The weight is the mode's electric energy density, so the heat counts where the light is. If the whole cross-section is heated uniformly and only the silicon matters, the formula reduces to $\Delta n_\text{eff} = (n_g / n_\text{Si})\,\Gamma_\text{Si}\, \Delta n_\text{Si}$, where $\Gamma_\text{Si}$ is the fraction of the electric energy inside the silicon. For the 400 × 220 nm strip at 1.31 µm, $n_g = 4.14$ and $\Gamma_\text{Si} = 0.93$, so the mode index changes **10 % faster** than the silicon index itself. The <Term id="en-ng" n={3}>group index</Term> appears, not the effective index, because the phase is compared at a fixed wavelength: a high-$n_g$ waveguide converts an index change into more phase.
+
+<Glossary>
+<Def id="en-neff" n={2} term="Effective index (n_eff)">
+The index that sets the phase velocity of a guided mode: the mode's phase advances by $2\pi n_\text{eff}/\lambda$ per unit length. It lies between the cladding and core indices and depends on the waveguide's dimensions.
+</Def>
+<Def id="en-ng" n={3} term="Group index (n_g)">
+$n_g = n_\text{eff} - \lambda\, dn_\text{eff}/d\lambda$: the index that sets the speed of a pulse, and how fast the phase changes with wavelength. In silicon wire waveguides it is about 4, well above $n_\text{eff} \approx 2.5$.
+</Def>
+</Glossary>
+
+#### Why P_π does not depend on the heater length
+
+Heat flow behaves like current in a resistor network. In steady state the temperature rise near the waveguide is proportional to the power per unit length of the heater, $P/L$, through a <Term id="en-rth" n={4}>thermal resistance</Term> per unit length:
+
+$$
+\Delta T = R'_\text{th}\, \frac{P}{L} .
+$$
+
+<Symbols>
+
+- $\Delta T$ — temperature rise of the waveguide (K)
+- $R'_\text{th}$ — thermal resistance of a unit length of the cross-section (K·m/W)
+- $P$ — electrical power dissipated in the heater (W)
+- $L$ — heater length (m)
+
+</Symbols>
+
+Substituting into the phase equation, $L$ cancels: $\Delta\phi = (2\pi/\lambda)\,(dn_\text{eff}/dT)\, R'_\text{th}\, P$. The power for a $\pi$ phase shift, $P_\pi$, is then:
+
+$$
+P_\pi = \frac{\lambda}{2\, R'_\text{th}\, (dn_\text{eff}/dT)} .
+$$
+
+<Symbols>
+
+- $P_\pi$ — heater power for a phase shift of $\pi$ (W)
+- $dn_\text{eff}/dT$ — thermo-optic coefficient of the mode, from the overlap above (K⁻¹)
+
+</Symbols>
+
+A longer heater spreads the same power over more length: each micrometre gets less heat, the temperature rise is smaller, and the longer path makes up for it exactly. So $P_\pi$ is a property of the **cross-section**, not of the length. A long heater only lowers the temperature (good for reliability) and needs a lower current density. A typical heater in a standard stack, metal or doped silicon, needs about 20 mW for $\pi$, whatever foundry made it (review by Liu et al.[^liu]). A circuit with a thousand such phase shifters therefore burns more than 20 W.[^liu] Reducing $P_\pi$ means raising $R'_\text{th}$, i.e. insulating the waveguide better, or raising $dn_\text{eff}/dT$.
+
+<Glossary>
+<Def id="en-rth" n={4} term="Thermal resistance">
+The temperature rise per watt of heat flowing through a structure, $R_\text{th} = \Delta T/P$ in K/W. Here it is quoted per unit length of a long, uniform heater (K·m/W). Low thermal conductivity (oxide, air) and long, narrow heat paths make it large.
+</Def>
+</Glossary>
+
+#### How fast: the thermal time constant
+
+Heating also has a capacitance. Before the waveguide reaches its new temperature, the surrounding material must be heated, and that takes energy $C'_\text{th}\,\Delta T$ per unit length. The simplest model is a single thermal RC circuit, $C'_\text{th}\, d\Delta T/dt = P/L - \Delta T / R'_\text{th}$. A power step then gives an exponential rise, $\Delta T(t) = \Delta T_\infty (1 - e^{-t/\tau})$, with the <Term id="en-tau" n={5}>thermal time constant</Term>:
+
+$$
+\tau = R'_\text{th}\, C'_\text{th} .
+$$
+
+<Symbols>
+
+- $\tau$ — thermal time constant, the time to reach $1 - 1/e \approx 63$ % of the final phase (s)
+- $C'_\text{th}$ — heat capacity of the heated region per unit length (J/(K·m))
+
+</Symbols>
+
+For a sinusoidally modulated heater power the same circuit is a low-pass filter. Its −3 dB bandwidth is $f_\text{3dB} = 1/(2\pi\tau)$. A real cross-section has many thermal paths and is not a single RC circuit: for a heater above the waveguide the relation holds within about 10 %, while a heater with a fast and a slow heat path departs from it (see the Simulation section). Typical heaters have $\tau$ of a few microseconds and bandwidths of tens of kilohertz; thermo-optic phase shifters stay below about 100 kHz.[^liu] Papers use different definitions: some quote a 10–90 % rise time, which is $2.2\tau$ for a single pole, so check the definition before comparing numbers.
+
+<Glossary>
+<Def id="en-tau" n={5} term="Thermal time constant (τ)">
+How long a heater takes to respond. In this article: the time after a power step at which the phase reaches $1-1/e$ (63 %) of its final value. For one thermal RC circuit, $\tau = R_\text{th} C_\text{th}$.
+</Def>
+</Glossary>
+
+#### The figure of merit P_π·τ
+
+Multiply the two results and $R'_\text{th}$ cancels:
+
+$$
+P_\pi\, \tau = \frac{\lambda\, C'_\text{th}}{2\, (dn_\text{eff}/dT)} .
+$$
+
+<Symbols>
+
+- $P_\pi\, \tau$ — figure of merit of a thermo-optic phase shifter (W·s, usually mW·µs)
+
+</Symbols>
+
+This is the central trade-off of heater design. Insulating the waveguide (trenches, removing the substrate under it, air cladding) raises $R'_\text{th}$: $P_\pi$ falls, and $\tau$ rises by the same factor. The only ways to improve **both** are to heat less material (a smaller $C'_\text{th}$: put the heat source right next to the core) or to make the mode more sensitive (a larger $dn_\text{eff}/dT$). That is why the product $P_\pi\tau$ is the usual figure of merit.[^harris] [^liu] Reported values for standard-process heaters range from about 50 to 1000 mW·µs.[^liu]
+
+#### Thermal crosstalk
+
+The heat does not stop at the waveguide. It spreads sideways through the oxide and warms neighbouring waveguides, whose phases then drift with the heater setting: <Term id="en-xt" n={6}>thermal crosstalk</Term>. In a dense MZI mesh or a bank of rings, crosstalk is often what sets the waveguide pitch.
+
+A simple model shows what controls it. Treat the BOX and the cladding as one oxide layer of thickness $H$ on top of the substrate. The substrate conducts heat a hundred times better than oxide, so its surface is close to a fixed temperature; the oxide's top surface loses almost nothing to the air (in the model of this article, 99.997 % of the heat goes down). Far from the heater, the solution of the heat equation in such a layer decays sideways as $e^{-|x|/\ell}$, with a decay length set by the thickness alone:
+
+$$
+\ell = \frac{2H}{\pi} .
+$$
+
+<Symbols>
+
+- $\ell$ — lateral decay length of the temperature (m)
+- $H$ — total oxide thickness between the substrate and the top surface (m)
+
+</Symbols>
+
+The temperature profile is a quarter sine through the layer, $\sin(\pi y/2H)$ with $y$ measured from the substrate, and the Laplace equation then fixes the lateral decay. For the standard stack ($H$ = 2 µm BOX + 2.5 µm to the surface = 4.5 µm), $\ell$ = 2.9 µm: every 2.9 µm of extra pitch cuts the crosstalk by a factor $e$, and 10 µm of pitch by about 30.
+
+The same layer also sets the speed. The slowest thermal mode of the layer has the same quarter-sine shape, and it decays in time with:
+
+$$
+\tau_1 = \frac{\ell^2}{D} = \frac{4H^2}{\pi^2 D} , \qquad D = \frac{k}{\rho c_p} .
+$$
+
+<Symbols>
+
+- $\tau_1$ — decay time of the slowest thermal mode of the oxide layer (s)
+- $D$ — thermal diffusivity of the oxide (m²/s)
+- $k$ — thermal conductivity (W/(m·K))
+- $\rho$ — density (kg/m³)
+- $c_p$ — specific heat capacity (J/(kg·K))
+
+</Symbols>
+
+For silica, $D = 8.8\times10^{-7}$ m²/s,[^jacques] so $\tau_1$ ≈ 9 µs for $H$ = 4.5 µm. The two results are linked: **in a plain stack, the lateral reach of the heat and the speed come together.** A thinner oxide makes the heater faster and the crosstalk shorter-ranged, but lowers $R'_\text{th}$, so $P_\pi$ goes up. A thicker oxide saves power and costs both speed and crosstalk. Trenches break this link (next sections), at the price of speed.
+
+<Glossary>
+<Def id="en-xt" n={6} term="Thermal crosstalk">
+The unwanted phase shift on a neighbouring waveguide caused by one heater. In this article, the phase on the neighbour divided by the phase on the heated waveguide.
+</Def>
+</Glossary>
+
+#### Heater materials: why TiN, why doped silicon
+
+A heater must meet four requirements at once:
+
+1. **It must be resistive, but not too resistive.** Its resistivity must be much higher than that of the aluminium or copper wiring that feeds it, so that the heat is released in the heater and not in the leads.[^liu] Its resistance also sets the drive voltage, $V = \sqrt{PR}$:[^liu] 17 mW in a 1 kΩ heater needs 4.1 V.
+2. **It must not absorb the light.** Metals absorb strongly, so a metal heater must sit where the mode's field has decayed: in the cladding, about 1–2 µm above the waveguide. Doped silicon absorbs through its free carriers and must be kept out of the mode as well.
+3. **It must be available in the foundry process,** as a standard layer of the process design kit.
+4. **It must survive** high temperature and current density for years.
+
+A **metal heater above the waveguide** meets these with the fewest compromises, and TiN is the metal most foundries offer for it: the heaters in Jacques et al. (AMF) and in the TiN entries of the foundry comparisons in Liu et al. (CUMEC, IME) are TiN.[^jacques] [^liu] Tungsten (imec) and platinum heaters are reported too.[^liu] Because the metal is 2 µm away, it adds no measurable optical loss. The price is speed and efficiency: the heat must cross 2 µm of oxide to reach the core, and part of it flows sideways or straight down instead.
+
+A **doped-silicon heater** uses the silicon layer itself: the ion implantation steps that make the ohmic contacts of silicon modulators also make conductive N++ or P++ strips in the slab of a rib waveguide. The heat is released in silicon, which conducts heat a hundred times better than oxide, right next to the core. Less oxide is heated, so the heater is faster: Jacques et al. measured 2.2 µs for an N++ slab heater against 5.6 µs for TiN in the same process, at similar $P_\pi$ (22.8 and 21.4 mW).[^jacques] The price is optical loss: free carriers absorb light, so the doped strips must stay far enough from the rib. The waveguide itself can also be doped and used as the heater: Harris et al. reached $P_\pi$ = 24.8 mW and 2.7 µs with 0.23 dB insertion loss that way.[^harris]
+
+**Silicide** heaters (a metal–silicon compound formed on the silicon) have a low resistance and allow drive voltages near 1 V; the IBM design in Liu et al. reaches 20 mW and under 2.8 µs, but its excess optical loss is about 25 dB/cm.[^liu]
+
+#### Trenches and undercut
+
+Air conducts heat fifty times worse than silica (0.026 against 1.38 W/(m·K)).[^jacques] Deep <Term id="en-trench" n={7}>trenches</Term> etched through the cladding and the BOX beside the waveguide therefore block the sideways heat path. They act on two numbers at once. The heat that would have spread sideways is forced down under the waveguide, so $R'_\text{th}$ rises and $P_\pi$ falls; and the neighbour behind the trench gets much less heat, so the crosstalk falls. Because $\tau = R'_\text{th} C'_\text{th}$, the heater becomes slower.
+
+Going further, the silicon substrate under the waveguide can be etched away after the trenches are opened (<Term id="en-undercut" n={8}>undercut</Term>), leaving the waveguide suspended in oxide. Then the heat can only escape along thin oxide bridges: $P_\pi$ falls to about 0.5–1.5 mW, but the heating times grow to 140–780 µs.[^liu] [^dong] That is the trade-off of $P_\pi\tau$ in its extreme form: 10–40 times less power than the ~20 mW of a standard heater, for a response tens of times slower.
+
+<Glossary>
+<Def id="en-trench" n={7} term="Deep (thermal isolation) trench">
+A narrow slot etched through the top oxide and the buried oxide next to a waveguide, usually left filled with air. It cuts the sideways heat path through the oxide.
+</Def>
+<Def id="en-undercut" n={8} term="Substrate undercut">
+Removing the silicon substrate under a waveguide by selective etching through openings in the oxide, so that the heated region hangs free. It gives the lowest heater power and the slowest response.
+</Def>
+</Glossary>
+
+#### Tuning a ring resonator
+
+A ring's resonances sit where the round-trip phase is a multiple of $2\pi$, and they repeat every <Term id="en-fsr" n={9}>free spectral range</Term>, $\mathrm{FSR} = \lambda^2/(n_g L_\text{ring})$. A heater along the whole ring shifts the round-trip phase by $2\pi$ at $P = 2P_\pi$, and that moves the resonance by exactly one FSR. Since $P_\pi$ does not depend on length, **the power to tune a ring over one full FSR is $2P_\pi$ whatever its radius.** A small ring has a large FSR and therefore a large tuning efficiency in nm/mW, but the power to reach any wavelength is the same. A heater can only heat, so the ring must be designed to sit below its target and be tuned up; reaching every wavelength in the worst case costs up to $2P_\pi$.
+
+The same effect makes rings sensitive to the chip temperature. Their resonance moves by $d\lambda/dT = \lambda\,(dn_\text{eff}/dT)/n_g$, about 64 pm/K for the strip of this article. Most ring-based transmitters therefore run a heater in a feedback loop that keeps each ring on its laser line.
+
+<Glossary>
+<Def id="en-fsr" n={9} term="Free spectral range (FSR)">
+The wavelength spacing between neighbouring resonances of a ring, $\lambda^2/(n_g L_\text{ring})$, with $L_\text{ring}$ the ring's circumference and $n_g$ the group index.
+</Def>
+</Glossary>
+
+#### Thermo-optic versus electro-optic
+
+The two families do different jobs:
+
+| | Thermo-optic (heater) | Electro-optic, Si depletion | Electro-optic, Pockels (TFLN) |
+|---|---|---|---|
+| Index change | $1.9\times10^{-4}$ per K; $10^{-3}$–$10^{-2}$ in practice | of order $10^{-4}$[^reed] | $3\times10^{-5}$ for 1 V across 5 µm |
+| Length for π | 100 µm or less ($P_\pi$ independent of $L$) | a few mm[^rahim] | several mm |
+| Speed | µs, below ~100 kHz[^liu] | tens of GHz[^reed] [^rahim] | tens of GHz and more |
+| Static power | ~20 mW per π, continuously[^liu] | near zero (reverse bias) | near zero |
+| Optical loss | negligible for TiN | free-carrier absorption[^liu] [^reed] | low |
+| Side effects | heats neighbours, drifts with ambient temperature | loss changes with voltage | — |
+
+**Advantages of heaters.** They are short, simple, cheap and essentially lossless, and they give a large phase range: several $\pi$ if needed. Every silicon foundry offers them.
+
+**Disadvantages.** They are slow, they consume power continuously as long as a phase is held, they can only heat, and they disturb their neighbours. In large circuits the heater power and the crosstalk calibration become system problems of their own.
+
+The TFLN column uses the design of [Mach–Zehnder Modulators](/blog/mach-zehnder-modulators/) (4.5 mm, 79 GHz). So the division of labour is natural: electro-optic phase shifters carry the data, and heaters set and hold everything else (modulator bias, switch states, mesh phases, ring wavelengths).
+
+#### Design guide: what changes what
+
+<Callout kind="design" title="What this means for design">
+
+| If you change… | …this happens | Why |
+|---|---|---|
+| Heater length | $P_\pi$ unchanged; lower peak temperature | $\Delta T \propto P/L$, the phase $\propto \Delta T\,L$ |
+| Heater closer to the core (metal) | lower $P_\pi$, faster; optical loss once the metal reaches the mode | less oxide to cross, smaller heated volume |
+| Doped Si instead of metal | ~2× faster at similar $P_\pi$ | heat released in silicon next to the core |
+| Doped strips closer to the rib | lower $P_\pi$, faster; loss rises steeply | free-carrier absorption in the mode's tail |
+| Add deep trenches | lower $P_\pi$, much less crosstalk, slower | higher $R'_\text{th}$, $\tau = R'_\text{th} C'_\text{th}$ |
+| Undercut the substrate | $P_\pi$ ÷ 10–40; response in hundreds of µs | heat must leave through thin oxide bridges |
+| Thicker BOX / cladding | lower $P_\pi$, longer-range crosstalk, slower | $\ell = 2H/\pi$, $\tau_1 = \ell^2/D$ |
+| Larger waveguide pitch | crosstalk ∝ $e^{-p/\ell}$ | lateral decay in the oxide |
+| Ring radius | nm/mW changes, power per FSR ($2P_\pi$) does not | FSR ∝ 1/L, $P_\pi$ independent of L |
+
+</Callout>
+
+### Simulation
+
+#### The model used here
+
+Everything below comes from a 2D model of the real cross-section, at 1.31 µm (O band):
+
+- **Heat:** a finite-volume solution of the heat equation on the cross-section of Fig. 1, uniform along the heater. The bottom of a 6 µm thick piece of substrate is held at a fixed temperature; the oxide surface loses heat to the air by convection (10 W/(m²·K)); the sides are insulated, 20 µm from the centre. Steady state, time steps and frequency response are solved on the same grid. Thermal constants and geometry follow Jacques et al.[^jacques]
+- **Optics:** the TE mode of the real 400 × 220 nm strip (or rib) in oxide, from MPB, with bulk silicon index and $dn/dT$ from Frey et al.[^frey] The phase uses the mode overlap of the Theory section on the computed temperature field.
+
+<Callout kind="note" title="Assumptions">
+
+The heater is assumed long compared with the cross-section, so heat flow along it is ignored. That makes $P_\pi$ reliable, but the model's time constants come out 1.3–2× slower than measured (heat also spreads along the heater and into the bulk substrate in 3D), so use them to compare designs, not as absolute values. For the same reason the far crosstalk (beyond ~15 µm pitch) depends on how deep the modelled substrate is, and is not predicted. The N++ absorption at 1.31 µm is estimated by scaling Jacques' value at 1.55 µm with the free-carrier $\lambda^2$ law.
+
+</Callout>
+
+#### Benchmark: reproducing a published heater
+
+Before any design, the model was run on the exact structures of Jacques et al.: a 500 nm strip at 1.55 µm, the same constants, and their phase metric (temperature at the waveguide centre × $dn/dT$):
+
+| | This model | Jacques et al., calculated | Jacques et al., measured |
+|---|---|---|---|
+| $P_\pi$, TiN | 23.85 mW | 23.9 mW | 21.4 mW |
+| $P_\pi$, N++ | 25.19 mW | 25.2 mW | 22.8 mW |
+| $\tau$, TiN / N++ | 7.5 / 4.2 µs | — | 5.6 / 2.2 µs |
+
+The calculated $P_\pi$ is reproduced within 0.2 %; both calculations are 10 % above the measurement. The time constants are slower than measured, the 2D limitation described above; a 2D reproduction of the same paper with a commercial solver gives the same 7.5 and 4.3 µs.[^tidy3d] The heat solver itself reproduces the exact solution of a layered stack to all printed digits.
+
+#### Temperature and phase
+
+Fig. 2 shows the temperature at $P = P_\pi$ for a 100 µm heater. The TiN heater warms a broad region of the oxide, and the waveguide sits at about 30 K. With trenches, the heat is confined between them and the same phase needs 11.6 mW instead of 16.8 mW. The N++ heater heats the slab and the rib directly.
+
+<Figure src={fig2} alt="Three temperature maps of the cross-sections, colour scale from black (0 K) to yellow (hottest). (a) TiN heater: a hot spot at the heater spreading downward and sideways through the oxide to the substrate. (b) TiN with trenches: the heat is confined between the two trenches, the region outside them stays cool. (c) N++ heater: two hot spots in the slab on both sides of the rib, close to the waveguide. A cyan contour marks the optical mode at each waveguide." caption="Temperature rise at P = P_π for a 100 µm long heater (the field for another length L is the same at the same P/L), 1.31 µm. White outlines: waveguide, heater, trenches; cyan: the optical mode (1/e² of the peak intensity); dotted: bottom of the BOX. 2D finite-volume heat solve; P_π from the mode overlap." number={2} size="wide" />
+
+Computed with the mode overlap, the TiN heater needs $P_\pi$ = 16.8 mW. The point metric used in the benchmark gives 18.7 mW: the 10 % difference is the $n_g/n_\text{Si}$ enhancement of the Theory section, which the point metric misses.
+
+#### Speed
+
+Fig. 3 shows the response of the phase to a power step and to a sinusoidal power. The N++ slab heater is the fastest ($\tau$ = 4.1 µs), the TiN heater takes 7.5 µs, and the trenches slow it to 10.4 µs. For the two TiN designs the bandwidth follows the single-RC estimate closely: 22 and 17 kHz, against $1/(2\pi\tau)$ = 21 and 15 kHz. The N++ heater departs from it. Its heat is released in silicon right next to the core, which gives a fast first rise, but the last part of the response still waits for the oxide around it to warm up. Its step response therefore reaches 63 % early, while its bandwidth, 28 kHz, is only 0.72 times $1/(2\pi\tau)$; above 100 kHz it rolls off more gently than the TiN heaters. When a control loop has to be designed around a heater, use the bandwidth, not $\tau$.
+
+<Figure src={fig3} alt="Two plots. Left: normalised phase versus time after a power step, logarithmic time axis from 0.01 to 1000 microseconds; three S-shaped curves rise from 0 to 1, the N++ heater first, then TiN, then TiN with trenches; dots mark where each reaches 63 percent. Right: phase response in dB versus modulation frequency from 100 Hz to 10 MHz; all three curves are flat at low frequency and roll off, the N++ heater last; a dashed line marks minus 3 dB." caption="(a) Phase after a power step, normalised to its final value; dots: the time constant τ (63 %). (b) Small-signal response to a sinusoidal heater power; dashed: −3 dB. The N++ slab heater is the fastest, the trenches make the TiN heater slower. 2D model: absolute times are 1.3–2× slower than measured devices; the ranking holds." number={3} size="wide" />
+
+#### Trenches
+
+Fig. 4 moves 1.5 µm wide trenches towards the waveguide. Far away ($d$ = 8 µm) they change little. At $d$ = 3 µm, $P_\pi$ falls by 31 % to 11.6 mW while $\tau$ grows by 38 % to 10.4 µs; at $d$ = 2 µm, $P_\pi$ is halved (8.3 mW) and $\tau$ = 10.8 µs. Down to $d$ = 3 µm the product $P_\pi\tau$ stays within 121–134 mW·µs, the trade-off of the Theory section. Closer in, the trenches also remove part of the heated oxide, $C'_\text{th}$ shrinks and the product falls to 90 mW·µs. The trenches must still stay clear of the optical mode, and they cut the crosstalk by about ten times (Fig. 6).
+
+<Figure src={fig4} alt="Two plots versus the trench distance d from 2 to 8 micrometres. Left: P pi rises from about 8 milliwatts at d equals 2 to about 16.6 at d equals 8, below a dashed line at 16.8 for no trench. Right: the time constant falls from about 10.8 microseconds at d equals 2 to about 7.7 at d equals 8, above a dashed line at 7.5 for no trench." caption="TiN heater with air trenches (1.5 µm wide, through the top oxide and BOX) at distance d from the waveguide centre. (a) P_π; (b) time constant. Dashed: no trench. Moving the trenches in saves power and costs speed: the P_π·τ trade-off. 2D model, 1.31 µm." number={4} size="wide" />
+
+#### The N++ heater: power against loss
+
+For the doped heater the main design choice is the distance $b$ between the doped strips and the rib (Fig. 5). Moving the strips from 1.2 to 0.4 µm saves 26 % of the power (21.5 → 16.0 mW) and makes the heater faster (4.8 → 3.5 µs), but the optical loss grows by almost five orders of magnitude, about four times per 0.1 µm, because the strips move into the exponential tail of the mode. At $b$ = 0.8 µm the estimated loss is 0.06 dB/cm, under 0.001 dB for a 100 µm heater; at 0.4 µm it is 15 dB/cm. The distance is therefore set by the loss budget, not by power: about 0.7–0.8 µm here.
+
+<Figure src={fig5} alt="P pi and optical loss versus the distance b of the N++ strips from the rib edge, 0.4 to 1.2 micrometres. P pi rises gently from about 16 to about 21.5 milliwatts. The loss on a logarithmic right axis falls steeply from about 15 dB per centimetre at 0.4 micrometres to about 0.0003 dB per centimetre at 1.2 micrometres." caption="N++ slab heater: P_π (left axis) and the heater-induced optical loss (right axis, logarithmic) against the distance b of the doped strips from the rib. The loss is an estimate: free-carrier absorption of N++ silicon scaled from 1.55 µm (Jacques et al.) to 1.31 µm, applied through the mode overlap. 2D model." number={5} />
+
+#### Crosstalk
+
+Fig. 6(a) shows the temperature at the height of the silicon layer as a function of the distance from the heater. Beyond about 4 µm it falls exponentially with a local decay length of 2.9–3.1 µm, against $\ell = 2H/\pi$ = 2.86 µm from the slab model. The crosstalk in Fig. 6(b) follows the same law: 31 % at 5 µm pitch, 5.9 % at 10 µm and 1.1 % at 15 µm. Trenches at $d$ = 3 µm cut it to 2.8 %, 0.6 % and 0.14 %. Changing the BOX tests the model further: for a BOX of 1, 2 and 3 µm the decay length taken from the crosstalk at 5 and 10 µm is 2.38, 2.97 and 3.61 µm, against 2.23, 2.86 and 3.50 µm from $2H/\pi$. The same sweep shows the price: $P_\pi$ = 26.6, 16.8 and 13.2 mW, and $\tau$ = 5.2, 7.6 and 10.2 µs. A thin BOX gives a fast, short-reaching but power-hungry heater; a thick one the opposite.
+
+<Figure src={fig6} alt="Two plots on logarithmic vertical axes. Left: the temperature at the silicon layer normalised to its value under the heater, versus lateral distance 0 to 30 micrometres; it falls almost linearly on the log scale beyond about 4 micrometres, parallel to a dashed exponential with decay length about 2.9 micrometres. Right: crosstalk versus waveguide pitch 3 to 20 micrometres; without trenches it falls from about 0.5 at 3 micrometres to about 0.002 at 20; with trenches it is about ten times lower at every pitch." caption="(a) Temperature at the Si layer versus lateral distance from a TiN heater (wide domain, 150 µm half-width), with the slab-model decay exp(−x/ℓ), ℓ = 2H/π (dashed). (b) Thermal crosstalk: phase on a neighbouring waveguide at pitch p divided by the heated waveguide's own phase, without and with trenches (d = 3 µm). 2D model; values beyond ~15 µm depend on the substrate depth and are not predicted." number={6} size="wide" />
+
+#### The trade-off in one picture
+
+Fig. 7 collects every design of this article on a $P_\pi$–$\tau$ map, with lines of constant $P_\pi\tau$. Changing the BOX or adding trenches moves a TiN heater roughly along one hyperbola: the BOX sweep has $P_\pi\tau$ = 137, 127 and 134 mW·µs, and the trenches stay within 121–134 mW·µs down to $d$ = 3 µm. Power is traded for speed, not gained. Only the N++ heater, which heats less material, sits on a lower hyperbola (55–104 mW·µs, depending on $b$), and it pays with optical loss instead.
+
+<Figure src={fig7} alt="Scatter plot of P pi versus time constant, 2 to 13 microseconds, with dotted hyperbolas for P pi times tau equal to 50, 100 and 150 milliwatt microseconds. The trench sweep runs from upper left to lower right along roughly constant product. The BOX sweep runs from high power and fast to low power and slow. The N++ buffer sweep lies at short times, near the 50 to 100 hyperbolas. The standard TiN design is circled." caption="All simulated designs on one map: TiN with trenches at d = 2–8 µm, TiN with BOX 1, 2, 3 µm, and N++ heaters at b = 0.4–1.2 µm. Dotted: constant P_π·τ. Insulation moves a design along a hyperbola (less power, slower); only heating less material (N++) moves it to a lower one. 2D model, 1.31 µm." number={7} />
+
+#### Theory versus simulation
+
+The main numbers of the model, next to the formulas they test:
+
+| Quantity | Theory | This model |
+|---|---|---|
+| Mode enhancement over $dn_\text{Si}/dT$ | $(n_g/n_\text{Si})\Gamma_\text{Si}$ = 1.10 | $P_\pi$ 16.8 mW with the overlap, 18.7 mW with the point metric (ratio 1.11) |
+| Lateral decay length, BOX 1 / 2 / 3 µm | $2H/\pi$ = 2.23 / 2.86 / 3.50 µm | 2.38 / 2.97 / 3.61 µm |
+| Slowest thermal time, BOX 1 / 2 / 3 µm | $\ell^2/D$ = 5.6 / 9.3 / 13.9 µs | $\tau$ (63 %) = 5.2 / 7.6 / 10.2 µs, same trend |
+| Bandwidth | $1/(2\pi\tau)$ for one RC | 1.06× (TiN), 1.11× (trenches), 0.72× (N++) |
+| $P_\pi\tau$ under insulation | constant | 127 → 121 mW·µs (trenches at 3 µm); BOX sweep 137 / 127 / 134 |
+| Power to tune a ring by one FSR | $2P_\pi$, any radius | 33.7 mW (TiN) |
+
+The 2D model confirms the scaling laws of the Theory section within a few per cent for the lateral decay and within about 10 % for the bandwidth of the TiN heaters. The slab model's $\tau_1$ is the slowest mode only, so it overestimates the 63 % time but follows its growth with the oxide thickness.
+
+A thermo-optic phase shifter is set by one cross-section. The heater's position fixes the thermal resistance, and with it $P_\pi$; the heated volume fixes the heat capacity, and with it $P_\pi\tau$. The oxide thickness fixes how far the heat reaches. Each design option moves along these three quantities: none of them makes a heater that is efficient, fast and isolated all at once.
+
+### Code and data
+
+- Notebook (literature, cross-section mode, heat-solver validation, Jacques benchmark, TiN / trench / N++ design, crosstalk, frequency response, ring tuning, compact model and layout): [`si_active/notebooks/01_thermo_optic_phase_shifter.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si_active/notebooks/01_thermo_optic_phase_shifter.ipynb)
+- Simulation modules: [`thermal.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/active/thermal.py) (2D finite-volume heat conduction), [`si_xsection.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/active/si_xsection.py) (MPB cross-section and perturbation overlap), [`thermo_optic.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/active/thermo_optic.py); compact (SAX) model: [`models/thermo_optic_phase_shifter.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/thermo_optic_phase_shifter.py)
+- The solves behind the figures are re-run by `scripts/blog_figures/thermo_optic_phase_shifters_data.py` (heat and MPB only; it adds the BOX sweep and the lateral profile to the notebook's studies) and saved in `si_active/data/blog_figures/thermo_optic_phase_shifters.npz`. The figures and all numbers are produced by `scripts/blog_figures/thermo_optic_phase_shifters.py` from that file.
+
+---
+
+## 日本語
+
+**熱光学位相シフタ**(thermo-optic phase shifter)は、導波路のすぐそばに小さなヒーターを置いた区間です。電流で導波路を温めるとシリコンの屈折率が上がり、通過する光の位相が進みます。シリコンフォトニクス回路を調整する最も一般的な方法で、変調器のバイアス設定、スイッチ行列や光プログラマブル回路での光路切り替え、リング共振器の波長合わせに使われます。
+
+### 概要
+
+#### 位相シフタは何をするか
+
+干渉計や共振器は、位相のそろった光波を足し合わせて動作します。[マッハ・ツェンダー干渉計](/blog/mach-zehnder-interferometers/)は2本のアームの位相差に応じて光をどちらかの出力へ送り、[リング共振器](/blog/ring-resonators/)は1周して戻った光の位相がそろうときに共鳴します。しかし製作したチップの位相は設計どおりにはなりません。幅や厚さが数 nm ずれるだけで実効屈折率が変わり、数百 µm の長さで位相誤差が積み重なります。位相シフタがあれば、製作後に回路を補正し、組み替え、動作点に固定できます。
+
+位相シフタには2つの系統があります。**電気光学**位相シフタは電圧で屈折率を変えます。シリコン中の自由キャリアや、ニオブ酸リチウムなどの結晶のポッケルス効果を使います([マッハ・ツェンダー変調器](/blog/mach-zehnder-modulators/)参照)。高速ですが、屈折率変化は小さくなります。**熱光学**位相シフタは熱で屈折率を変えます。応答はピコ秒ではなくマイクロ秒と遅いものの、シリコンでは効果が大きく、素子は短く単純で、光損失もほとんど増えません。そのため、GHz で変化させる必要のない用途には、ほぼすべてのシリコンフォトニクスチップがヒーターを使っています。
+
+#### 基本構造
+
+ヒーターは抵抗です。抵抗 $R$ に電流 $I$ を流すと $P = I^2 R$ の熱が発生し、その熱は周囲の酸化膜を通ってチップのヒートシンクであるシリコン基板へ流れます。その途中で導波路が温まります。本記事では、標準的な 220 nm SOI 上の3つの設計を比べます(図1)。
+
+- **(a) TiN ヒーター**:幅 2 µm、厚さ 200 nm の窒化チタンの帯を、400 × 220 nm のシリコン細線導波路の 2 µm 上の上部酸化膜中に置いた構造。
+- **(b) 深いトレンチ付き TiN ヒーター**:同じヒーターに加え、導波路の両側に上部酸化膜と埋め込み酸化膜(BOX)を貫く幅 1.5 µm の空気トレンチを掘った構造。
+- **(c) N++ スラブヒーター**:リブ導波路(スラブ厚 90 nm)のスラブを、リブから 0.8 µm 離れた幅 1 µm の2本の帯で高濃度 n 型にドープした構造。電流はドープしたシリコン自体を流れます。
+
+設計者が選ぶのは、ヒーターの材料と位置、導波路(細線かリブか)、トレンチの有無、隣の導波路との間隔、ヒーター長です。層構成(シリコン厚、2 µm の BOX、クラッド)はファウンドリが決めます。
+
+<Figure src={fig1} alt="幅 12 マイクロメートルの SOI 断面図が3つ。どれも下に灰色のシリコン基板、その上に厚さ約 4.5 マイクロメートルの水色の酸化膜、酸化膜の底に小さな濃い青のシリコン導波路がある。(a) 導波路の 2 マイクロメートル上の酸化膜中に金色の TiN ヒーター。(b) 同じ構造に加え、導波路の両側に酸化膜の全厚さを貫く白い空気トレンチが2本。(c) 薄いシリコンスラブをもつリブ導波路で、リブの両側のスラブ中に紫色の N++ ドープ領域が2本。" caption="本記事の3つのヒーター設計(縮尺どおり)。(a) 400 × 220 nm の Si 細線の 2 µm 上に TiN ヒーター(2 µm × 200 nm)。(b) 同じ構造に、幅 1.5 µm の空気トレンチを追加。トレンチ内側の端は導波路中心から 3 µm で、上部酸化膜と 2 µm の BOX を貫いて基板まで達する。(c) 幅 400 nm、スラブ厚 90 nm のリブ導波路。リブ端から 0.8 µm 離れたスラブ中に幅 1 µm の N++ 領域。酸化膜表面は BOX 上面から 2.5 µm、その上は空気。構造は Jacques ら[^jacques]にならい、波長 1.31 µm。" number={1} size="wide" />
+
+### 理論
+
+#### 熱光学効果
+
+シリコンの屈折率は温度とともに上がります。その割合が<Term id="ja-to" n={1}>熱光学係数</Term>で、室温・波長 1.3 µm で $dn/dT = 1.94\times10^{-4}$ K⁻¹ です(Frey ら[^frey]。1.55 µm では約 $1.8\times10^{-4}$ K⁻¹[^komma])。シリカの値はその20分の1の約 $1\times10^{-5}$ K⁻¹ です[^jacques]。加熱された長さ $L$ を通過した光が得る余分な位相は次のようになります。
+
+$$
+\Delta\phi = \frac{2\pi}{\lambda}\, \Delta n_\text{eff}\, L .
+$$
+
+<Symbols title="記号">
+
+- $\Delta\phi$ — ヒーターによる余分な位相(rad)
+- $\lambda$ — 真空中の波長(m)
+- $\Delta n_\text{eff}$ — 導波路の実効屈折率の変化(無次元)
+- $L$ — 加熱される長さ(m)
+
+</Symbols>
+
+最初の設計目標は $\pi$ の位相シフトで、これで MZI の出力が一方から他方へ切り替わります。$\Delta n_\text{eff} \approx (dn/dT)\,\Delta T$ とすると、必要な温度上昇は $\Delta T_\pi = \lambda / (2L\, dn/dT)$ です。1.31 µm、$L$ = 100 µm なら約 34 K、$L$ = 1 mm なら約 3.4 K です。シリコンで $10^{-3}$〜$10^{-2}$ の屈折率変化をこれほど簡単に得られる効果は、ほかにありません。代わりに、熱は遅く、広がります。
+
+<Glossary title="用語">
+<Def id="ja-to" n={1} term="熱光学係数(dn/dT)">
+材料の屈折率が 1 K あたりどれだけ変わるか。室温付近のシリコンでは通信波長帯で約 $2\times10^{-4}$ K⁻¹ と、代表的な光学材料の中で最大級。シリカは約 $1\times10^{-5}$ K⁻¹。
+</Def>
+</Glossary>
+
+#### 材料の屈折率からモードの屈折率へ
+
+導波モードはすべてがシリコン内にあるわけではなく、温度も一様ではありません。そのため<Term id="ja-neff" n={2}>実効屈折率</Term>は、局所的な屈折率変化の重み付き平均だけ変わります。周波数を固定したとき、小さな屈折率変化 $\Delta n(x, y)$ に対する1次の摂動論の結果は次のようになります[^kogelnik]。
+
+$$
+\Delta n_\text{eff} = n_g\, \frac{\iint n\, \Delta n\, |\mathbf{E}|^2 \, dx\, dy}{\iint n^2\, |\mathbf{E}|^2 \, dx\, dy} .
+$$
+
+<Symbols title="記号">
+
+- $n_g$ — モードの群屈折率(無次元)
+- $n(x, y)$ — 断面の屈折率分布(無次元)
+- $\Delta n(x, y)$ — 局所的な屈折率変化。ここでは $(dn/dT)\,\Delta T(x, y)$(無次元)
+- $\mathbf{E}(x, y)$ — モードの電界(任意単位)
+
+</Symbols>
+
+重みはモードの電界エネルギー密度なので、光がある場所の熱だけが効きます。断面全体が一様に温まり、シリコンだけが効くとすると、この式は $\Delta n_\text{eff} = (n_g / n_\text{Si})\,\Gamma_\text{Si}\, \Delta n_\text{Si}$ になります。$\Gamma_\text{Si}$ は電界エネルギーのうちシリコン内にある割合です。1.31 µm の 400 × 220 nm 細線では $n_g = 4.14$、$\Gamma_\text{Si} = 0.93$ なので、モードの屈折率はシリコン自体の屈折率より **10 % 速く**変わります。実効屈折率ではなく<Term id="ja-ng" n={3}>群屈折率</Term>が現れるのは、位相を固定した波長で比べるからです。$n_g$ の大きい導波路ほど、同じ屈折率変化から大きな位相が得られます。
+
+<Glossary title="用語">
+<Def id="ja-neff" n={2} term="実効屈折率(n_eff)">
+導波モードの位相速度を決める屈折率。単位長さあたり位相が $2\pi n_\text{eff}/\lambda$ 進む。クラッドとコアの屈折率の間の値をとり、導波路の寸法で決まる。
+</Def>
+<Def id="ja-ng" n={3} term="群屈折率(n_g)">
+$n_g = n_\text{eff} - \lambda\, dn_\text{eff}/d\lambda$。パルスの速さと、位相が波長とともにどれだけ速く変わるかを決める屈折率。シリコン細線では約 4 で、$n_\text{eff} \approx 2.5$ よりずっと大きい。
+</Def>
+</Glossary>
+
+#### P_π がヒーター長によらない理由
+
+熱の流れは、抵抗回路を流れる電流と同じように振る舞います。定常状態では導波路付近の温度上昇はヒーターの単位長さあたりの電力 $P/L$ に比例し、比例係数は単位長さあたりの<Term id="ja-rth" n={4}>熱抵抗</Term>です。式は次のようになります。
+
+$$
+\Delta T = R'_\text{th}\, \frac{P}{L} .
+$$
+
+<Symbols title="記号">
+
+- $\Delta T$ — 導波路の温度上昇(K)
+- $R'_\text{th}$ — 断面の単位長さあたりの熱抵抗(K·m/W)
+- $P$ — ヒーターで消費される電力(W)
+- $L$ — ヒーター長(m)
+
+</Symbols>
+
+位相の式に代入すると $L$ が消え、$\Delta\phi = (2\pi/\lambda)\,(dn_\text{eff}/dT)\, R'_\text{th}\, P$ となります。したがって $\pi$ の位相シフトに必要な電力 $P_\pi$ は次のようになります。
+
+$$
+P_\pi = \frac{\lambda}{2\, R'_\text{th}\, (dn_\text{eff}/dT)} .
+$$
+
+<Symbols title="記号">
+
+- $P_\pi$ — $\pi$ の位相シフトに必要なヒーター電力(W)
+- $dn_\text{eff}/dT$ — 上の重なり積分から求めたモードの熱光学係数(K⁻¹)
+
+</Symbols>
+
+ヒーターを長くすると、同じ電力がより長い区間に分散します。1 µm あたりの熱が減って温度上昇は小さくなり、長い光路がそれをちょうど打ち消します。つまり $P_\pi$ は長さではなく**断面**で決まる量です。長いヒーターは最高温度を下げ(信頼性に有利)、電流密度を下げるだけです。標準的な層構成のヒーターは、金属でもドープシリコンでも、ファウンドリによらず $\pi$ あたり約 20 mW を必要とします(Liu らのレビュー[^liu])。このような位相シフタを1000個並べた回路は 20 W 以上を消費します[^liu]。$P_\pi$ を下げるには $R'_\text{th}$ を上げる(導波路をよりよく断熱する)か、$dn_\text{eff}/dT$ を上げるしかありません。
+
+<Glossary title="用語">
+<Def id="ja-rth" n={4} term="熱抵抗">
+構造を流れる熱 1 W あたりの温度上昇、$R_\text{th} = \Delta T/P$(K/W)。ここでは長く一様なヒーターの単位長さあたりの値(K·m/W)で表す。熱伝導率が低い材料(酸化膜、空気)や、長く細い熱経路ほど大きくなる。
+</Def>
+</Glossary>
+
+#### 応答の速さ:熱時定数
+
+加熱には容量もあります。導波路が新しい温度に達する前に周囲の材料を温める必要があり、そのために単位長さあたり $C'_\text{th}\,\Delta T$ のエネルギーが要ります。最も簡単なモデルは1段の熱 RC 回路、$C'_\text{th}\, d\Delta T/dt = P/L - \Delta T / R'_\text{th}$ です。電力をステップ状に入れると温度は $\Delta T(t) = \Delta T_\infty (1 - e^{-t/\tau})$ と指数関数的に上がり、その<Term id="ja-tau" n={5}>熱時定数</Term>は次のようになります。
+
+$$
+\tau = R'_\text{th}\, C'_\text{th} .
+$$
+
+<Symbols title="記号">
+
+- $\tau$ — 熱時定数。最終的な位相の $1 - 1/e \approx 63$ % に達するまでの時間(s)
+- $C'_\text{th}$ — 加熱される領域の単位長さあたりの熱容量(J/(K·m))
+
+</Symbols>
+
+ヒーター電力を正弦波で変調すると、同じ回路はローパスフィルタとして働きます。その −3 dB 帯域は $f_\text{3dB} = 1/(2\pi\tau)$ です。実際の断面には多くの熱経路があり1段の RC 回路ではありません。導波路の上のヒーターではこの関係が約 10 % 以内で成り立ちますが、速い熱経路と遅い熱経路をもつヒーターではずれます(シミュレーションの節を参照)。典型的なヒーターの $\tau$ は数 µs、帯域は数十 kHz で、熱光学位相シフタは約 100 kHz を超えません[^liu]。文献によって定義が異なり、10〜90 % の立ち上がり時間(1段の極なら $2.2\tau$)を使うものもあるので、数値を比べる前に定義を確認してください。
+
+<Glossary title="用語">
+<Def id="ja-tau" n={5} term="熱時定数(τ)">
+ヒーターの応答の速さ。本記事では、電力をステップ状に入れてから位相が最終値の $1-1/e$(63 %)に達するまでの時間。1段の熱 RC 回路なら $\tau = R_\text{th} C_\text{th}$。
+</Def>
+</Glossary>
+
+#### 性能指数 P_π·τ
+
+2つの結果を掛けると $R'_\text{th}$ が消え、次のようになります。
+
+$$
+P_\pi\, \tau = \frac{\lambda\, C'_\text{th}}{2\, (dn_\text{eff}/dT)} .
+$$
+
+<Symbols title="記号">
+
+- $P_\pi\, \tau$ — 熱光学位相シフタの性能指数(W·s、通常は mW·µs)
+
+</Symbols>
+
+これがヒーター設計の中心にあるトレードオフです。導波路を断熱する(トレンチ、下の基板の除去、空気クラッド)と $R'_\text{th}$ が上がり、$P_\pi$ は下がりますが、$\tau$ は同じ割合で上がります。**両方**を改善する方法は、温める材料を減らす($C'_\text{th}$ を小さくする:熱源をコアのすぐ横に置く)か、モードの感度を上げる($dn_\text{eff}/dT$ を大きくする)ことだけです。そのため積 $P_\pi\tau$ が一般的な性能指数として使われます[^harris] [^liu]。標準プロセスのヒーターの報告値は約 50〜1000 mW·µs です[^liu]。
+
+#### 熱クロストーク
+
+熱は導波路で止まりません。酸化膜を通って横に広がり、隣の導波路を温めるので、隣の位相がヒーターの設定に応じて変わってしまいます。これが<Term id="ja-xt" n={6}>熱クロストーク</Term>です。高密度の MZI メッシュやリングを並べた回路では、クロストークで導波路の間隔が決まることがよくあります。
+
+簡単なモデルで、何がクロストークを決めるかがわかります。BOX とクラッドを、基板上の厚さ $H$ の1枚の酸化膜とみなします。基板は酸化膜の100倍熱を通すので、その表面はほぼ一定温度です。酸化膜の上面から空気へはほとんど熱が逃げません(本記事のモデルでは熱の 99.997 % が下へ流れます)。ヒーターから離れた場所では、この層の熱方程式の解は横方向に $e^{-|x|/\ell}$ で減衰し、減衰長は厚さだけで次のように決まります。
+
+$$
+\ell = \frac{2H}{\pi} .
+$$
+
+<Symbols title="記号">
+
+- $\ell$ — 温度の横方向の減衰長(m)
+- $H$ — 基板から上面までの酸化膜の総厚さ(m)
+
+</Symbols>
+
+層内の温度分布は4分の1周期の正弦波 $\sin(\pi y/2H)$($y$ は基板から測る)になり、ラプラス方程式が横方向の減衰を決めます。標準の層構成($H$ = BOX 2 µm + 表面まで 2.5 µm = 4.5 µm)では $\ell$ = 2.9 µm です。間隔を 2.9 µm 広げるごとにクロストークは $e$ 分の1になり、10 µm 広げると約30分の1になります。
+
+同じ層が速さも決めます。層の最も遅い熱モードは同じ4分の1正弦波の形で、時間的には次の時定数で減衰します。
+
+$$
+\tau_1 = \frac{\ell^2}{D} = \frac{4H^2}{\pi^2 D} , \qquad D = \frac{k}{\rho c_p} .
+$$
+
+<Symbols title="記号">
+
+- $\tau_1$ — 酸化膜層の最も遅い熱モードの減衰時間(s)
+- $D$ — 酸化膜の熱拡散率(m²/s)
+- $k$ — 熱伝導率(W/(m·K))
+- $\rho$ — 密度(kg/m³)
+- $c_p$ — 比熱(J/(kg·K))
+
+</Symbols>
+
+シリカでは $D = 8.8\times10^{-7}$ m²/s[^jacques] なので、$H$ = 4.5 µm では $\tau_1$ ≈ 9 µs です。2つの結果はつながっています。**単純な層構成では、熱の横方向の到達距離と速さはセットで決まります。** 酸化膜を薄くするとヒーターは速くなり、クロストークも短距離になりますが、$R'_\text{th}$ が下がるので $P_\pi$ は上がります。酸化膜を厚くすると電力は減りますが、速さとクロストークの両方が悪くなります。トレンチはこの結びつきを断ち切りますが(次の節)、代わりに遅くなります。
+
+<Glossary title="用語">
+<Def id="ja-xt" n={6} term="熱クロストーク">
+あるヒーターが隣の導波路に与える望まない位相シフト。本記事では、隣の導波路の位相を加熱した導波路自身の位相で割った値。
+</Def>
+</Glossary>
+
+#### ヒーター材料:なぜ TiN か、なぜドープシリコンか
+
+ヒーターは4つの条件を同時に満たす必要があります。
+
+1. **抵抗性であること、ただし高すぎないこと。** 抵抗率が給電用のアルミや銅の配線よりずっと高くなければ、熱は配線側で発生してしまいます[^liu]。また抵抗値が駆動電圧 $V = \sqrt{PR}$ を決めます[^liu]。1 kΩ のヒーターで 17 mW を出すには 4.1 V が必要です。
+2. **光を吸収しないこと。** 金属は強く光を吸収するので、金属ヒーターはモードの電界が十分減衰した場所、つまり導波路の 1〜2 µm 上のクラッド中に置く必要があります。ドープシリコンも自由キャリアで光を吸収するので、モードから離しておく必要があります。
+3. **ファウンドリのプロセスで使えること。** プロセスデザインキットの標準層として提供されている必要があります。
+4. **長期間もつこと。** 高温と高い電流密度に何年も耐える必要があります。
+
+**導波路の上に置く金属ヒーター**は、最も少ない妥協でこれらを満たし、多くのファウンドリが提供している金属が TiN です。Jacques ら(AMF)のヒーターも、Liu らのファウンドリ比較表の TiN の項目(CUMEC、IME)も TiN です[^jacques] [^liu]。タングステン(imec)や白金のヒーターも報告されています[^liu]。金属は 2 µm 離れているので、測定できるほどの光損失は加わりません。代わりに速さと効率を失います。熱はコアに届くまでに 2 µm の酸化膜を越えねばならず、一部は横や真下へ逃げてしまうからです。
+
+**ドープシリコンヒーター**はシリコン層そのものを使います。シリコン変調器のオーミックコンタクトを作るイオン注入工程で、リブ導波路のスラブに導電性の N++ や P++ の帯も作れます。熱は酸化膜の100倍熱を通すシリコン中で、コアのすぐ隣で発生します。温める酸化膜が少ないので、ヒーターは速くなります。Jacques らは同じプロセスで、N++ スラブヒーターの 2.2 µs と TiN の 5.6 µs を、同程度の $P_\pi$(22.8 mW と 21.4 mW)で測定しています[^jacques]。代わりに光損失が生じます。自由キャリアが光を吸収するので、ドープ領域はリブから十分離さなければなりません。導波路そのものをドープしてヒーターにすることもでき、Harris らはこの方法で $P_\pi$ = 24.8 mW、2.7 µs、挿入損失 0.23 dB を得ています[^harris]。
+
+**シリサイド**ヒーター(シリコン上に形成した金属とシリコンの化合物)は抵抗が低く、1 V 程度の駆動電圧を可能にします。Liu らが紹介する IBM の設計は 20 mW、2.8 µs 未満を達成していますが、過剰な光損失が約 25 dB/cm あります[^liu]。
+
+#### トレンチとアンダーカット
+
+空気の熱伝導率はシリカの50分の1です(0.026 対 1.38 W/(m·K))[^jacques]。そのため、導波路の横にクラッドと BOX を貫いて掘った深い<Term id="ja-trench" n={7}>トレンチ</Term>は、横方向の熱の通り道をふさぎます。トレンチは2つの量に同時に効きます。横に広がるはずだった熱が導波路の下へ押し込められるので、$R'_\text{th}$ が上がって $P_\pi$ が下がります。また、トレンチの向こうの隣の導波路に届く熱がずっと減るので、クロストークが下がります。ただし $\tau = R'_\text{th} C'_\text{th}$ なので、ヒーターは遅くなります。
+
+さらに進めて、トレンチを開けたあと導波路の下のシリコン基板をエッチングで除去すると(<Term id="ja-undercut" n={8}>アンダーカット</Term>)、導波路は酸化膜の中に宙づりになります。すると熱は細い酸化膜の橋からしか逃げられず、$P_\pi$ は約 0.5〜1.5 mW まで下がりますが、加熱時間は 140〜780 µs に延びます[^liu] [^dong]。これは $P_\pi\tau$ のトレードオフの極端な形です。電力は標準的なヒーターの約 20 mW の10〜40分の1になり、応答は数十倍遅くなります。
+
+<Glossary title="用語">
+<Def id="ja-trench" n={7} term="深いトレンチ(断熱トレンチ)">
+導波路の横に、上部酸化膜と埋め込み酸化膜を貫いて掘った細い溝。通常は空気のまま残す。酸化膜を通る横方向の熱の経路を断つ。
+</Def>
+<Def id="ja-undercut" n={8} term="基板アンダーカット">
+酸化膜に開けた穴から選択エッチングを行い、導波路の下のシリコン基板を除去すること。加熱部が宙に浮く。ヒーター電力は最も小さくなるが、応答は最も遅くなる。
+</Def>
+</Glossary>
+
+#### リング共振器のチューニング
+
+リングの共鳴は1周の位相が $2\pi$ の整数倍になる波長にあり、<Term id="ja-fsr" n={9}>自由スペクトル領域</Term> $\mathrm{FSR} = \lambda^2/(n_g L_\text{ring})$ ごとに繰り返します。リング全周にヒーターを置くと、$P = 2P_\pi$ で1周の位相が $2\pi$ ずれ、共鳴はちょうど1 FSR 動きます。$P_\pi$ は長さによらないので、**リングを1 FSR 全体にわたってチューニングする電力は、半径によらず $2P_\pi$ です。** 小さいリングは FSR が大きいので nm/mW で表すチューニング効率は高くなりますが、任意の波長に届くための電力は同じです。ヒーターは温めることしかできないので、リングは目標より短波長側に作っておき、加熱して合わせます。最悪の場合、すべての波長に届くには最大 $2P_\pi$ が必要です。
+
+同じ効果のため、リングはチップの温度にも敏感です。共鳴は $d\lambda/dT = \lambda\,(dn_\text{eff}/dT)/n_g$、本記事の細線で約 64 pm/K 動きます。そのためリングを使う送信器の多くは、ヒーターをフィードバックループで動かし、各リングをレーザーの波長に固定しています。
+
+<Glossary title="用語">
+<Def id="ja-fsr" n={9} term="自由スペクトル領域(FSR)">
+リングの隣り合う共鳴の波長間隔、$\lambda^2/(n_g L_\text{ring})$。$L_\text{ring}$ はリングの周長、$n_g$ は群屈折率。
+</Def>
+</Glossary>
+
+#### 熱光学と電気光学の比較
+
+2つの系統は役割が異なります。
+
+| | 熱光学(ヒーター) | 電気光学、Si 空乏型 | 電気光学、ポッケルス(TFLN) |
+|---|---|---|---|
+| 屈折率変化 | 1 K あたり $1.9\times10^{-4}$、実用上 $10^{-3}$〜$10^{-2}$ | $10^{-4}$ 程度[^reed] | 5 µm に 1 V で $3\times10^{-5}$ |
+| π に必要な長さ | 100 µm 以下($P_\pi$ は $L$ によらない) | 数 mm[^rahim] | 数 mm |
+| 速さ | µs、約 100 kHz 以下[^liu] | 数十 GHz[^reed] [^rahim] | 数十 GHz 以上 |
+| 静的な電力 | π あたり約 20 mW を常時[^liu] | ほぼゼロ(逆バイアス) | ほぼゼロ |
+| 光損失 | TiN ではほぼなし | 自由キャリア吸収[^liu] [^reed] | 小さい |
+| 副作用 | 隣を温める、周囲温度で変動 | 損失が電圧で変わる | — |
+
+**ヒーターの長所。** 短く、単純で、安く、実質的に無損失で、必要なら数 $\pi$ の大きな位相範囲が得られます。どのシリコンファウンドリでも使えます。
+
+**短所。** 遅く、位相を保つ間は電力を消費し続け、温めることしかできず、隣に影響します。大規模な回路では、ヒーターの電力とクロストークの校正がそれ自体システムの問題になります。
+
+TFLN の列は[マッハ・ツェンダー変調器](/blog/mach-zehnder-modulators/)の設計(4.5 mm、79 GHz)に基づきます。役割分担は自然に決まります。電気光学位相シフタはデータを運び、ヒーターはそれ以外のすべて(変調器のバイアス、スイッチの状態、メッシュの位相、リングの波長)を設定して保ちます。
+
+#### 設計の早見表:何を変えると何が変わるか
+
+<Callout kind="design" title="設計上の意味">
+
+| 変えるもの | 起こること | 理由 |
+|---|---|---|
+| ヒーター長 | $P_\pi$ は不変、最高温度が下がる | $\Delta T \propto P/L$、位相 $\propto \Delta T\,L$ |
+| 金属ヒーターをコアに近づける | $P_\pi$ 減、高速化。金属がモードに届くと光損失 | 越える酸化膜が減り、加熱体積が小さい |
+| 金属の代わりにドープ Si | 同程度の $P_\pi$ で約2倍高速 | 熱がコアの隣のシリコンで発生 |
+| ドープ領域をリブに近づける | $P_\pi$ 減、高速化。損失が急増 | モードの裾での自由キャリア吸収 |
+| 深いトレンチを追加 | $P_\pi$ 減、クロストーク大幅減、低速化 | $R'_\text{th}$ 増、$\tau = R'_\text{th} C'_\text{th}$ |
+| 基板をアンダーカット | $P_\pi$ が10〜40分の1、応答は数百 µs | 熱が細い酸化膜の橋からしか逃げない |
+| BOX・クラッドを厚く | $P_\pi$ 減、クロストークが遠くまで届く、低速化 | $\ell = 2H/\pi$、$\tau_1 = \ell^2/D$ |
+| 導波路間隔を広げる | クロストーク ∝ $e^{-p/\ell}$ | 酸化膜中の横方向の減衰 |
+| リング半径 | nm/mW は変わるが、1 FSR の電力($2P_\pi$)は不変 | FSR ∝ 1/L、$P_\pi$ は L によらない |
+
+</Callout>
+
+### シミュレーション
+
+#### 本記事のモデル
+
+以下の結果はすべて、実際の断面の2次元モデルで、波長 1.31 µm(O バンド)で求めました。
+
+- **熱:** 図1の断面(ヒーター方向に一様)で熱方程式を有限体積法で解きます。厚さ 6 µm に切った基板の底を一定温度に保ち、酸化膜表面は対流(10 W/(m²·K))で空気へ熱を逃がし、中心から 20 µm の側面は断熱とします。定常状態、時間発展、周波数応答を同じ格子で解きます。熱定数と構造は Jacques ら[^jacques]に従います。
+- **光:** 酸化膜中の実際の 400 × 220 nm 細線(またはリブ)の TE モードを MPB で求めます。シリコンの屈折率と $dn/dT$ はバルクの値(Frey ら[^frey])です。位相は、計算した温度分布に理論の節の重なり積分を適用して求めます。
+
+<Callout kind="note" title="前提">
+
+ヒーターは断面に比べて十分長いと仮定し、ヒーター方向の熱の流れは無視しています。$P_\pi$ はこれで信頼できますが、時定数は測定より 1.3〜2 倍遅く出ます(3次元では熱がヒーター方向やバルク基板へも広がるため)。したがって時定数は設計どうしの比較に使い、絶対値としては使わないでください。同じ理由で、遠くのクロストーク(間隔約 15 µm 以上)はモデル化した基板の深さに依存し、予測できません。1.31 µm での N++ の吸収は、Jacques らの 1.55 µm の値を自由キャリアの $\lambda^2$ 則で換算した推定値です。
+
+</Callout>
+
+#### ベンチマーク:発表済みのヒーターの再現
+
+設計の前に、Jacques らと全く同じ構造(1.55 µm、幅 500 nm の細線、同じ定数、導波路中心の温度 × $dn/dT$ という彼らの位相の指標)でモデルを計算しました。
+
+| | 本モデル | Jacques ら、計算 | Jacques ら、測定 |
+|---|---|---|---|
+| $P_\pi$、TiN | 23.85 mW | 23.9 mW | 21.4 mW |
+| $P_\pi$、N++ | 25.19 mW | 25.2 mW | 22.8 mW |
+| $\tau$、TiN / N++ | 7.5 / 4.2 µs | — | 5.6 / 2.2 µs |
+
+計算された $P_\pi$ を 0.2 % 以内で再現しました。両方の計算とも測定より 10 % 高くなっています。時定数は測定より遅く、上で述べた2次元モデルの限界です。同じ論文を商用ソルバーで2次元再現した例でも、同じ 7.5 µs と 4.3 µs が得られています[^tidy3d]。熱ソルバー自体は、層状構造の厳密解を表示した全桁で再現します。
+
+#### 温度と位相
+
+図2は、長さ 100 µm のヒーターで $P = P_\pi$ のときの温度分布です。TiN ヒーターは酸化膜の広い範囲を温め、導波路は約 30 K 上がります。トレンチがあると熱はその間に閉じ込められ、同じ位相を 16.8 mW ではなく 11.6 mW で得られます。N++ ヒーターはスラブとリブを直接温めます。
+
+<Figure src={fig2} alt="各断面の温度分布が3つ。色は黒(0 K)から黄色(最も高温)。(a) TiN ヒーター:ヒーターの高温部から酸化膜を通って下と横へ基板まで熱が広がる。(b) トレンチ付き TiN:熱は2本のトレンチの間に閉じ込められ、外側は冷たいまま。(c) N++ ヒーター:リブ両側のスラブ中、導波路の近くに2つの高温部。各導波路の光モードをシアンの等高線で示す。" caption="長さ 100 µm のヒーターに P = P_π を加えたときの温度上昇(別の長さ L でも同じ P/L なら同じ分布)、1.31 µm。白線:導波路、ヒーター、トレンチ。シアン:光モード(強度がピークの 1/e²)。点線:BOX の底。2次元有限体積法の熱計算。P_π はモードの重なりから求めた値。" number={2} size="wide" />
+
+モードの重なりで計算すると、TiN ヒーターの $P_\pi$ は 16.8 mW です。ベンチマークで使った点温度の指標では 18.7 mW になります。この 10 % の差は理論の節の $n_g/n_\text{Si}$ による増強で、点温度の指標はこれを見落とします。
+
+#### 速さ
+
+図3は、電力のステップと正弦波状の電力に対する位相の応答です。N++ スラブヒーターが最も速く($\tau$ = 4.1 µs)、TiN ヒーターは 7.5 µs、トレンチを付けると 10.4 µs に遅くなります。2つの TiN 設計では、帯域は1段の RC の見積もりによく従います(22 kHz と 17 kHz に対し、$1/(2\pi\tau)$ = 21 kHz と 15 kHz)。N++ ヒーターはこの見積もりから外れます。熱がコアのすぐ隣のシリコンで発生するので最初の立ち上がりは速いのですが、応答の最後の部分は周囲の酸化膜が温まるのを待つことになります。そのためステップ応答は早く 63 % に達する一方、帯域は 28 kHz と $1/(2\pi\tau)$ の 0.72 倍にとどまり、100 kHz より上では TiN ヒーターより緩やかに低下します。ヒーターを含む制御ループを設計するときは、$\tau$ ではなく帯域を使ってください。
+
+<Figure src={fig3} alt="2つのグラフ。左:電力ステップ後の規格化した位相と時間。時間軸は対数で 0.01〜1000 マイクロ秒。3本の S 字曲線が 0 から 1 へ上がり、N++ ヒーターが最初、次に TiN、最後にトレンチ付き TiN。点は 63 % に達する時刻。右:変調周波数 100 Hz〜10 MHz に対する位相応答(dB)。3本とも低周波では平坦で、その後低下し、N++ ヒーターが最後まで残る。破線は −3 dB。" caption="(a) 電力ステップ後の位相(最終値で規格化)。点:時定数 τ(63 %)。(b) 正弦波状のヒーター電力に対する小信号応答。破線:−3 dB。N++ スラブヒーターが最も速く、トレンチは TiN ヒーターを遅くする。2次元モデルの絶対時間は実デバイスの測定より 1.3〜2 倍遅いが、順位は変わらない。" number={3} size="wide" />
+
+#### トレンチ
+
+図4では、幅 1.5 µm のトレンチを導波路に近づけていきます。遠く($d$ = 8 µm)ではほとんど変わりません。$d$ = 3 µm では $P_\pi$ が 31 % 下がって 11.6 mW になり、$\tau$ は 38 % 増えて 10.4 µs になります。$d$ = 2 µm では $P_\pi$ は半分(8.3 mW)、$\tau$ = 10.8 µs です。$d$ = 3 µm までは積 $P_\pi\tau$ が 121〜134 mW·µs の範囲にとどまり、理論の節のトレードオフどおりです。それより近づけると、トレンチが加熱される酸化膜の一部も取り除くので $C'_\text{th}$ が小さくなり、積は 90 mW·µs まで下がります。トレンチは光モードからは離しておく必要があり、またクロストークを約10分の1にします(図6)。
+
+<Figure src={fig4} alt="トレンチ距離 d(2〜8 マイクロメートル)に対する2つのグラフ。左:P pi は d = 2 で約 8 ミリワット、d = 8 で約 16.6 と増え、トレンチなしの 16.8 の破線より下にある。右:時定数は d = 2 で約 10.8 マイクロ秒、d = 8 で約 7.7 と減り、トレンチなしの 7.5 の破線より上にある。" caption="導波路中心から距離 d に空気トレンチ(幅 1.5 µm、上部酸化膜と BOX を貫通)を置いた TiN ヒーター。(a) P_π、(b) 時定数。破線:トレンチなし。トレンチを近づけると電力は減り、速さは落ちる。これが P_π·τ のトレードオフ。2次元モデル、1.31 µm。" number={4} size="wide" />
+
+#### N++ ヒーター:電力と損失
+
+ドープヒーターの主な設計パラメータは、ドープ領域とリブの距離 $b$ です(図5)。ドープ領域を 1.2 µm から 0.4 µm に近づけると電力は 26 % 減り(21.5 → 16.0 mW)、ヒーターは速くなります(4.8 → 3.5 µs)。しかし光損失はほぼ5桁、0.1 µm あたり約4倍の割合で増えます。ドープ領域がモードの指数関数的な裾に入っていくためです。$b$ = 0.8 µm での推定損失は 0.06 dB/cm で、100 µm のヒーターなら 0.001 dB 未満ですが、0.4 µm では 15 dB/cm になります。したがって距離は電力ではなく損失の許容量で決まり、ここでは約 0.7〜0.8 µm です。
+
+<Figure src={fig5} alt="リブ端から N++ 領域までの距離 b(0.4〜1.2 マイクロメートル)に対する P pi と光損失。P pi は約 16 から約 21.5 ミリワットへ緩やかに増える。右の対数軸の損失は、0.4 マイクロメートルの約 15 dB/cm から 1.2 マイクロメートルの約 0.0003 dB/cm へ急激に下がる。" caption="N++ スラブヒーター:ドープ領域とリブの距離 b に対する P_π(左軸)とヒーターによる光損失(右軸、対数)。損失は推定値で、N++ シリコンの自由キャリア吸収を 1.55 µm(Jacques ら)から 1.31 µm へ換算し、モードの重なりで評価した。2次元モデル。" number={5} />
+
+#### クロストーク
+
+図6(a)は、シリコン層の高さでの温度をヒーターからの距離の関数として示しています。約 4 µm より先では指数関数的に下がり、局所的な減衰長は 2.9〜3.1 µm です。層モデルの $\ell = 2H/\pi$ = 2.86 µm とよく一致します。図6(b) のクロストークも同じ法則に従い、間隔 5 µm で 31 %、10 µm で 5.9 %、15 µm で 1.1 % です。$d$ = 3 µm のトレンチがあると 2.8 %、0.6 %、0.14 % に下がります。BOX を変えるとモデルをさらに確かめられます。BOX が 1、2、3 µm のとき、5 µm と 10 µm のクロストークから求めた減衰長は 2.38、2.97、3.61 µm で、$2H/\pi$ の 2.23、2.86、3.50 µm と一致します。同じ掃引から代償もわかります。$P_\pi$ = 26.6、16.8、13.2 mW、$\tau$ = 5.2、7.6、10.2 µs です。BOX が薄いと高速で熱の届く範囲は狭いが電力を食うヒーターに、厚いとその逆になります。
+
+<Figure src={fig6} alt="縦軸が対数の2つのグラフ。左:シリコン層での温度をヒーター直下の値で規格化し、横方向距離 0〜30 マイクロメートルに対して示す。約 4 マイクロメートルより先では対数軸上でほぼ直線的に下がり、減衰長約 2.9 マイクロメートルの破線の指数関数と平行。右:導波路間隔 3〜20 マイクロメートルに対するクロストーク。トレンチなしでは 3 マイクロメートルの約 0.5 から 20 マイクロメートルの約 0.002 へ下がり、トレンチありではどの間隔でも約10分の1。" caption="(a) TiN ヒーターからの横方向距離に対するシリコン層の温度(片側 150 µm の広い計算領域)と、層モデルの減衰 exp(−x/ℓ)、ℓ = 2H/π(破線)。(b) 熱クロストーク:間隔 p の隣の導波路の位相を、加熱した導波路自身の位相で割った値。トレンチなしとトレンチあり(d = 3 µm)。2次元モデル。約 15 µm を超える値は基板の深さに依存し、予測できない。" number={6} size="wide" />
+
+#### トレードオフを1枚の図で
+
+図7は、本記事のすべての設計を $P_\pi$–$\tau$ 平面に、$P_\pi\tau$ 一定の線とともにまとめたものです。BOX を変えたりトレンチを加えたりすると、TiN ヒーターはおおむね1本の双曲線に沿って動きます。BOX の掃引では $P_\pi\tau$ = 137、127、134 mW·µs、トレンチは $d$ = 3 µm まで 121〜134 mW·µs の範囲です。電力は速さと交換されるだけで、得をするわけではありません。温める材料が少ない N++ ヒーターだけが下の双曲線(b に応じて 55〜104 mW·µs)にあり、代わりに光損失を払います。
+
+<Figure src={fig7} alt="横軸が時定数(2〜13 マイクロ秒)、縦軸が P pi の散布図。点線は P pi τ が 50、100、150 ミリワット・マイクロ秒の双曲線。トレンチの掃引は左上から右下へ、積がほぼ一定の線に沿って並ぶ。BOX の掃引は高電力・高速から低電力・低速へ並ぶ。N++ の距離の掃引は短い時間側の 50〜100 の双曲線付近にある。標準の TiN 設計を丸で囲む。" caption="シミュレーションしたすべての設計:トレンチ付き TiN(d = 2〜8 µm)、BOX 1、2、3 µm の TiN、b = 0.4〜1.2 µm の N++ ヒーター。点線:P_π·τ 一定。断熱すると設計は双曲線に沿って動き(電力減、低速化)、温める材料を減らす(N++)ことだけが下の双曲線へ移す。2次元モデル、1.31 µm。" number={7} />
+
+#### 理論とシミュレーションの比較
+
+モデルの主な数値を、それが検証する式と並べます。
+
+| 量 | 理論 | 本モデル |
+|---|---|---|
+| $dn_\text{Si}/dT$ に対するモードの増強 | $(n_g/n_\text{Si})\Gamma_\text{Si}$ = 1.10 | $P_\pi$:重なりで 16.8 mW、点温度で 18.7 mW(比 1.11) |
+| 横方向の減衰長、BOX 1 / 2 / 3 µm | $2H/\pi$ = 2.23 / 2.86 / 3.50 µm | 2.38 / 2.97 / 3.61 µm |
+| 最も遅い熱の時定数、BOX 1 / 2 / 3 µm | $\ell^2/D$ = 5.6 / 9.3 / 13.9 µs | $\tau$(63 %)= 5.2 / 7.6 / 10.2 µs、同じ傾向 |
+| 帯域 | 1段の RC なら $1/(2\pi\tau)$ | 1.06 倍(TiN)、1.11 倍(トレンチ)、0.72 倍(N++) |
+| 断熱したときの $P_\pi\tau$ | 一定 | 127 → 121 mW·µs(3 µm のトレンチ)。BOX 掃引 137 / 127 / 134 |
+| リングを1 FSR チューニングする電力 | 半径によらず $2P_\pi$ | 33.7 mW(TiN) |
+
+2次元モデルは、理論の節のスケーリング則を、横方向の減衰については数 % 以内、TiN ヒーターの帯域については約 10 % 以内で確かめています。層モデルの $\tau_1$ は最も遅いモードだけなので 63 % の時間を過大評価しますが、酸化膜の厚さに対する増え方は同じです。
+
+熱光学位相シフタは1つの断面で決まります。ヒーターの位置が熱抵抗を、したがって $P_\pi$ を決めます。加熱される体積が熱容量を、したがって $P_\pi\tau$ を決めます。酸化膜の厚さが熱の届く距離を決めます。どの設計の選択肢もこの3つの量の間を動くだけで、効率がよく、速く、隔離されたヒーターを一度に実現するものはありません。
+
+### コードとデータ
+
+- ノートブック(文献、断面モード、熱ソルバーの検証、Jacques ベンチマーク、TiN・トレンチ・N++ の設計、クロストーク、周波数応答、リングのチューニング、コンパクトモデルとレイアウト):[`si_active/notebooks/01_thermo_optic_phase_shifter.ipynb`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/si_active/notebooks/01_thermo_optic_phase_shifter.ipynb)
+- シミュレーションモジュール:[`thermal.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/active/thermal.py)(2次元有限体積法の熱伝導)、[`si_xsection.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/active/si_xsection.py)(MPB の断面モードと摂動の重なり)、[`thermo_optic.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/active/thermo_optic.py)。コンパクト(SAX)モデル:[`models/thermo_optic_phase_shifter.py`](https://github.com/ykawaguchi-photonics/photonics-simulation-toolkit/blob/main/src/pic_toolkit/models/thermo_optic_phase_shifter.py)
+- 図のもとになる計算は `scripts/blog_figures/thermo_optic_phase_shifters_data.py` で再実行し(熱と MPB のみ。ノートブックの解析に BOX の掃引と横方向の温度分布を追加)、`si_active/data/blog_figures/thermo_optic_phase_shifters.npz` に保存しています。図とすべての数値は、そのファイルから `scripts/blog_figures/thermo_optic_phase_shifters.py` で作成しています。
+
+---
+
+## References / 参考文献
+
+[^jacques]: M. Jacques, A. Samani, E. El-Fiky, D. Patel, Z. Xing and D. V. Plant, "Optimization of thermo-optic phase-shifter design and mitigation of thermal crosstalk on the SOI platform," *Optics Express* **27**, 10456–10471 (2019). [doi:10.1364/OE.27.010456](https://doi.org/10.1364/OE.27.010456)
+[^frey]: B. J. Frey, D. B. Leviton and T. J. Madison, "Temperature-dependent refractive index of silicon and germanium," *Proc. SPIE* **6273**, 62732J (2006). [doi:10.1117/12.672850](https://doi.org/10.1117/12.672850)
+[^komma]: J. Komma, C. Schwarz, G. Hofmann, D. Heinert and R. Nawrodt, "Thermo-optic coefficient of silicon at 1550 nm and cryogenic temperatures," *Applied Physics Letters* **101**, 041905 (2012). [doi:10.1063/1.4738989](https://doi.org/10.1063/1.4738989)
+[^kogelnik]: H. Kogelnik, "Theory of dielectric waveguides," in T. Tamir (ed.), *Integrated Optics*, Topics in Applied Physics **7**, Springer (1975), pp. 13–81. [doi:10.1007/978-3-662-43208-2_2](https://doi.org/10.1007/978-3-662-43208-2_2) First-order perturbation of the propagation constant, $\Delta\beta = \omega \iint \Delta\varepsilon |\mathbf{E}|^2 dA / 4P$. With the mode's power $P = v_g W$ this is the form used here.
+[^liu]: S. Liu, J. Feng, Y. Tian, H. Zhao, L. Jin, B. Ouyang, J. Zhu and J. Guo, "Thermo-optic phase shifters based on silicon-on-insulator platform: state-of-the-art and a review," *Frontiers of Optoelectronics* **15**, 9 (2022). [doi:10.1007/s12200-022-00012-9](https://doi.org/10.1007/s12200-022-00012-9)
+[^harris]: N. C. Harris, Y. Ma, J. Mower, T. Baehr-Jones, D. Englund, M. Hochberg and C. Galland, "Efficient, compact and low loss thermo-optic phase shifter in silicon," *Optics Express* **22**, 10487–10493 (2014). [doi:10.1364/OE.22.010487](https://doi.org/10.1364/OE.22.010487)
+[^dong]: P. Dong, W. Qian, H. Liang, R. Shafiiha, D. Feng, G. Li, J. E. Cunningham, A. V. Krishnamoorthy and M. Asghari, "Thermally tunable silicon racetrack resonators with ultralow tuning power," *Optics Express* **18**, 20298–20304 (2010). [doi:10.1364/OE.18.020298](https://doi.org/10.1364/OE.18.020298)
+[^reed]: G. T. Reed, G. Mashanovich, F. Y. Gardes and D. J. Thomson, "Silicon optical modulators," *Nature Photonics* **4**, 518–526 (2010). [doi:10.1038/nphoton.2010.179](https://doi.org/10.1038/nphoton.2010.179)
+[^rahim]: A. Rahim, A. Hermans, B. Wohlfeil, D. Petousi, B. Kuyken, D. Van Thourhout and R. Baets, "Taking silicon photonics modulators to a higher performance level: state-of-the-art and a review of new technologies," *Advanced Photonics* **3**, 024003 (2021). [doi:10.1117/1.AP.3.2.024003](https://doi.org/10.1117/1.AP.3.2.024003)
+[^tidy3d]: Flexcompute, "Transient heat analysis of thermo-optic phase shifters," Tidy3D example notebook (a 2D reproduction of Jacques et al. 2019), accessed November 2026. A vendor example, used here only as a cross-check.

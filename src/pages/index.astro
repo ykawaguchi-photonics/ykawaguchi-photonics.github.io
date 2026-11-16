@@ -2,8 +2,8 @@
 import { Image } from "astro:assets";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import JsonLd from "../components/JsonLd.astro";
-import PubItem from "../components/PubItem.astro";
-import PostCard from "../components/PostCard.astro";
+import FieldVideo from "../components/FieldVideo.astro";
+import { clips } from "../data/animations";
 import { profileLinks, site } from "../data/site";
 import { headshot, headshotAlt, headshotSchemaPath } from "../data/headshot";
 import { featuredPublications, getPosts, getProjects, getPublications, getResearchAreas } from "../utils/content";
@@ -15,6 +15,16 @@ const areas = await getResearchAreas();
 const project = (await getProjects())[0];
 const posts = (await getPosts()).slice(0, 3);
 const photoPath = await headshotSchemaPath();
+const pad = (n: number) => String(n).padStart(2, "0");
+
+// The phase line under the hero: one sine period is 120 units; the strip is twice the
+// screen width and slides left by half its length, so the motion loops seamlessly.
+const period = 120;
+const periods = 24;
+const sine = Array.from({ length: periods }, (_, k) => {
+  const x0 = k * period;
+  return `M${x0},10 C${x0 + 20},0 ${x0 + 40},0 ${x0 + 60},10 S${x0 + 100},20 ${x0 + 120},10`;
+}).join(" ");
 ---
 
 <BaseLayout>
@@ -23,103 +33,185 @@ const photoPath = await headshotSchemaPath();
     <JsonLd data={websiteSchema(Astro.site)} />
   </Fragment>
 
-  <div class="container page">
-    <section class="intro" aria-labelledby="name">
-      <div class="identity">
-        <Image
-          class="photo"
-          src={headshot}
-          alt={headshotAlt}
-          width={112}
-          height={112}
-          densities={[1, 2]}
-          fit="cover"
-          loading="eager"
-          fetchpriority="high"
-        />
-        <div>
-          <p class="eyebrow">{site.title}</p>
-          <h1 id="name">{site.name}</h1>
-          <p class="tagline">{site.tagline}</p>
-          <p class="headline">{site.headline}</p>
+  <section class="container hero" aria-labelledby="name">
+    <p class="eyebrow"><span class="p">+</span><span class="n">−</span>{site.title}</p>
+    <h1 id="name">{site.name}</h1>
+    <p class="tagline">{site.tagline}</p>
+    <figure class="hero-fig">
+      <FieldVideo clip="topological" priority />
+      <figcaption>
+        <span class="legend"
+          ><i class="sw p"></i>Re{"{"}H<sub>z</sub>{"}"} &gt; 0 <span class="jp">朱</span>
+          <i class="sw n"></i>&lt; 0 <span class="jp">藍</span></span
+        >
+        <span>{clips.topological.en}</span>
+      </figcaption>
+    </figure>
+  </section>
+
+  <div class="phase" aria-hidden="true">
+    <svg viewBox={`0 0 ${period * periods} 20`} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="phase-grad" x1="0" x2="1">
+          <stop offset="0" stop-color="#d9482b"></stop>
+          <stop offset="0.25" stop-color="#3a6ea5"></stop>
+          <stop offset="0.5" stop-color="#d9482b"></stop>
+          <stop offset="0.75" stop-color="#3a6ea5"></stop>
+          <stop offset="1" stop-color="#d9482b"></stop>
+        </linearGradient>
+      </defs>
+      <path d={sine} fill="none" stroke="url(#phase-grad)" stroke-width="1.2" vector-effect="non-scaling-stroke"></path>
+    </svg>
+  </div>
+
+  <div class="container">
+    <section class="sec" aria-labelledby="about-h">
+      <h2 id="about-h" class="head"><span class="num p">01</span><span class="en">About</span><span class="ja">紹介</span></h2>
+      <div class="about">
+        <div class="bio">
+          <p>
+            I am a {site.position} at {site.affiliation} in {site.location}, where I work on metasurfaces. I received my
+            Ph.D. in Electrical Engineering from The City College of New York (CUNY) in 2024, with a dissertation on ring
+            resonators with dichroic materials and spin-valley controlled topological photonic systems.
+          </p>
+          <p>
+            My work combines full-wave simulation (Lumerical FDTD, Meep, COMSOL, RCWA) with nanophotonic device design
+            across silicon photonic integrated circuits, metasurfaces and flat optics, topological and nonreciprocal
+            photonics, and optical sensing. My designs have been experimentally demonstrated on silicon chips. I also
+            maintain an open-source photonics simulation toolkit that turns FDTD-verified PIC components into
+            circuit-level models and fabricable GDS layouts.
+          </p>
         </div>
-      </div>
-      <div class="bio">
-        <p>
-          I am a {site.position} at {site.affiliation} in {site.location}, where I work on metasurfaces. I received my
-          Ph.D. in Electrical Engineering from The City College of New York (CUNY) in 2024, with a dissertation on ring
-          resonators with dichroic materials and spin-valley controlled topological photonic systems.
-        </p>
-        <p>
-          My work combines full-wave simulation (Lumerical FDTD, Meep, COMSOL, RCWA) with nanophotonic device design
-          across silicon photonic integrated circuits, metasurfaces and flat optics, topological and nonreciprocal
-          photonics, and optical sensing. My designs have been experimentally demonstrated on silicon chips (Science
-          Advances 2024) and published in Nature Nanotechnology, Science Advances and Nature Communications. I also
-          maintain an open-source photonics simulation toolkit that turns FDTD-verified PIC components into
-          circuit-level models and fabricable GDS layouts.
-        </p>
-        <p class="facts">Based in {site.location} · {site.languages}</p>
-      </div>
-      <ul class="link-list profile-links" aria-label="Profiles">
-        {profileLinks().map((l) => <li><a class="chip" href={l.href} rel="me noopener">{l.label}</a></li>)}
-        <li><a class="chip" href="/cv/">CV</a></li>
-        {site.resumePdf && <li><a class="chip" href={site.resumePdf}>Download resume (PDF)</a></li>}
-      </ul>
-    </section>
-
-    <section class="section" aria-labelledby="areas-h">
-      <div class="section-head">
-        <h2 id="areas-h">Research areas</h2>
-        <a href="/research/">All research →</a>
-      </div>
-      <div class="card-grid">
-        {
-          areas.map((a) => (
-            <a class="card" href={`/research/${a.id}/`}>
-              <h3>{a.data.title}</h3>
-              <p>{a.data.description}</p>
-            </a>
-          ))
-        }
+        <aside class="card-side">
+          <Image
+            class="photo"
+            src={headshot}
+            alt={headshotAlt}
+            width={88}
+            height={88}
+            densities={[1, 2]}
+            fit="cover"
+          />
+          <p class="facts">{site.location}<br />{site.languages}</p>
+          <ul class="side-links">
+            {profileLinks().map((l) => <li><a href={l.href} rel="me noopener">{l.label}</a></li>)}
+            <li><a href="/cv/">CV</a></li>
+            {site.resumePdf && <li><a href={site.resumePdf}>Resume (PDF)</a></li>}
+          </ul>
+        </aside>
       </div>
     </section>
 
-    <section class="section" aria-labelledby="pubs-h">
-      <div class="section-head">
-        <h2 id="pubs-h">Selected publications</h2>
-        <a href="/publications/">All {pubs.length} publications →</a>
+    <section class="sec" aria-labelledby="areas-h">
+      <h2 id="areas-h" class="head"><span class="num n">02</span><span class="en">Research</span><span class="ja">研究</span></h2>
+      <div>
+        <ol class="areas">
+          {
+            areas.map((a, i) => (
+              <li class={i % 2 ? "rule-n" : "rule-p"}>
+                <span class="idx">{pad(i + 1)}</span>
+                <a href={`/research/${a.id}/`}>{a.data.title}</a>
+                <p>{a.data.description}</p>
+              </li>
+            ))
+          }
+        </ol>
+        <a class="more" href="/research/">All research →</a>
       </div>
-      <ol class="pubs">
-        {featured.map((p) => <PubItem pub={p} compact />)}
-      </ol>
     </section>
 
     {
       project && (
-        <section class="section" aria-labelledby="proj-h">
-          <div class="section-head">
-            <h2 id="proj-h">Latest project</h2>
-            <a href="/projects/">All projects →</a>
+        <section class="sec" aria-labelledby="gh-h">
+          <h2 id="gh-h" class="head">
+            <span class="num p">03</span>
+            <span class="en">GitHub</span>
+            <span class="ja">オープンソース</span>
+          </h2>
+          <div class="gh">
+            <div>
+              <a class="repo" href={project.data.repo ?? site.links.github} rel="noopener">
+                {(project.data.repo ?? site.links.github).replace("https://", "")}
+              </a>
+              <h3>{project.data.title}</h3>
+              <p class="desc">{project.data.description}</p>
+              <ul class="tech">
+                {project.data.technologies.map((t) => (
+                  <li>{t}</li>
+                ))}
+              </ul>
+              <ul class="gh-links">
+                {project.data.repo && (
+                  <li>
+                    <a class="strong" href={project.data.repo} rel="noopener">
+                      View repository →
+                    </a>
+                  </li>
+                )}
+                <li>
+                  <a href={`/projects/${project.id}/`}>Project page →</a>
+                </li>
+                <li>
+                  <a href={site.links.github} rel="me noopener">
+                    GitHub profile →
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <figure class="gh-fig">
+              <FieldVideo clip="ring" />
+              <figcaption>
+                <span>
+                  <span class="fig">Fig. 1</span>
+                  {clips.ring.en}
+                </span>
+                <span class="jp-cap">{clips.ring.ja}</span>
+              </figcaption>
+            </figure>
           </div>
-          <a class="card project" href={`/projects/${project.id}/`}>
-            <h3>{project.data.title}</h3>
-            <p>{project.data.description}</p>
-            <p class="tech">{project.data.technologies.join(" · ")}</p>
-          </a>
         </section>
       )
     }
 
+    <section class="sec" aria-labelledby="pubs-h">
+      <h2 id="pubs-h" class="head"><span class="num n">04</span><span class="en">Publications</span><span class="ja">論文</span></h2>
+      <div>
+        <ol class="pubs">
+          {
+            featured.map((p) => (
+              <li>
+                <span class="yr">{p.data.year}</span>
+                <div>
+                  <a href={`/publications/${p.id}/`}>{p.data.title}</a>
+                  <span class="venue">{p.data.venueShort ?? p.data.venue}</span>
+                </div>
+              </li>
+            ))
+          }
+        </ol>
+        <a class="more" href="/publications/">All {pubs.length} publications →</a>
+      </div>
+    </section>
+
     {
       posts.length > 0 && (
-        <section class="section" aria-labelledby="posts-h">
-          <div class="section-head">
-            <h2 id="posts-h">Latest writing</h2>
-            <a href="/blog/">All posts →</a>
+        <section class="sec" aria-labelledby="posts-h">
+          <h2 id="posts-h" class="head">
+            <span class="num p">05</span>
+            <span class="en">Writing</span>
+            <span class="ja">記事</span>
+          </h2>
+          <div>
+            <ol class="posts">
+              {posts.map((p) => (
+                <li>
+                  <a href={`/blog/${p.id}/`}>{p.data.title}</a>
+                  <span class="desc">{p.data.description}</span>
+                </li>
+              ))}
+            </ol>
+            <a class="more" href="/blog/">All posts →</a>
           </div>
-          {posts.map((p) => (
-            <PostCard post={p} headingLevel="h3" />
-          ))}
         </section>
       )
     }
@@ -127,87 +219,354 @@ const photoPath = await headshotSchemaPath();
 </BaseLayout>
 
 <style>
-  .intro {
-    max-width: var(--content-width);
-    padding-top: var(--space-5);
+  .p {
+    color: var(--accent);
   }
-  .identity {
-    display: flex;
-    align-items: center;
-    gap: var(--space-5);
-    margin-bottom: var(--space-6);
+  .n {
+    color: var(--ai);
   }
-  .identity .tagline {
-    margin-bottom: 0;
+  .jp {
+    font-family: var(--font-display);
   }
-  .photo {
-    flex: none;
-    width: 112px;
-    height: 112px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid var(--border-strong);
-    box-shadow: 0 0 0 4px var(--accent-soft);
+
+  /* ---------- hero ---------- */
+  .hero {
+    padding-top: var(--space-7);
   }
-  @media (max-width: 560px) {
-    .identity {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: var(--space-4);
-    }
-    .photo {
-      width: 88px;
-      height: 88px;
-    }
+  .eyebrow .p,
+  .eyebrow .n {
+    margin-right: 0.35em;
+  }
+  .eyebrow .n {
+    margin-right: 0.9em;
   }
   h1 {
-    font-size: clamp(2.25rem, 5vw, 3.25rem);
-    margin-bottom: var(--space-3);
+    font-size: clamp(2.5rem, 6.5vw, 4.75rem);
+    line-height: 1.08;
+    letter-spacing: 0.01em;
+    margin-bottom: var(--space-4);
   }
   .tagline {
-    font-size: var(--step-1);
-    color: var(--accent);
-    font-weight: 500;
-    margin-bottom: var(--space-6);
+    color: var(--text-muted);
+    font-size: clamp(1rem, 1.8vw, 1.15rem);
+    margin: 0 0 var(--space-7);
+  }
+  .hero-fig {
+    margin: 0;
+  }
+  .hero-fig :global(video) {
+    width: 100%;
+  }
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.5rem;
+    margin-top: 0.9rem;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--text-faint);
+  }
+  .legend {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .sw {
+    display: inline-block;
+    width: 0.65rem;
+    height: 0.65rem;
+    margin: 0 0.35rem -0.05rem 0.8rem;
+  }
+  .sw.p {
+    background: #d9482b;
+    margin-left: 0;
+  }
+  .sw.n {
+    background: var(--ai-deep);
+  }
+
+  /* the one phase line */
+  .phase {
+    overflow: hidden;
+    margin-top: var(--space-8);
+    height: 20px;
+    opacity: 0.8;
+  }
+  .phase svg {
+    width: 200%;
+    height: 20px;
+    animation: drift 24s linear infinite;
+  }
+  @keyframes drift {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* ---------- sections: number, English heading, Japanese label ---------- */
+  .sec {
+    display: grid;
+    grid-template-columns: 12rem 1fr;
+    gap: var(--space-4) 2.5rem;
+    padding-block: 4rem;
+  }
+  .sec + .sec {
+    border-top: 1px solid var(--border);
+  }
+  .head {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 2rem auto;
+    align-content: start;
+    gap: 0 0.5rem;
+    font-weight: 400;
+  }
+  .num {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding-top: 0.55rem;
+    grid-row: span 2;
+  }
+  .head .en {
+    font-size: 1.6rem;
+    line-height: 1.3;
+  }
+  .head .ja {
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    color: var(--text-faint);
+  }
+  .more {
+    display: inline-block;
+    margin-top: var(--space-5);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .more:hover {
+    color: var(--ai);
+  }
+
+  /* about */
+  .about {
+    display: grid;
+    grid-template-columns: 1fr 15rem;
+    gap: 2.5rem;
   }
   .bio p {
-    font-family: var(--font-serif);
-    font-size: 1.1875rem;
-    line-height: 1.7;
-    color: var(--text);
+    font-size: 1.0625rem;
+    line-height: 1.8;
+    margin: 0 0 1.2rem;
   }
-  .bio p.facts {
-    font-family: var(--font-sans);
-    font-size: var(--step--1);
+  .card-side {
+    border-left: 1px solid var(--border);
+    padding-left: var(--space-5);
+  }
+  .photo {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    filter: grayscale(1);
+    margin-bottom: var(--space-4);
+  }
+  .facts {
+    font-size: 0.8125rem;
     color: var(--text-muted);
+    line-height: 1.6;
   }
-  .identity .headline {
-    margin: var(--space-2) 0 0;
-    color: var(--text-muted);
-    font-size: var(--step-0);
-    line-height: 1.5;
-  }
-  .profile-links {
-    margin-top: var(--space-5);
-  }
-  .profile-links .chip {
-    font-size: 0.875rem;
-    padding: 0.5em 0.9em;
-  }
-  .pubs {
+  .side-links,
+  .areas,
+  .pubs,
+  .posts,
+  .tech,
+  .gh-links {
     list-style: none;
     padding: 0;
     margin: 0;
   }
-  .project {
-    max-width: var(--content-width);
+  .side-links {
+    display: grid;
+    gap: 0.2rem;
+    font-size: 0.875rem;
   }
-  .project h3 {
-    font-size: var(--step-1);
+  .side-links a {
+    color: var(--text-muted);
+    text-decoration: none;
   }
-  .project .tech {
-    margin-top: var(--space-3);
-    font-size: var(--step--1);
+  .side-links a:hover {
+    color: var(--ai);
+  }
+
+  /* research */
+  .areas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: var(--space-6);
+  }
+  .areas li {
+    padding-top: 0.9rem;
+    border-top: 2px solid;
+  }
+  .rule-p {
+    border-color: var(--accent);
+  }
+  .rule-n {
+    border-color: var(--ai-deep);
+  }
+  .idx {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
     color: var(--text-faint);
+  }
+  .areas a {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    line-height: 1.4;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .areas a:hover {
+    color: var(--ai);
+  }
+  .areas p {
+    margin: 0.4rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  /* github */
+  .gh {
+    display: grid;
+    gap: var(--space-6);
+  }
+  .repo {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  .repo:hover {
+    text-decoration: underline;
+  }
+  .gh h3 {
+    font-size: 1.45rem;
+    margin: 0.4rem 0 0.6rem;
+  }
+  .desc {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .gh .desc {
+    max-width: 44rem;
+    margin: 0 0 var(--space-4);
+  }
+  .tech {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: var(--space-5);
+  }
+  .tech li {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.15rem 0.45rem;
+  }
+  .gh-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1.5rem;
+    font-size: 0.875rem;
+  }
+  .gh-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .gh-links a.strong {
+    color: var(--accent);
+  }
+  .gh-links a:hover {
+    text-decoration: underline;
+  }
+  .gh-fig {
+    margin: 0;
+  }
+  .gh-fig :global(video) {
+    width: 100%;
+  }
+  .gh-fig figcaption {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .fig {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+    margin-right: 0.75em;
+  }
+  .jp-cap {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+  }
+
+  /* publications and posts */
+  .pubs li {
+    display: grid;
+    grid-template-columns: 3.75rem 1fr;
+    padding-block: 1.1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .yr {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--ai);
+    padding-top: 0.2rem;
+  }
+  .pubs a,
+  .posts a {
+    display: block;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .pubs a:hover {
+    color: var(--accent);
+  }
+  .posts a:hover {
+    color: var(--ai);
+  }
+  .venue {
+    font-style: italic;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+  .posts li {
+    display: grid;
+    gap: 0.25rem;
+    padding-block: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  @media (max-width: 760px) {
+    .sec {
+      grid-template-columns: 1fr;
+      padding-block: var(--space-7);
+    }
+    .about {
+      grid-template-columns: 1fr;
+    }
+    .card-side {
+      border-left: 0;
+      padding-left: 0;
+      border-top: 1px solid var(--border);
+      padding-top: var(--space-5);
+    }
   }
 </style>

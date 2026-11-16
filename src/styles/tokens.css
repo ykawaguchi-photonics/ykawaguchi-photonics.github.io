@@ -1,28 +1,37 @@
-/* Design tokens. Dark is the default (and only) theme for now; a light theme
-   can be added later by redefining these under :root[data-theme="light"]. */
+/* Design tokens: "朱と藍" (shu and ai). The site's palette is the field plot's: in the
+   animations, positive Re{Hz} is vermilion (shu) and negative is indigo (ai), on ink (sumi).
+   Dark is the only theme. Contrast on --bg: text 14.8, muted 6.7, faint 5.0, accent 5.0,
+   ai 7.4 (WCAG AA for body text); --ai-deep is 3.5 and is for rules and swatches only. */
 :root {
   color-scheme: dark;
 
-  --bg: #0f1216;
-  --surface: #161b22;
-  --surface-2: #1e252e;
-  --border: #2a323c;
-  --border-strong: #3a444f;
+  --bg: #14120f; /* sumi */
+  --surface: #1b1915;
+  --surface-2: #221f1a;
+  --border: #2f2b26;
+  --border-strong: #3d3832;
 
-  --text: #e6e8eb;
-  --text-muted: #9aa4af;
-  --text-faint: #7d8793;
+  --text: #e8e4dc;
+  --text-muted: #a19a8f;
+  --text-faint: #8a8378;
 
-  --accent: #f0a04b;
-  --accent-strong: #f5b56e;
-  --accent-soft: rgba(240, 160, 75, 0.12);
-  --accent-line: rgba(240, 160, 75, 0.35);
-  /* faint amber wash for the glossary (term) box; same hue as --accent */
-  --accent-tint: rgba(240, 160, 75, 0.06);
+  /* shu (vermilion): the one accent: emphasis, terms (※ and Glossary), design callouts */
+  --accent: #e0583b;
+  --accent-strong: #ec7356;
+  --accent-soft: rgba(224, 88, 59, 0.12);
+  --accent-line: rgba(224, 88, 59, 0.38);
+  --accent-tint: rgba(224, 88, 59, 0.06);
 
-  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-serif: "Source Serif 4 Variable", "Source Serif 4", Georgia, "Times New Roman", serif;
-  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* ai (indigo): links and navigation; the counterpart colour of the field plots */
+  --ai: #7fa6d6;
+  --ai-strong: #a3c1e6;
+  --ai-deep: #3a6ea5;
+  --ai-line: rgba(127, 166, 214, 0.35);
+
+  --font-sans: "IBM Plex Sans Variable", "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* headings and titles; Shippori Mincho B1 covers Latin and Japanese */
+  --font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* 1.25 modular scale */
   --step--1: 0.875rem;
@@ -41,10 +50,10 @@
   --space-7: 3rem;
   --space-8: 4.5rem;
 
-  --radius: 6px;
+  --radius: 2px;
   --measure: 68ch;
-  --page-width: 72rem;
+  --page-width: 68rem;
   --content-width: 46rem;
-  --gutter: clamp(1rem, 4vw, 2rem);
+  --gutter: clamp(1rem, 4vw, 2.5rem);
   --transition: 150ms ease;
 }

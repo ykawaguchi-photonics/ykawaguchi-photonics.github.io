@@ -1,0 +1,47 @@
+---
+// Looping field animation (src/data/animations.ts). No autoplay attribute: the script below
+// starts playback only when the viewer has not asked for reduced motion, and pauses clips
+// that are off screen. Without JS, or with reduced motion, the poster frame is shown.
+import { getImage } from "astro:assets";
+import { clips, type ClipName } from "../data/animations";
+
+interface Props {
+  clip: ClipName;
+  class?: string;
+  /** true for the first clip on a page (poster loads eagerly) */
+  priority?: boolean;
+}
+const { clip, class: cls, priority = false } = Astro.props;
+const c = clips[clip];
+const poster = await getImage({ src: c.poster, format: "webp", width: Math.min(1350, c.poster.width) });
+---
+
+<video
+  class={cls}
+  data-field
+  muted
+  loop
+  playsinline
+  preload={priority ? "auto" : "metadata"}
+  poster={poster.src}
+  width={c.poster.width}
+  height={c.poster.height}
+  aria-label={c.en}
+>
+  <source src={c.webm} type="video/webm" />
+  <source src={c.mp4} type="video/mp4" />
+</video>
+
+<script>
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduce) {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        const v = e.target as HTMLVideoElement;
+        if (e.isIntersecting) v.play().catch(() => {});
+        else v.pause();
+      }
+    });
+    document.querySelectorAll<HTMLVideoElement>("video[data-field]").forEach((v) => io.observe(v));
+  }
+</script>

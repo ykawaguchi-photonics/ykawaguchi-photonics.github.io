@@ -168,9 +168,9 @@ Omit the Simulation section only when simulation is genuinely irrelevant.
   term (split a Glossary rather than collect definitions at the end of a long
   subsection); never put two tables back to back or a Glossary directly against
   a Callout without a sentence of prose between them.
-- Colours: the amber accent family means "terms" (※ and Glossary); Symbols is
-  neutral; Callout design has an amber left rule, note a grey rule. Do not add
-  new hues (tokens only in `src/styles/tokens.css`).
+- Colours: the shu (vermilion, `--accent`) family means "terms" (※ and
+  Glossary); Symbols is neutral; Callout design has a shu left rule, note a grey
+  rule. Do not add new hues (tokens only in `src/styles/tokens.css`).
 
 ### Notation and conventions
 - State every convention that changes a formula: field amplitude vs power;
@@ -225,10 +225,21 @@ temporarily, build, check, and set it back.
 - Figures: no text, legend or label may overlap the drawn structure or the data
   (labels outside the structure, legends outside busy axes; check every PNG).
   Same rule as `photonics-simulation-toolkit/CLAUDE.md` §3.
-- Colors are defined only in `src/styles/tokens.css`. There is one amber accent
-  (`--accent`), and categories are never color-coded.
-- Fonts: Inter (UI), Source Serif 4 (long-form), JetBrains Mono (code), all
-  self-hosted via @fontsource.
+- Design "朱と藍" (shu and ai, chosen by Yuma 2026-11-16): ink background, and the
+  field plots' two colours as the palette. Colors are defined only in
+  `src/styles/tokens.css`:
+  - `--accent` (shu, vermilion): emphasis, terms, design callouts, current page.
+  - `--ai` (indigo): links and navigation. `--ai-deep` is for rules and swatches
+    only (3.5:1, never text).
+  - Categories are never color-coded.
+- Fonts, all self-hosted via @fontsource: IBM Plex Sans (UI and body text),
+  Shippori Mincho B1 (`--font-display`: headings and titles; ships 400/500 only,
+  so headings never synthesize bold), IBM Plex Mono (code, labels, numbers).
+- English first, Japanese second: Home section headings are English with a
+  small Japanese label after them (Research / 研究).
+- Field animations (`src/components/FieldVideo.astro`, `src/data/animations.ts`)
+  come from `photonics-simulation-toolkit/scripts/blog_figures/field_animations.py
+  --theme aiaka`; captions state only what the saved data shows.
 - Markdown uses the `unified` processor (`@astrojs/markdown-remark`) so that
   remark-math and rehype-katex run. Astro 7's default Sätteri processor would skip them.
 - In `.astro` templates, a link that starts on a new source line after text
